@@ -1,6 +1,6 @@
 #err-stackstorm
 
-This plugin can run action-alias in stackstorm
+Plugin to run action-alias in stackstorm.
 
 **important: not support st2 auth now,If you want,It is easy to add by yourself.**
 
