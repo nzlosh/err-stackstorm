@@ -9,9 +9,9 @@ import time
 
 class St2(BotPlugin):
     """A plugin for st2"""
-    def __init__(self):
-        super(St2,self).__init__()
 
+    def activate(self):
+        super(St2, self).activate()
         self.bot_prefix=self.bot_config.BOT_PREFIX
         self.st2_config=self.bot_config.ST2
         self.st2_base_url=self.st2_config.get('st2_base_url') or 'http://localhost'
@@ -73,15 +73,12 @@ class St2(BotPlugin):
     def gen_patterns_and_help(self):
         """
         gen pattern and help for action alias
-
-        大概步骤是获取alias ，将其中的{{key}}替换成(?P<key>.+)，然后用正则表达式匹配所有的聊天记录，如果匹配到则执行相应的action。
         :return:
         """
-        #一次性替换完helps与pattern_action，减少timer_gen_patterns_and_helps线程干扰可能性。maybe?
         help=''
         pattern_action={}
 
-        st2_client=Client()
+        st2_client=Client(base_url=self.st2_base_url, api_url=self.st2_api_url, token=self.st2_token)
         for alias_obj in st2_client.managers['ActionAlias'].get_all():
             formats=alias_obj.formats
             for format in formats:
@@ -109,6 +106,5 @@ class St2(BotPlugin):
         if not res:
             return None
 
-        #可能会匹配到多个patter，这里以匹配到的最长的dict为正确的结果。
         res.sort(reverse=True)
         return res[0]
