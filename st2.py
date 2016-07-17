@@ -6,26 +6,39 @@ import re
 import logging
 import threading
 import time
-
-
+import requests
+from requests.auth import HTTPBasicAuth
 
 class St2(BotPlugin):
-    """A plugin for StackStorm"""
-
-    def activate(self):
-        super(St2, self).activate()
+    """
+    A plugin for StackStorm
+    """
+    def __init__(self, bot):
+        super(St2, self).__init__(bot)
         self.bot_prefix = self.bot_config.BOT_PREFIX
         self.st2_config = self.bot_config.STACKSTORM
-        self.st2_base_url = self.st2_config.get('st2_base_url') or 'http://localhost'
-        self.st2_auth_url = self.st2_config.get('st2_auth_url') or 'http://localhost:9100'
-        self.st2_api_url = self.st2_config.get('st2_api_url') or 'http://localhost:9100/v1'
-        self.st2_api_version = self.st2_config.get('st2_api_version') or 'v1'
-        self.st2_api_token = self.st2_config.get('st2_api_token') or ''
+        self.base_url = self.st2_config.get('base_url') or 'http://localhost'
+        self.auth_url = self.st2_config.get('auth_url') or 'http://localhost:9100'
+        self.api_url = self.st2_config.get('api_url') or 'http://localhost:9100/v1'
+        self.api_version = self.st2_config.get('api_version') or 'v1'
         self.timer_update = self.st2_config.get('timer_update') or 60
+
+        # API user authentication.
+        api_auth = self.st2_config.get('api_auth') or {}
+        tmp_user = api_auth.get('user') or None
+        if tmp_user:
+            self.api_username = tmp_user.get('name') or None
+            self.api_password = tmp_user.get('password') or None
+            self.api_token = tmp_user.get("token") or None
+
+        # API Key support doesn't exist in st2client as of version 1.4
+        # but it's being worked on # so it's provisioned here for future
+        # use.
+        self.api_key = api_auth.get('key') or None
 
         self.pattern_action = {}
         self.help = ''  #show help doc with exec `!helpst2`
-        self.gen_patterns_and_help()
+        self.tolerant_gen_patterns_and_help()
 
         th1 = threading.Thread(target=self.timer_gen_patterns_and_help)
         th1.setDaemon(True)
@@ -41,9 +54,62 @@ class St2(BotPlugin):
         data = self.match(_msg)
         if data:
             action_ref = data.pop('__action_ref')
-            res = self.run_action(action_ref,**data)
+            res = self.run_action(action_ref, **data)
             logging.debug('st2 run response: {0}'.format(res))
             return res
+
+
+    def _trial_token(self):
+        """
+        Send token header 'X-Auth-Token: <token>'
+        to API endpoint https://<stackstorm host>/api/'
+        """
+        logging.info('trail token "{}"'.format(self.api_token))
+        add_headers = {'X-Auth-Token': self.api_token}
+        r = self._http_request('GET', '/api/', headers=add_headers)
+        logging.info('Server response %d %s' % (r.status_code, r.reason))
+        if r.status_code == 401: # unauthorised try to get a new token.
+            self._renew_token()
+        else:
+            logging.info('API response to token = {} {}'.format(r.status_code, r.reason))
+
+
+    def _renew_token(self):
+        """
+        Request a new user token be created by stackstorm and use it
+        to query the API end point.
+        """
+        logging.info('renew token with {}:{}'.format(self.api_username, self.api_password))
+        auth = HTTPBasicAuth(self.api_username, self.api_password)
+
+        r = self._http_request('POST', '/auth/{}/tokens'.format(self.api_version), auth=auth)
+        logging.info('Server response %d %s' % (r.status_code, r.reason))
+
+        if r.status_code == 201: # created.
+            auth_info = r.json()
+            self.api_token = auth_info["token"]
+            logging.info("Received token %s" % self.api_token)
+        else:
+            logging.warning('Failed to get new user token. {} {}'.format(r.status_code, r.reason))
+
+
+    def _http_request(self, verb="GET", url="/", headers={}, auth=None):
+        """
+        Generic HTTP call.
+        """
+        get_kwargs = {
+            'headers': headers,
+            'timeout': 5,
+            'verify': False
+        }
+
+        if auth:
+            get_kwargs['auth']=auth
+
+        host = self.base_url.rsplit('//')[1]
+        response = requests.request(verb, 'https://{}{}'.format(host,url), **get_kwargs)
+
+        return response
 
 
     def run_action(self, action, **kwargs):
@@ -51,14 +117,15 @@ class St2(BotPlugin):
         run action
         """
         cmd = r'st2 --url="{0}" --auth-url="{1}" --api-url="{2}" --api-version={3} run -t {4} {5} {6}'.format(
-            self.st2_base_url,
-            self.st2_auth_url,
-            self.st2_api_url,
-            self.st2_api_version,
-            self.st2_api_token,
+            self.base_url,
+            self.auth_url,
+            self.api_url,
+            self.api_version,
+            self.api_token,
             action,
             ' '.join('{0}="{1}"'.format(k, v) for k, v in kwargs.iteritems())
         )
+        logging.info('running command : {} '.format(cmd))
         sp = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         output = sp.communicate()[0]
         returncode = sp.returncode
@@ -74,7 +141,19 @@ class St2(BotPlugin):
         """
         while True:
             time.sleep(self.timer_update)
-            logging.debug('Auto update st2 pattern and help after sleep {0}s'.format(self.timer_update))
+            logging.info('Auto update st2 pattern and help after sleep %d s' % self.timer_update)
+            tolerant_gen_patterns_and_help()
+
+
+    def tolerant_gen_patterns_and_help(self):
+        """
+        A wrapper method to check for API access authorisation.
+        """
+        try:
+            self.gen_patterns_and_help()
+        except Exception as err:
+            logging.error('Exception was caught, %s' % err.message)
+            self._trial_token()
             self.gen_patterns_and_help()
 
 
@@ -83,25 +162,29 @@ class St2(BotPlugin):
         gen pattern and help for action alias
         :return:
         """
-        help = ''
+        _help = ''
         pattern_action = {}
 
-        logging.info('St2 Client {} {} {}'.format(self.st2_base_url, self.st2_api_url, self.st2_api_token))
-        st2_client = Client(base_url=self.st2_base_url, api_url=self.st2_api_url, token=self.st2_api_token)
+        st2_client = Client(base_url=self.base_url, api_url=self.api_url, token=self.api_token)
 
         for alias_obj in st2_client.managers['ActionAlias'].get_all():
             formats = alias_obj.formats
-            for format in formats:
-                pattern = format
-                keys = re.findall('{{(.+?)}}',format)
+
+            for _format in formats:
+                pattern = _format
+                logging.info("Pattern = %s" % pattern)
+                if type(pattern) != type(str):
+                    continue
+                keys = re.findall('{{(.+?)}}', _format)
                 if keys:
                     for key in keys:
-                        pattern = pattern.replace('{{'+key+'}}','(?P<{0}>.+)'.format(key.strip()))
-                pattern = r'^{0}{1}'.format(self.bot_prefix, pattern)  #just match cmd which startswith bot_prefix
+                        pattern = pattern.replace('{{'+key+'}}', '(?P<{0}>.+)'.format(key.strip()))
+                # just match cmd which startswith bot_prefix
+                pattern = r'^{0}{1}'.format(self.bot_prefix, pattern)
                 pattern = re.compile(pattern, re.I)
                 pattern_action[pattern] = alias_obj.action_ref
-                help+='{0}{1} -- {2}\r\n'.format(self.bot_prefix, format, alias_obj.description)
-        self.help = help
+                _help += '{0}{1} -- {2}\r\n'.format(self.bot_prefix, _format, alias_obj.description)
+        self.help = _help
         self.pattern_action = pattern_action
 
 
