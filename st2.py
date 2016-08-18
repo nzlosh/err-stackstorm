@@ -1,5 +1,5 @@
 #coding:utf-8
-from errbot import BotPlugin, re_botcmd
+from errbot import BotPlugin, re_botcmd, botcmd
 from st2client.client import Client
 import subprocess
 import re
@@ -9,13 +9,16 @@ import time
 import requests
 from requests.auth import HTTPBasicAuth
 
+
 class St2(BotPlugin):
     """
-    A plugin for StackStorm
+    Stackstorm plugin for authentication and Action Alias execution.  Try !st2help for action alias help.
     """
     def __init__(self, bot):
         super(St2, self).__init__(bot)
-        self.bot_prefix = self.bot_config.BOT_PREFIX
+        # We append 'st2 ' to the bot prefix to avoid action alias definitions
+        # from colliding with errbot's native plugin commands.
+        self.bot_prefix = "{}st2 ".format(self.bot_config.BOT_PREFIX)
         self.st2_config = self.bot_config.STACKSTORM
         self.base_url = self.st2_config.get('base_url') or 'http://localhost'
         self.auth_url = self.st2_config.get('auth_url') or 'http://localhost:9100'
@@ -45,24 +48,34 @@ class St2(BotPlugin):
         th1.start()
 
 
-    @re_botcmd(pattern=r'.*', prefixed=False)
+
+    @re_botcmd(pattern=r'^st2 .*')
     def st2_run(self, msg, match):
         """
         Run an arbitrary stackstorm command.
-        Available commands can be listed using %shelpst2
-        """ % self.bot_prefix
-        _msg = str(msg)
-        if _msg == '{0}helpst2'.format(self.bot_prefix):
-            logging.info("Sending help : %s" % self.help)
-            return self.help
-        logging.debug("Received message: %s" % _msg)
+        Available commands can be listed using !st2help
+        """
+        _msg = unicode(msg)
         data = self.match(_msg)
+        logging.info("st2 matched with the following %s" % data)
         if data:
-            action_ref = data.pop('__action_ref')
-            logging.debug('st2 run request %s : %s' % (_msg, action_ref))
-            res = self.run_action(action_ref, **data)
-            logging.debug('st2 run response: {0}'.format(res))
+            action_ref = data.pop('action_ref')
+            logging.info('st2 run request %s : %s' % (_msg, action_ref))
+            res = self.run_action(action_ref, **data["kwargs"])
+            logging.info('st2 run response: {0}'.format(res))
             return res
+        else:
+            return "st2 command not found '{}'.  Check help with !st2help".format(_msg)
+
+
+
+    @botcmd
+    def st2help(self, msg, args):
+        """
+        Provide help for stackstorm action aliases.
+        """
+        return self.help
+
 
 
     def _trial_token(self):
@@ -70,14 +83,13 @@ class St2(BotPlugin):
         Send token header 'X-Auth-Token: <token>'
         to API endpoint https://<stackstorm host>/api/'
         """
-        logging.info('trail token "{}"'.format(self.api_token))
         add_headers = {'X-Auth-Token': self.api_token}
         r = self._http_request('GET', '/api/', headers=add_headers)
-        logging.info('Server response %d %s' % (r.status_code, r.reason))
         if r.status_code == 401: # unauthorised try to get a new token.
             self._renew_token()
         else:
             logging.info('API response to token = {} {}'.format(r.status_code, r.reason))
+
 
 
     def _renew_token(self):
@@ -85,18 +97,16 @@ class St2(BotPlugin):
         Request a new user token be created by stackstorm and use it
         to query the API end point.
         """
-        logging.info('renew token with {}:{}'.format(self.api_username, self.api_password))
         auth = HTTPBasicAuth(self.api_username, self.api_password)
-
         r = self._http_request('POST', '/auth/{}/tokens'.format(self.api_version), auth=auth)
-        logging.info('Server response %d %s' % (r.status_code, r.reason))
 
         if r.status_code == 201: # created.
             auth_info = r.json()
             self.api_token = auth_info["token"]
-            logging.info("Received token %s" % self.api_token)
+            logging.info("Received new token %s" % self.api_token)
         else:
             logging.warning('Failed to get new user token. {} {}'.format(r.status_code, r.reason))
+
 
 
     def _http_request(self, verb="GET", url="/", headers={}, auth=None):
@@ -118,37 +128,34 @@ class St2(BotPlugin):
         return response
 
 
+
     def run_action(self, action, **kwargs):
         """
-        run action
+        Perform the system call to execute the Stackstorm action.
         """
-        # This method is not ideal as it requires the bot to run on the
-        # same host as the st2 installation.  Stackstorm provides a
-        # rest api.
-        #
-        # USE THE DEBUG INFO TO APPLY THE ACTION.
-        # # -------- begin 140213707749136 request ----------
-        # curl -X GET -H  'Connection: keep-alive' -H  'Accept-Encoding: gzip, deflate' -H  'Accept: */*' -H  'User-Agent: python-requests/2.10.0' -H  'X-Auth-Token: 1cdc4d360ed74c998e35b2acacddefea' http://127.0.0.1:9101/v1/actions/core.local
-        # # -------- begin 140213707749136 response ----------
-        # {"name": "local", "parameters": {"cmd": {"required": true, "type": "string", "description": "Arbitrary Linux command to be executed on the remote host(s)."}, "sudo": {"immutable": true}}, "tags": [], "description": "Action that executes an arbitrary Linux command on the localhost.", "enabled": true, "entry_point": "", "notify": {}, "uid": "action:core:local", "pack": "core", "ref": "core.local", "id": "57584182fd6f06e36ec70fb5", "runner_type": "local-shell-cmd"}
+        # This method ties errbot to the same machine as the stackstorm
+        # installation.  TO DO: Investigate if errbot can execute stackstorm
+        # runs from a remote host.
+        cmd = [ '/opt/stackstorm/st2/bin/st2',
+                '--url={}'.format(self.base_url),
+                '--auth-url={}'.format(self.auth_url),
+                '--api-url={}'.format(self.api_url),
+                '--api-version={}'.format(self.api_version),
+                'run',
+                '-t',
+                '{}'.format(self.api_token),
+                '{}'.format(action),
+        ]
+        for k, v in kwargs.iteritems():
+            cmd.append('{}={}'.format(k, v))
 
-
-        cmd = r'st2 --url="{0}" --auth-url="{1}" --api-url="{2}" --api-version={3} run -t {4} {5} {6}'.format(
-            self.base_url,
-            self.auth_url,
-            self.api_url,
-            self.api_version,
-            self.api_token,
-            action,
-            ' '.join('{0}="{1}"'.format(k, v) for k, v in kwargs.iteritems())
-        )
-        logging.info('running command : {} '.format(cmd))
-        sp = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        sp = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd='/opt/stackstorm/st2/bin')
         output = sp.communicate()[0]
         returncode = sp.returncode
-        #filter color
         output = re.sub(r'\x1b\[.{3}(?P<content>.*)\x1b\[0m', r'\g<content>', output)
+
         return output
+
 
 
     def tolerant_gen_patterns_and_help(self):
@@ -157,10 +164,13 @@ class St2(BotPlugin):
         """
         try:
             self.gen_patterns_and_help()
-        except Exception as e:
-            logging.error('Error while fetching action aliases. %s' % e.message)
+        except requests.exceptions.HTTPError as e:
+            # Attempt to re-authenticate on HTTP Error
             self._trial_token()
             self.gen_patterns_and_help()
+        except Exception as e:
+            logging.error("Error while fetching action aliases %s" % e.message)
+
 
 
     def timer_gen_patterns_and_help(self):
@@ -170,25 +180,19 @@ class St2(BotPlugin):
         """
         while True:
             time.sleep(self.timer_update)
-            logging.info('Auto update st2 pattern and help after sleep %d s' % self.timer_update)
+            logging.debug('Updating st2 pattern and help after sleep %d s' % self.timer_update)
             self.tolerant_gen_patterns_and_help()
+
 
 
     def gen_patterns_and_help(self):
         """
         gen pattern and help for action alias
 
-        Aliases have evolved
-
-         {
-            "display": "pack deploy <repo_name> [packs <packs>] [branch <branch=master>]",
-            "representation": [
-                "pack deploy {{repo_name}} packs {{packs}} branch {{branch}}",
-                "pack deploy {{repo_name}} packs {{packs}}"
-            ]
-        },
-        "salt {{module}}"
-
+        Action-aliases come in two forms:
+            1. A simple string holding the format
+            2. A dictionary which hold numberous alias format "representation(s)"
+               With a single "display" for help about the action alias.
         :return:
         """
         self.help = ''
@@ -196,61 +200,90 @@ class St2(BotPlugin):
 
         st2_client = Client(base_url=self.base_url, api_url=self.api_url, token=self.api_token)
 
-        try:
-            for alias_obj in st2_client.managers['ActionAlias'].get_all():
-                formats = alias_obj.formats
-                display, representation = self.normalise_format(_format)
-                for _format in formats:
-                    pattern = _format
-                    logging.info("Format = %s" % pattern)
-                    if not type(pattern) in [type(str()), type(unicode())]:
-                        logging.info("Skipping: %s which is type %s" % (alias_obj.action_ref, type(pattern)))
+        for alias_obj in st2_client.managers['ActionAlias'].get_all():
+            for _format in alias_obj.formats:
+                display, representations = self._normalise_format(_format)
+                for representation in representations:
+                    if not type(representation) in [type(str()), type(unicode())]:
+                        logging.info("Skipping: %s which is type %s" % (alias_obj.action_ref, type(representation)))
                         continue
-                    #~ keys = re.findall('{{(.+?)}}', _format)
-                    #~ if keys:
-                        #~ for _key in keys:
-                            #~ _key = _key.split("=")[0]
-                            #~ logging.info("Key: %s" % _key ))
-                            #~ pattern = pattern.replace('{{' + _key + '}}', '(?P<{0}>.+)'.format(_key.strip()))
-                            #~ logging.info("Pattern: %s" % pattern)
-                    # just match cmd which startswith bot_prefix
-                    #~ pattern = r'^{0}{1}'.format(self.bot_prefix, pattern)
-                    #~ pattern = re.compile(pattern, re.I)
-                    pattern = self.format_to_pattern(_format)
-                    self.pattern_action[pattern] = alias_obj.action_ref
-                    self.help += '{0}{1} -- {2}\r\n'.format(self.bot_prefix, _format, alias_obj.description)
-                    logging.info("Added %s" % _format)
+                    pattern_context, kwargs = self._format_to_pattern(representation)
+                    self.pattern_action[pattern_context] = {
+                        "action_ref": alias_obj.action_ref,
+                        "kwargs": kwargs
+                    }
+                    self.help += '{}{} -- {}\r\n'.format(self.bot_prefix, display, alias_obj.description)
+        if self.help == '':
+            self.help = 'No Action-Alias definitions were found.  No help is available.'
 
-        except requests.exceptions.HTTPError as e:
-            # Raise HTTP Error to allow re-authentication
-            raise e
-        except Exception as e:
-            logging.error("Error while fetching action aliases %s" % e.message)
 
-    def normalise_format(self, _format):
-        if type(_format) in [type(str), type(unicode)]:
-            display = _format
-            representation = [_format]
-        if type(_format) == type(dict):
-            display = _format.display
-            representation = _format.representation
+
+    def _normalise_format(self, alias_format):
+        """
+        Stackstorm action aliases can have two types;
+          1. A string which contains the alias and any variables
+          2. A dictionary which provides one or more representation
+             strings along with a display string which is used as
+             help for the action alias.
+        """
+        display = None
+        representation = []
+        if type(alias_format) in [type(str()), type(unicode())]:
+            display = alias_format
+            representation.append(alias_format)
+        if type(alias_format) == type(dict()):
+            display = alias_format['display']
+            representation = alias_format['representation']
         return (display, representation)
 
-    def format_to_pattern(self, alias_format):
+
+
+    def _format_to_pattern(self, alias_format):
         """
-        ** Comment and regex taken from hubot stackstorm integration **
-        Note: We replace format parameters with ([\s\S]+?) and allow arbitrary
-        number of key=value pairs at the end of the string
-        Format parameters with default value {{param=value}} are allowed to
-        be skipped.
-        Note that we use "[\s\S]" instead of "." to allow multi-line values
-        and multi-line commands in general.
+        Extract named arguments from format to create a keyword argument list.
+        Transform tokens into regular expressions.
         """
-        extra_params = r'(\\s+(\\S+)\\s*=("([\\s\\S]*?)"|\'([\\s\\S]*?)\'|({[\\s\\S]*?})|(\\S+))\\s*)*'
-        alias_pattern = re.sub('(\s*){{\s*\S+\s*=\s*(?:({.+?}|.+?))\s*}}(\s*)', '\\s*(<1>([\\s\\S]+?)<3>)?\\s*', alias_format)
-        alias_pattern = re.sub('\s*{{.+?}}\s*', '\\s*([\\s\\S]+?)\\s*', alias_pattern)
-        alias_pattern = r'^{0}{1}$'.format(self.bot_prefix, alias_pattern)
-        return re.compile(alias_pattern, re.I)
+        kwargs = {}
+        # Step 1: Extract action alias arguments so they can be used later
+        #         when calling the stackstorm action.
+        tokens = re.findall(r"{{(.*?)}}", alias_format, re.IGNORECASE)
+        for token in tokens:
+            if token.find("=") > -1:
+                name, val = token.split("=")
+                # Remove unnecessary whitespace
+                name = name.strip()
+                val = val.strip()
+                kwargs[name] = val
+                name = r"?P<{}>[\s\S]+?".format(name)
+            else:
+                name = token.strip()
+                kwargs[name] = None
+                name = r"?P<{}>[\s\S]+?".format(name)
+            # The below code causes a regex exception to be raised under certain conditions.  Using replace() as alternative.
+            #~ alias_format = re.sub( r"\s*{{{{{}}}}}\s*".format(token), r"\\s*({})\\s*".format(name), alias_format)
+            # Replace token with named group match.
+            alias_format = alias_format.replace(r"{{{{{}}}}}".format(token), r"({})".format(name))
+
+
+        # Step 2: Append regex to match any extra parameters that weren't declared in the action alias.
+        extra_params = r"""(:?\s+(\S+)\s*=("([\s\S]*?)"|'([\s\S]*?)'|({[\s\S]*?})|(\S+))\s*)*"""
+        alias_format = r'^{}{}{}$'.format(self.bot_prefix, alias_format, extra_params)
+
+        return (re.compile(alias_format, re.I), kwargs)
+
+
+
+    def _extract_extra_params(self, extra_params):
+        """
+        Returns a dictionary of extra parameters supplied in the action_alias.
+        """
+        kwargs = {}
+        for arg in extra_params.groups():
+            if arg and "=" in arg:
+                k, v = arg.split("=", 1)
+                kwargs[k.strip()] = v.strip()
+        return kwargs
+
 
 
     def match(self, text):
@@ -259,11 +292,15 @@ class St2(BotPlugin):
         """
         results = []
         for pattern in self.pattern_action:
-            logging.debug("Search: %s using '%s'" % (text, pattern.pattern))
             res = pattern.search(text)
             if res:
-                data = res.groupdict()
-                data['__action_ref'] = self.pattern_action[pattern]
+                data = {}
+                # Create keyword arguments starting with the defaults.
+                data.update(self.pattern_action[pattern])
+                # Merge in the named arguments.
+                data["kwargs"].update(res.groupdict())
+                # Merge in any extra arguments supplied as a key/value pair.
+                data["kwargs"].update(self._extract_extra_params(res))
                 results.append(data)
 
         if not results:
