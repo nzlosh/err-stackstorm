@@ -2,6 +2,7 @@
 from errbot import BotPlugin, re_botcmd, botcmd
 from st2client.client import Client
 import subprocess
+import copy
 import re
 import logging
 import threading
@@ -188,12 +189,6 @@ class St2(BotPlugin):
     def gen_patterns_and_help(self):
         """
         gen pattern and help for action alias
-
-        Action-aliases come in two forms:
-            1. A simple string holding the format
-            2. A dictionary which hold numberous alias format "representation(s)"
-               With a single "display" for help about the action alias.
-        :return:
         """
         self.help = ''
         self.pattern_action = {}
@@ -221,10 +216,10 @@ class St2(BotPlugin):
     def _normalise_format(self, alias_format):
         """
         Stackstorm action aliases can have two types;
-          1. A string which contains the alias and any variables
-          2. A dictionary which provides one or more representation
-             strings along with a display string which is used as
-             help for the action alias.
+            1. A simple string holding the format
+            2. A dictionary which hold numberous alias format "representation(s)"
+               With a single "display" for help about the action alias.
+        This function processes both forms and returns a standardised form.
         """
         display = None
         representation = []
@@ -296,7 +291,9 @@ class St2(BotPlugin):
             if res:
                 data = {}
                 # Create keyword arguments starting with the defaults.
-                data.update(self.pattern_action[pattern])
+                # Deep copy is used here to avoid exposing the reference
+                # outside the match function.
+                data.update(copy.deepcopy(self.pattern_action[pattern]))
                 # Merge in the named arguments.
                 data["kwargs"].update(res.groupdict())
                 # Merge in any extra arguments supplied as a key/value pair.
@@ -307,4 +304,5 @@ class St2(BotPlugin):
             return None
 
         results.sort(reverse=True)
+
         return results[0]
