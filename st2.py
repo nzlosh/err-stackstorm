@@ -1,14 +1,28 @@
 #coding:utf-8
-from errbot import BotPlugin, re_botcmd, botcmd
+from errbot import BotPlugin, re_botcmd, botcmd, webhook
 from st2client.client import Client
 import subprocess
+import copy
 import re
 import logging
 import threading
+import six
 import time
+try:
+    import urlparse
+except :
+    import urllib.parse as urlparse
 import requests
+import json
 from requests.auth import HTTPBasicAuth
 
+import http
+
+# To do.  Break the code up into seperate files based on:
+#  1. Errbot initalisation
+#  2. Action-Alias processing, (list, match, parse)
+#  3. Polling client to stackstorm (one thread)
+#  4. HTTP Listener for stackstorm to client callback posts. (one thread with async processing)
 
 class St2(BotPlugin):
     """
@@ -47,6 +61,9 @@ class St2(BotPlugin):
         th1.setDaemon(True)
         th1.start()
 
+        th2 = threading.Thread(target=self.webserver)
+        th2.setDaemon(True)
+        th2.start()
 
 
     @re_botcmd(pattern=r'^st2 .*')
@@ -76,6 +93,20 @@ class St2(BotPlugin):
         """
         return self.help
 
+
+    @webhook
+    def st2_chatops(self, request):
+        content_type = request.headers().raw("Content-Type")
+        if content_type.startswith("application/json"):
+            logging.info("Webhook received payload %s" % payload.json)
+        else:
+            logging.info("Webhook received payload without JSON content.")
+        for room in self.bot_config.CHATROOM_PRESENCE:
+            self.send(
+                self.build_identifier(room),
+                'WEBHOOK CALLED!',
+            )
+        return "OK"
 
 
     def _trial_token(self):
@@ -142,19 +173,27 @@ class St2(BotPlugin):
                 '--api-url={}'.format(self.api_url),
                 '--api-version={}'.format(self.api_version),
                 'run',
+                '-j',
                 '-t',
                 '{}'.format(self.api_token),
                 '{}'.format(action),
         ]
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             cmd.append('{}={}'.format(k, v))
 
         sp = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd='/opt/stackstorm/st2/bin')
-        output = sp.communicate()[0]
+        output = sp.communicate()[0].strip().decode('utf-8')
         returncode = sp.returncode
-        output = re.sub(r'\x1b\[.{3}(?P<content>.*)\x1b\[0m', r'\g<content>', output)
+        logging.info(output)
+        output = self._format_output(output)
 
         return output
+
+
+
+    def _format_output(self, output):
+        exec_data = json.loads(output)
+        return '`{} {}` ```{}```'.format(exec_data['id'], exec_data['status'], exec_data['result'])
 
 
 
@@ -185,15 +224,22 @@ class St2(BotPlugin):
 
 
 
+    def webserver(self):
+        """
+        Run asynchronous web server to received chatops results.
+        """
+        run = True
+        server = WebServer()
+        while run:
+            time.sleep(self.timer_update)
+            logging.debug('Web server loop. sleep %d s' % self.timer_update)
+
+
+
+
     def gen_patterns_and_help(self):
         """
         gen pattern and help for action alias
-
-        Action-aliases come in two forms:
-            1. A simple string holding the format
-            2. A dictionary which hold numberous alias format "representation(s)"
-               With a single "display" for help about the action alias.
-        :return:
         """
         self.help = ''
         self.pattern_action = {}
@@ -204,7 +250,7 @@ class St2(BotPlugin):
             for _format in alias_obj.formats:
                 display, representations = self._normalise_format(_format)
                 for representation in representations:
-                    if not type(representation) in [type(str()), type(unicode())]:
+                    if not ( isinstance(representation, str) or isinstance(representation, unicode) ):
                         logging.info("Skipping: %s which is type %s" % (alias_obj.action_ref, type(representation)))
                         continue
                     pattern_context, kwargs = self._format_to_pattern(representation)
@@ -221,17 +267,17 @@ class St2(BotPlugin):
     def _normalise_format(self, alias_format):
         """
         Stackstorm action aliases can have two types;
-          1. A string which contains the alias and any variables
-          2. A dictionary which provides one or more representation
-             strings along with a display string which is used as
-             help for the action alias.
+            1. A simple string holding the format
+            2. A dictionary which hold numberous alias format "representation(s)"
+               With a single "display" for help about the action alias.
+        This function processes both forms and returns a standardised form.
         """
         display = None
         representation = []
-        if type(alias_format) in [type(str()), type(unicode())]:
+        if isinstance(alias_format, str) or isinstance(alisa_format, unicode):
             display = alias_format
             representation.append(alias_format)
-        if type(alias_format) == type(dict()):
+        if isinstance(alias_format, dict):
             display = alias_format['display']
             representation = alias_format['representation']
         return (display, representation)
@@ -296,7 +342,9 @@ class St2(BotPlugin):
             if res:
                 data = {}
                 # Create keyword arguments starting with the defaults.
-                data.update(self.pattern_action[pattern])
+                # Deep copy is used here to avoid exposing the reference
+                # outside the match function.
+                data.update(copy.deepcopy(self.pattern_action[pattern]))
                 # Merge in the named arguments.
                 data["kwargs"].update(res.groupdict())
                 # Merge in any extra arguments supplied as a key/value pair.

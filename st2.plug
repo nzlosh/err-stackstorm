@@ -6,4 +6,4 @@ Module = st2
 Description = This is a plugin for st2
 
 [Python]
-Version = 2+
+Version = 3+
