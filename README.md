@@ -5,25 +5,30 @@ functionality to errbot.
 
 ##Install
 ```
-!repos install https://github.com/nzlosh/err-stackstorm.git
+!repos install https://github.com/fmnisme/err-stackstorm.git
 ```
 
 
 ##Configuration
-Edit `config.py` which contains the configuration which is used to define how the plugin will communicate with Stackstorm's API and Authenticate end points.
+Edit `config.py` configuration file which is used to define how the plugin will communicate with Stackstorm's API and authentication end points.
 
 ###Authentication
-The errbot plugin must have valid credentials to use Stackstorm's API.  The credentials may be username/password, user token or api key.  See https://docs.stackstorm.com/authentication.html for more details.
+The errbot plugin must have valid credentials to use Stackstorm's API.  The credentials may be;
+
+ - username/password
+ - user token
+ - api key
+
+See https://docs.stackstorm.com/authentication.html for more details.
 
 ####Username/Password
-Using a username and password will allow errbot to renew the user token when it expires.  Do not enter a _User Token_ when you want to use username/password authentication.
+Using a username and password will allow errbot to renew the user token when it expires.  If a _User Token_ is supplied, it will over-ride username/password authentication.
+
 ####User Token
-If using a username and password doesn't meet the requirements for the environment errbot is operating inside, it's possible to supply a pre-generated _User Token_ as supplied by StackStorm.  Note when the token expires, a new one must be generated and updated in `config.py`.
+To avoid using the username/password pair in a configuration file, it's possible to supply a pre-generated _User Token_ as supplied by StackStorm.  Note when the token expires, a new one must be generated and updated in `config.py`.
+
 ####API Key
 Provisions have been made to implement support for _API Key_ support in the future.  As of the writing of this document, it is not implemented.
-
-
-
 
 ```
 STACKSTORM = {
@@ -39,7 +44,11 @@ STACKSTORM = {
         },
         'key': '<API Key>'
     },
-    'timer_update': 60 # Unit: second.  Interval for errbot to refresh to list of available action aliases.
+    'timer_update': 60, # Unit: second.  Interval for errbot to refresh to list of available action aliases.
+    'web_server': {
+        'enable': true
+        'port': 8888
+    }
 }
 ```
 
@@ -55,14 +64,26 @@ STACKSTORM = {
 ##Authentication
 Authentication is possible with username/password or User Token.  In the case of a username and password, the plugin is able to request a new User Token after it expires.
 
-API Key support has been provisioned but hasn't been implmented to date.
+API Key support has been provisioned but hasn't been implemented to date.
 
 
 ##Send message from stackstorm to errbot
 
-As of writing, this feature hasn't been implemented.  The original author of errbot left this feature to be implemented by others with the follow message:
+Errbot has a built in webserver.  It is configured and enabled through the bots admin chat interface.
+It listens for Stackstorm's chatops messages and delivers them to the attached chat backend.
 
-> If you want to send a message from Stackstorm to errbot, you should write a simple httpserver in your backend, and post message to your backend just like `hubot.post_message` does in stackstorm.
+Configure errbot's webserver plugin.
+```
+!plugin config Webserver {'HOST': '0.0.0.0',
+'PORT': 8888,
+'SSL': {'certificate': '',
+'enabled': False,
+'host': '0.0.0.0',
+'key': '',
+'port': 8889}}
+```
 
-If time permits, this will be implemented in the near future.
-
+Enable to webserver plugin.
+```
+!plugin activate Webserver
+```

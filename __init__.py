@@ -1,4 +1,2 @@
 #coding:utf-8
-
-from st2bot import St2
-
+from st2 import St2

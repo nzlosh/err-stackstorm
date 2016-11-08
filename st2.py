@@ -5,24 +5,15 @@ import subprocess
 import copy
 import re
 import logging
-import threading
 import six
 import time
 try:
     import urlparse
 except :
     import urllib.parse as urlparse
-import requests
-import json
+import requests, json
 from requests.auth import HTTPBasicAuth
 
-import http
-
-# To do.  Break the code up into seperate files based on:
-#  1. Errbot initalisation
-#  2. Action-Alias processing, (list, match, parse)
-#  3. Polling client to stackstorm (one thread)
-#  4. HTTP Listener for stackstorm to client callback posts. (one thread with async processing)
 
 class St2(BotPlugin):
     """
@@ -57,13 +48,14 @@ class St2(BotPlugin):
         self.help = ''  #show help doc with exec `!helpst2`
         self.tolerant_gen_patterns_and_help()
 
-        th1 = threading.Thread(target=self.timer_gen_patterns_and_help)
-        th1.setDaemon(True)
-        th1.start()
 
-        th2 = threading.Thread(target=self.webserver)
-        th2.setDaemon(True)
-        th2.start()
+
+    def activate(self):
+        """
+        Enable poller to fetch st2 action alias patterns and help
+        """
+        super().activate()
+        self.start_poller(self.timer_update, self.tolerant_gen_patterns_and_help)
 
 
     @re_botcmd(pattern=r'^st2 .*')
@@ -85,7 +77,6 @@ class St2(BotPlugin):
             return "st2 command not found '{}'.  Check help with !st2help".format(_msg)
 
 
-
     @botcmd
     def st2help(self, msg, args):
         """
@@ -94,19 +85,30 @@ class St2(BotPlugin):
         return self.help
 
 
-    @webhook
-    def st2_chatops(self, request):
-        content_type = request.headers().raw("Content-Type")
-        if content_type.startswith("application/json"):
-            logging.info("Webhook received payload %s" % payload.json)
-        else:
-            logging.info("Webhook received payload without JSON content.")
-        for room in self.bot_config.CHATROOM_PRESENCE:
-            self.send(
-                self.build_identifier(room),
-                'WEBHOOK CALLED!',
-            )
-        return "OK"
+    @webhook('/chatops/message')
+    def chatops_message(self, request):
+        """
+        Webhook entry point for stackstorm to post messages into
+        errbot which will relay them into the chat backend.
+        """
+        logging.info(request)
+
+        channel = request['channel']
+        message = request['message']
+
+        user = request.get('user') or None
+        whisper = request.get('whisper') or None
+
+        self.send(
+            self.build_identifier(channel),
+            message,
+        )
+        truncated = ""
+        if len(message) > 96:
+            truncated = " ..."
+        logging.info("'{}{}'".format(message[:97], truncated))
+        return "Message Received."
+
 
 
     def _trial_token(self):
@@ -151,7 +153,7 @@ class St2(BotPlugin):
         }
 
         if auth:
-            get_kwargs['auth']=auth
+            get_kwargs['auth'] = auth
 
         host = self.base_url.rsplit('//')[1]
         response = requests.request(verb, 'https://{}{}'.format(host,url), **get_kwargs)
@@ -211,32 +213,6 @@ class St2(BotPlugin):
             logging.error("Error while fetching action aliases %s" % e.message)
 
 
-
-    def timer_gen_patterns_and_help(self):
-        """
-        auto update patterns and help.
-        :return:
-        """
-        while True:
-            time.sleep(self.timer_update)
-            logging.debug('Updating st2 pattern and help after sleep %d s' % self.timer_update)
-            self.tolerant_gen_patterns_and_help()
-
-
-
-    def webserver(self):
-        """
-        Run asynchronous web server to received chatops results.
-        """
-        run = True
-        server = WebServer()
-        while run:
-            time.sleep(self.timer_update)
-            logging.debug('Web server loop. sleep %d s' % self.timer_update)
-
-
-
-
     def gen_patterns_and_help(self):
         """
         gen pattern and help for action alias
@@ -248,6 +224,7 @@ class St2(BotPlugin):
 
         for alias_obj in st2_client.managers['ActionAlias'].get_all():
             for _format in alias_obj.formats:
+				
                 display, representations = self._normalise_format(_format)
                 for representation in representations:
                     if not ( isinstance(representation, str) or isinstance(representation, unicode) ):
