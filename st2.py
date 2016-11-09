@@ -7,12 +7,11 @@ import re
 import logging
 import six
 import time
-try:
-    import urlparse
-except :
-    import urllib.parse as urlparse
+from urllib.parse import urlparse, urljoin
 import requests, json
 from requests.auth import HTTPBasicAuth
+
+from st2auth import St2Auth
 
 
 class St2(BotPlugin):
@@ -24,30 +23,21 @@ class St2(BotPlugin):
         # We append 'st2 ' to the bot prefix to avoid action alias definitions
         # from colliding with errbot's native plugin commands.
         self.bot_prefix = "{}st2 ".format(self.bot_config.BOT_PREFIX)
-        self.st2_config = self.bot_config.STACKSTORM
-        self.base_url = self.st2_config.get('base_url') or 'http://localhost'
-        self.auth_url = self.st2_config.get('auth_url') or 'http://localhost:9100'
-        self.api_url = self.st2_config.get('api_url') or 'http://localhost:9100/v1'
-        self.api_version = self.st2_config.get('api_version') or 'v1'
-        self.timer_update = self.st2_config.get('timer_update') or 60
+        c = self.bot_config.STACKSTORM
+        self.base_url = c.get('base_url') or 'http://localhost'
+        self.auth_url = c.get('auth_url') or 'http://localhost:9100'
+        self.api_url = c.get('api_url') or 'http://localhost:9100/api/v1'
+        self.api_version = c.get('api_version') or 'v1'
+        self.timer_update = c.get('timer_update') or 60
 
-        # API user authentication.
-        api_auth = self.st2_config.get('api_auth') or {}
-        tmp_user = api_auth.get('user') or None
-        if tmp_user:
-            self.api_username = tmp_user.get('name') or None
-            self.api_password = tmp_user.get('password') or None
-            self.api_token = tmp_user.get("token") or None
-
-        # API Key support doesn't exist in st2client as of version 1.4
-        # but it's being worked on # so it's provisioned here for future
-        # use.
-        self.api_key = api_auth.get('key') or None
+        api_auth = c.get('api_auth') or {}
+        self.st2auth = St2Auth(api_auth, self.base_url, self.api_url, self.auth_url, self.api_version)
 
         self.pattern_action = {}
         self.help = ''  #show help doc with exec `!helpst2`
-        self.tolerant_gen_patterns_and_help()
 
+        # Fetch available action-aliases
+        self.tolerant_gen_patterns_and_help()
 
 
     def activate(self):
@@ -64,7 +54,8 @@ class St2(BotPlugin):
         Run an arbitrary stackstorm command.
         Available commands can be listed using !st2help
         """
-        _msg = unicode(msg)
+        logging.info("GOT MESSAGE(%s) %s" % (type(msg.body), msg.body))
+        _msg = msg.body
         data = self.match(_msg)
         logging.info("st2 matched with the following %s" % data)
         if data:
@@ -110,58 +101,6 @@ class St2(BotPlugin):
         return "Message Received."
 
 
-
-    def _trial_token(self):
-        """
-        Send token header 'X-Auth-Token: <token>'
-        to API endpoint https://<stackstorm host>/api/'
-        """
-        add_headers = {'X-Auth-Token': self.api_token}
-        r = self._http_request('GET', '/api/', headers=add_headers)
-        if r.status_code == 401: # unauthorised try to get a new token.
-            self._renew_token()
-        else:
-            logging.info('API response to token = {} {}'.format(r.status_code, r.reason))
-
-
-
-    def _renew_token(self):
-        """
-        Request a new user token be created by stackstorm and use it
-        to query the API end point.
-        """
-        auth = HTTPBasicAuth(self.api_username, self.api_password)
-        r = self._http_request('POST', '/auth/{}/tokens'.format(self.api_version), auth=auth)
-
-        if r.status_code == 201: # created.
-            auth_info = r.json()
-            self.api_token = auth_info["token"]
-            logging.info("Received new token %s" % self.api_token)
-        else:
-            logging.warning('Failed to get new user token. {} {}'.format(r.status_code, r.reason))
-
-
-
-    def _http_request(self, verb="GET", url="/", headers={}, auth=None):
-        """
-        Generic HTTP call.
-        """
-        get_kwargs = {
-            'headers': headers,
-            'timeout': 5,
-            'verify': False
-        }
-
-        if auth:
-            get_kwargs['auth'] = auth
-
-        host = self.base_url.rsplit('//')[1]
-        response = requests.request(verb, 'https://{}{}'.format(host,url), **get_kwargs)
-
-        return response
-
-
-
     def run_action(self, action, **kwargs):
         """
         Perform the system call to execute the Stackstorm action.
@@ -169,6 +108,9 @@ class St2(BotPlugin):
         # This method ties errbot to the same machine as the stackstorm
         # installation.  TO DO: Investigate if errbot can execute stackstorm
         # runs from a remote host.
+        
+        # This is a hack.  Find a better way to manage authentication by token or api key.
+        opt, auth = self.st2auth.auth_method("st2").popitem()
         cmd = [ '/opt/stackstorm/st2/bin/st2',
                 '--url={}'.format(self.base_url),
                 '--auth-url={}'.format(self.auth_url),
@@ -176,8 +118,8 @@ class St2(BotPlugin):
                 '--api-version={}'.format(self.api_version),
                 'run',
                 '-j',
-                '-t',
-                '{}'.format(self.api_token),
+                '{}'.format(opt),
+                '{}'.format(auth),
                 '{}'.format(action),
         ]
         for k, v in six.iteritems(kwargs):
@@ -187,15 +129,7 @@ class St2(BotPlugin):
         output = sp.communicate()[0].strip().decode('utf-8')
         returncode = sp.returncode
         logging.info(output)
-        output = self._format_output(output)
-
         return output
-
-
-
-    def _format_output(self, output):
-        exec_data = json.loads(output)
-        return '`{} {}` ```{}```'.format(exec_data['id'], exec_data['status'], exec_data['result'])
 
 
 
@@ -204,13 +138,15 @@ class St2(BotPlugin):
         A wrapper method to check for API access authorisation.
         """
         try:
-            self.gen_patterns_and_help()
+            if not self.st2auth.valid_credentials():
+                self.st2auth.renew_token()
         except requests.exceptions.HTTPError as e:
-            # Attempt to re-authenticate on HTTP Error
-            self._trial_token()
+            logging.info("Error while validating credentials %s" % e)
+
+        try:
             self.gen_patterns_and_help()
         except Exception as e:
-            logging.error("Error while fetching action aliases %s" % e.message)
+            logging.error("Error while fetching action aliases %s" % e)
 
 
     def gen_patterns_and_help(self):
@@ -220,11 +156,12 @@ class St2(BotPlugin):
         self.help = ''
         self.pattern_action = {}
 
-        st2_client = Client(base_url=self.base_url, api_url=self.api_url, token=self.api_token)
+        extra_kwargs = self.st2auth.auth_method("st2client")
+        logging.info("Create st2 client with {} {} {}".format(self.base_url, self.api_url, extra_kwargs))
+        st2_client = Client(base_url=self.base_url, api_url=self.api_url, **extra_kwargs)
 
         for alias_obj in st2_client.managers['ActionAlias'].get_all():
             for _format in alias_obj.formats:
-				
                 display, representations = self._normalise_format(_format)
                 for representation in representations:
                     if not ( isinstance(representation, str) or isinstance(representation, unicode) ):
@@ -251,7 +188,7 @@ class St2(BotPlugin):
         """
         display = None
         representation = []
-        if isinstance(alias_format, str) or isinstance(alisa_format, unicode):
+        if isinstance(alias_format, str) or isinstance(alias_format, bytes):
             display = alias_format
             representation.append(alias_format)
         if isinstance(alias_format, dict):
