@@ -1,1 +1,1 @@
-st2client
+st2client>=2.0.1

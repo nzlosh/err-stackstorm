@@ -7,7 +7,7 @@ from requests.auth import HTTPBasicAuth
 
 class St2Auth(object):
     """
-    A class to help manager API key or User token authentication against the stackstorm API
+    A class to help manage API key or user token authentication with the stackstorm API
     """
     def __init__(self, auth={}, base_url="", api_url="", auth_url="", api_version=""):
         self.base_url = base_url
