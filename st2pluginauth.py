@@ -1,13 +1,14 @@
 #coding:utf-8
+import json
 import logging
+import requests
 from urllib.parse import urlparse, urljoin
-import requests, json
 from requests.auth import HTTPBasicAuth
 
 
-class St2Auth(object):
+class St2PluginAuth(object):
     """
-    A class to help manage API key or user token authentication with the stackstorm API
+    Helper to manage API key or user token authentication with the stackstorm API
     """
     def __init__(self, auth={}, base_url="", api_url="", auth_url="", api_version=""):
         self.base_url = base_url
@@ -25,17 +26,11 @@ class St2Auth(object):
             self.username = tmp.get('name')
             self.password = tmp.get('password')
 
-        logging.debug("API KEY: {}".format(self.api_key))
-        logging.debug("TOKEN: {}".format(self.token))
-        logging.debug("USERNAME: {}".format(self.username))
-        logging.debug("PASSWORD: {}".format(self.password))
-        logging.debug("URL {} {}".format(self.base_url, self.api_version))
-
 
     def auth_method(self, name=None):
         """
         @name - the client that will use the returned authentication data
-        Return the correct authentication header when using an API key or User token.
+        Return the appropriate authentication method for using an API key or User token.
         """
         client = {
             "requests": {"api_key": 'St2-Api-Key:', "token": 'X-Auth-Token'},
@@ -50,25 +45,19 @@ class St2Auth(object):
         return _kwargs
 
 
-    def _trail(self):
+    def valid_credentials(self):
         """
         Attempt to access API endpoint '<stackstorm api host>/'
+
+        Check if the credentials a valid to access stackstorm API
+        Returns: True if access is permitted and false if access fails.
         """
         add_headers = self.auth_method("requests")
-        logging.info("Using credentials {}".format(add_headers))
         r = self._http_request('GET', self.api_url, '/', headers=add_headers)
         if r.status_code in [200]:
             return True
         logging.info('API response to token = {} {}'.format(r.status_code, r.reason))
         return False
-
-
-    def valid_credentials(self):
-        """
-        Check if the credentials a valid to access stackstorm API
-        Returns: True if access is permitted and false if access fails.
-        """
-        return self._trail()
 
 
     def renew_token(self):

@@ -1,1 +1,2 @@
 st2client>=2.0.1
+sseclient-py
