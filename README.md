@@ -11,7 +11,7 @@ A plugin to run Stackstorm actions, bringing Stackstorm's chatops to errbot.
 The plugin has been developed and tested against the below software.  For optimal operation it is recommended to use the following versions:
  - Python >3.4
  - errbot >4.3
- - stackstorm client >2.0
+ - stackstorm client >2.2
 
 
 ##Configuration
@@ -41,6 +41,7 @@ STACKSTORM = {
     'base_url': 'https://stackstorm.example.com',
     'auth_url': 'https://stackstorm.example.com/auth',
     'api_url': 'https://stackstorm.example.com/api/v1',
+    'stream_url': 'https://stackstorm.example.com/stream/v1',
     'api_version': 'v1',
     'api_auth': {
         'user': {
@@ -67,12 +68,11 @@ STACKSTORM = {
 Authentication is possible with username/password, User Token or API Key.  In the case of a username and password, the plugin is able to request a new User Token after it expires.  In the case of a User Token or API Key, once it expires, the errbot plugin will no longer have access to the st2 API.
 
 
-##Send message from stackstorm to errbot
+##Send messages from stackstorm to errbot using errbot's native webhook
 
-Errbot has a built in webserver.  It is configured and enabled through the bots admin chat interface.
-It listens for Stackstorm's chatops messages and delivers them to the attached chat backend.
+Errbot has a built in webserver which is configured and enabled through the bots admin chat interface.  The Stackstorm plugin is written to listen for Stackstorm's chatops messages and delivers them to the attached chat backend.
 
-Configure errbot's webserver plugin.
+To configure errbot's webserver plugin, the command below can sent to errbot.
 ```
 !plugin config Webserver {'HOST': '0.0.0.0',
 'PORT': 8888,
@@ -82,8 +82,17 @@ Configure errbot's webserver plugin.
 'key': '',
 'port': 8889}}
 ```
+**NOTE:** _The variables must be adjusted to match the operating environment in which errbot is running._
 
 Enable to webserver plugin.
 ```
 !plugin activate Webserver
 ```
+
+
+##Receive Notification from Stackstorm to Errbot using server-side events (SSE)
+
+As of Stackstorm 1.4. server-sent events (SSE) were added which allowed certain chatops messages to be
+streamed from Stackstorm to Errbot.  The Stackstorm stream url must be supplied in the configuration
+to use SSE.  The SSE configuration is complementry to the webhook method.
+
