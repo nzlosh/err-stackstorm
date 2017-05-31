@@ -32,8 +32,8 @@ class St2(BotPlugin):
     Stackstorm plugin for authentication and Action Alias execution.
     Try !st2help for action alias help.
     """
-    def __init__(self, bot):
-        super(St2, self).__init__(bot)
+    def __init__(self, bot, name):
+        super(St2, self).__init__(bot, name)
 
         self.st2config = St2Config(self.bot_config)
         self.st2api = St2PluginAPI(self.st2config)
