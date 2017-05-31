@@ -7,7 +7,7 @@ Installation of the err-stackstorm plugin is performed from within a running err
 
 The below command will install the plugin.
 ```
-!repos install https://github.com/nzlosh/err-stackstorm.git
+!repos install https://github.com/fmnisme/err-stackstorm.git
 ```
 
 ## Requirements
