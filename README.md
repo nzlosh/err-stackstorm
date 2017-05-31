@@ -12,9 +12,9 @@ The below command will install the plugin.
 
 ## Requirements
 The plugin has been developed and tested against the below software.  For optimal operation it is recommended to use the following versions:
- - Python >3.4
- - errbot >4.3
- - stackstorm client >2.2
+ - Python 3.4
+ - errbot 4.3
+ - stackstorm client 2.2
 
 
 ## Configuration
