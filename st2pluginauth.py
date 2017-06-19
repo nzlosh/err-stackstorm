@@ -35,7 +35,7 @@ class St2PluginAuth(object):
         Return the appropriate authentication method to use with an API key or User token.
         """
         client = {
-            "requests": {"api_key": 'St2-Api-Key:', "token": 'X-Auth-Token'},
+            "requests": {"api_key": 'St2-Api-Key', "token": 'X-Auth-Token'},
             "st2client": {"api_key": 'api_key', "token": 'token'},
             "st2": {"api_key": "--api-key", "token": "--token"}
         }
