@@ -32,8 +32,8 @@ class St2(BotPlugin):
     Stackstorm plugin for authentication and Action Alias execution.
     Try !st2help for action alias help.
     """
-    def __init__(self, bot):
-        super(St2, self).__init__(bot)
+    def __init__(self, bot, name):
+        super(St2, self).__init__(bot, name)
 
         self.st2config = St2Config(self.bot_config)
         self.st2api = St2PluginAPI(self.st2config)
@@ -100,7 +100,7 @@ class St2(BotPlugin):
                 result = "st2 command '{}' is disabled.".format(msg.body)
         else:
             result = "st2 command '{}' not found.  Check help with {}st2help"
-            result = result.format(user_command, self.st2config.bot_prefix)
+            result = result.format(msg.body, self.st2config.bot_prefix)
         return result
 
     @botcmd
@@ -138,7 +138,12 @@ class St2(BotPlugin):
                                                                                 channel,
                                                                                 extra))
         if user is not None:
-            target_id = self.build_identifier(user)
+            user_id = self.build_identifier(user)
+
+        if channel is not None:
+            channel_id = self.build_identifier(channel)
+
+        if whisper is True:
+            self.send(user_id, message)
         else:
-            target_id = self.build_identifier(channel)
-        self.send(target_id, message)
+            self.send(channel_id, message)

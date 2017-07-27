@@ -34,6 +34,7 @@ class St2PluginAPI(object):
 
     def match(self, text):
         auth_kwargs = self.st2auth.auth_method("st2client")
+        auth_kwargs['debug'] = False
 
         LOG.info("Create st2 client with {} {} {}".format(self.st2config.base_url,
                                                           self.st2config.api_url,
@@ -176,11 +177,13 @@ class St2PluginAPI(object):
         execution.name = action_alias.name
         execution.format = representation
         execution.command = msg.body
-        execution.source_channel = str(msg.frm)
         if msg.is_direct == False:
-            execution.notification_channel = str(msg.frm)
-        else:
             execution.notification_channel = str(msg.to)
+            execution.source_channel = str(msg.to)
+        else:
+            execution.notification_channel = str(msg.frm)
+            execution.source_channel = str(msg.frm)
+
         execution.notification_route = 'errbot'
         execution.user = str(msg.frm)
 
@@ -196,8 +199,12 @@ class St2PluginAPI(object):
         execution = action_exec_mgr.create(execution)
 
         LOG.info("AFTER {}{}".format(type(execution), dir(execution)))
-        LOG.info("AFTER {}{}".format(execution.execution, execution.message))
-        return " ".join([execution.message])
+        try:
+            ret_msg = execution.message
+            LOG.info("AFTER {}{}".format(execution.execution, execution.message))
+        except AttributeError as e:
+            ret_msg = "Something is happening ... "
+        return ret_msg # " ".join([execution.message])
 
     def st2stream_listener(self, callback=None):
         """

@@ -12,10 +12,12 @@ The below command will install the plugin.
 
 ## Requirements
 The plugin has been developed and tested against the below software.  For optimal operation it is recommended to use the following versions:
- - Python >3.4
- - errbot >4.3
- - stackstorm client >2.2
 
+plugin tag (version) | Python | Errbot | StackStorm client
+--- | --- | --- | ---
+1.2 | 3.4 | 5.0 | 2.2
+1.1 | 3.4 | 4.3 | 2.2
+1.0 | 2.7 | 3.x | 2.1
 
 ## Configuration
 Edit the `config.py` configuration file which is used to describe how the plugin will communicate with Stackstorm's API and authentication end points.
@@ -101,3 +103,10 @@ streamed from Stackstorm to Errbot.  The Stackstorm stream url must be supplied 
 to use SSE.  The SSE configuration is complementry to the webhook method and both must be enabled
 for full chatops support between Stackstorm and Errbot.
 
+
+## Stackstorm Chatops pack configuration.
+
+StackStorm's chatop pack https://github.com/StackStorm/st2/tree/master/contrib/chatops is required 
+to be installed and a notify rule file added to the pack.  The notify rule must be placed in 
+`/<stackstorm installation>/packs/chatops/rules`.  The rule file `notify_errbot.yaml` can be found 
+in this repository under `contrib/stackstorm-chatops`
