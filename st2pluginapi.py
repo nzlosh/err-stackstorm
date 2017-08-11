@@ -34,11 +34,13 @@ class St2PluginAPI(object):
 
     def match(self, text):
         auth_kwargs = self.st2auth.auth_method("st2client")
-        auth_kwargs['debug'] = False
+#        auth_kwargs['debug'] = False
 
-        LOG.info("Create st2 client with {} {} {}".format(self.st2config.base_url,
-                                                          self.st2config.api_url,
-                                                          auth_kwargs))
+        LOG.debug("Create st2 client with {} {} {}".format(
+            self.st2config.base_url,
+            self.st2config.api_url,
+            auth_kwargs)
+        )
 
         st2_client = Client(base_url=self.st2config.base_url,
                             api_url=self.st2config.api_url,
@@ -79,7 +81,7 @@ class St2PluginAPI(object):
                               cwd='/opt/stackstorm/st2/bin')
         output = sp.communicate()[0].strip().decode('utf-8')
         returncode = sp.returncode
-        LOG.info(output)
+        LOG.debug(output)
         return output
 
     def action_execution(self, msg, action_ref, action_alias, **kwargs):
@@ -90,34 +92,38 @@ class St2PluginAPI(object):
         @kwargs - a dict containing 0 or more arguments to be provided when calling the action.
         """
 
-        LOG.info("\u001b[35m Action={} kwargs={} \u001b[0m".format(action_alias.name, kwargs))
+        LOG.debug("\u001b[35m Action={} kwargs={} \u001b[0m".format(action_alias.name, kwargs))
 
         # run packs.info pack=livestatus
         # Step 1. Fetch action metadata
         #       http://127.0.0.1:9101/v1/actions/packs.info
 
         auth_kwargs = self.st2auth.auth_method("st2client")
-        LOG.info("Create st2 client with {} {} {}".format(self.st2config.base_url,
-                                                          self.st2config.api_url,
-                                                          auth_kwargs))
+        LOG.debug("Create st2 client with {} {} {}".format(
+            self.st2config.base_url,
+            self.st2config.api_url,
+            auth_kwargs)
+        )
 
-        st2_client = Client(base_url=self.st2config.base_url,
-                            api_url=self.st2config.api_url,
-                            **auth_kwargs)
+        st2_client = Client(
+            base_url=self.st2config.base_url,
+            api_url=self.st2config.api_url,
+            **auth_kwargs
+        )
 
-        LOG.info("\u001b[35m {} {}\u001b[0m".format(action_ref, kwargs))
+        LOG.debug("\u001b[35m {} {}\u001b[0m".format(action_ref, kwargs))
         action_meta = st2_client.actions.get_by_id(action_ref)
         if not action_meta.enabled:
             return "{}.{} won't execute because it's disabled.".format(action_meta.pack,
                                                                        action_meta.name)
-        LOG.info("\u001b[35m action_meta={}\u001b[0m".format(action_meta))
+        LOG.debug("\u001b[35m action_meta={}\u001b[0m".format(action_meta))
 
         # Step 2. Extract runner-type (and validate parameters)
         #          "runner_type" : "python-script",
         # action_meta=<Action name=state_overview,pack=livestatus,enabled=True,
         #                                   runner_type=action-chain>
         runnertype_meta = st2_client.runners.get_by_name(action_meta.runner_type)
-        LOG.info("\u001b[35m runnertype_meta={}\u001b[0m".format(runnertype_meta))
+        LOG.debug("\u001b[35m runnertype_meta={}\u001b[0m".format(runnertype_meta))
 
         # Step 3. Fetch runner-type metadata
         #       http://127.0.0.1:9101/v1/runnertypes/?name=python-script
@@ -127,7 +133,7 @@ class St2PluginAPI(object):
         # Step 5. Call execute API with JSON payload containing parameters
         #       '{"action": "packs.info", "user": null, "parameters":
         #                       {"pack": "livestatus"}}' http://127.0.0.1:9101/v1/executions
-        LOG.info([action_meta.pack, action_meta.name, msg.body, msg.frm, msg.channelname])
+        LOG.debug([action_meta.pack, action_meta.name, msg.body, msg.frm, msg.channelname])
 
         url = self.st2config.api_url+"executions"
         payload = {
@@ -140,13 +146,14 @@ class St2PluginAPI(object):
             'notification_route': 'errbot'
         }
 
-        payload = "{} {} {}".format(str(dir(action_meta)),
-                               str(dir(msg)),
-                               str(dir(runnertype_meta)))
+        payload = "{} {} {}".format(
+            str(dir(action_meta)),
+            str(dir(msg)),
+            str(dir(runnertype_meta))
+        )
 
-        LOG.info("\u001b[35m PAYLOAD={}\u001b[0m".format(payload))
-        r = requests.post(url, json=payload, verify=False)
-        LOG.info(r)
+        LOG.debug("\u001b[35m PAYLOAD={}\u001b[0m".format(payload))
+        r = requests.post(url, json=payload, verify=self.st2config.verify_cert)
         # Step 6. Get the state of the execution http://127.0.0.1:9101/v1/executions/<exec_id>
         return {
             "url": url,
@@ -155,7 +162,6 @@ class St2PluginAPI(object):
             "action_meta": str(action_meta),
             "ebbot_msg": str(msg)
         }
-        raise NotImplementedError
 
     def execute_actionalias(self, action_alias, representation, msg):
         """
@@ -164,20 +170,23 @@ class St2PluginAPI(object):
         @msg: errbot message.
         """
         auth_kwargs = self.st2auth.auth_method("st2client")
-        LOG.info("Create st2 client with {} {} {}".format(self.st2config.base_url,
-                                                          self.st2config.api_url,
-                                                          auth_kwargs))
+        LOG.debug("Create st2 client with {} {} {}".format(
+            self.st2config.base_url,
+            self.st2config.api_url,
+            auth_kwargs)
+        )
 
-        st2_client = Client(base_url=self.st2config.base_url,
-                            api_url=self.st2config.api_url,
-                            debug=True,
-                            **auth_kwargs)
+        st2_client = Client(
+            base_url=self.st2config.base_url,
+            api_url=self.st2config.api_url,
+            **auth_kwargs
+        )
 
         execution = ActionAliasExecution()
         execution.name = action_alias.name
         execution.format = representation
         execution.command = msg.body
-        if msg.is_direct == False:
+        if msg.is_direct is False:
             execution.notification_channel = str(msg.to)
             execution.source_channel = str(msg.to)
         else:
@@ -187,7 +196,7 @@ class St2PluginAPI(object):
         execution.notification_route = 'errbot'
         execution.user = str(msg.frm)
 
-        LOG.info("Execution: {}".format([execution.command,
+        LOG.debug("Execution: {}".format([execution.command,
                                          execution.format,
                                          execution.name,
                                          execution.notification_channel,
@@ -198,13 +207,15 @@ class St2PluginAPI(object):
         action_exec_mgr = st2_client.managers['ActionAliasExecution']
         execution = action_exec_mgr.create(execution)
 
-        LOG.info("AFTER {}{}".format(type(execution), dir(execution)))
         try:
             ret_msg = execution.message
-            LOG.info("AFTER {}{}".format(execution.execution, execution.message))
+            LOG.debug("Execution: {}\nMessage: {}".format(
+                pprint.pprint(execution.execution),
+                pprint.pprint(execution.message))
+            )
         except AttributeError as e:
             ret_msg = "Something is happening ... "
-        return ret_msg # " ".join([execution.message])
+        return ret_msg
 
     def st2stream_listener(self, callback=None):
         """
@@ -216,13 +227,18 @@ class St2PluginAPI(object):
             headers = self.st2auth.auth_method("requests")
             headers.update({'Accept': 'text/event-stream'})
 
-            response = requests.get(self.st2config.stream_url, headers=headers, stream=True)
+            response = requests.get(
+                self.st2config.stream_url,
+                headers=headers,
+                stream=True,
+                verify=self.st2config.verify_cert
+            )
 
             client = sseclient.SSEClient(response)
             for event in client.events():
                 data = json.loads(event.data)
                 if event.event in ["st2.announcement__errbot"]:
-                    LOG.info("\u001b[35mErrbot announcement event detected!\u001b[0m")
+                    LOG.debug("\u001b[35mErrbot announcement event detected!\u001b[0m")
                     channel = data["payload"].get('channel')
                     message = data["payload"].get('message')
 
@@ -247,7 +263,7 @@ class St2PluginAPI(object):
             if not self.st2auth.valid_credentials():
                 self.st2auth.renew_token()
         except requests.exceptions.HTTPError as e:
-            LOG.info("Error while validating credentials %s (%s)" % (e.reason, e.code))
+            LOG.error("Error while validating credentials %s (%s)" % (e.reason, e.code))
 
         try:
             self._generate_actionaliases()
@@ -265,8 +281,10 @@ class St2PluginAPI(object):
         api_url = self.st2config.api_url
 
         auth_kwargs = self.st2auth.auth_method("st2client")
-        LOG.info("\u001b[35m Create st2 client with {} {} {} \u001b[0m".format(base_url,
-                                                                               api_url,
-                                                                               auth_kwargs))
+        LOG.debug("\u001b[35m Create st2 client with {} {} {} \u001b[0m".format(
+            base_url,
+            api_url,
+            auth_kwargs)
+        )
         st2_client = Client(base_url=base_url, api_url=api_url, **auth_kwargs)
         self.parser.process_actionaliases(st2_client.managers['ActionAlias'].get_all())
