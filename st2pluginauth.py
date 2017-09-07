@@ -18,6 +18,7 @@ class St2PluginAuth(object):
         self.api_url = st2config.api_url
         self.auth_url = st2config.auth_url
         self.api_version = st2config.api_version
+        self.verify_cert = st2config.verify_cert
 
         self.api_key = st2config.api_auth.get('key')
         self.token = st2config.api_auth.get('token')
@@ -87,7 +88,7 @@ class St2PluginAuth(object):
         get_kwargs = {
             'headers': headers,
             'timeout': 5,
-            'verify': False
+            'verify': self.verify_cert
         }
 
         if auth:

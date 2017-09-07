@@ -2,6 +2,7 @@
 
 import logging
 import threading
+import pprint
 
 from errbot import BotPlugin, re_botcmd, botcmd, webhook
 from st2pluginapi import St2PluginAPI
@@ -9,7 +10,7 @@ from st2pluginapi import St2PluginAPI
 LOG = logging.getLogger(__name__)
 
 # A plugin prefix for stackstorm action aliases is to avoid name collisions between
-# them and native errbot plugins.  Defined here as a
+# them and native errbot plugins.  Defined here so it's available to errbot's facade decorator.
 PLUGIN_PREFIX = r"st2"
 
 
@@ -18,13 +19,14 @@ class St2Config(object):
         self.plugin_prefix = PLUGIN_PREFIX
         self.bot_prefix = bot_conf.BOT_PREFIX
         self.full_prefix = "{}{} ".format(bot_conf.BOT_PREFIX, PLUGIN_PREFIX)
-        self.api_auth = bot_conf.STACKSTORM.get('api_auth') or {}
-        self.base_url = bot_conf.STACKSTORM.get('base_url') or 'http://localhost'
-        self.api_url = bot_conf.STACKSTORM.get('api_url') or 'http://localhost:9100/api/v1'
-        self.auth_url = bot_conf.STACKSTORM.get('auth_url') or 'http://localhost:9100'
-        self.stream_url = bot_conf.STACKSTORM.get('stream_url') or 'http://localhost:9102/v1/stream'
-        self.api_version = bot_conf.STACKSTORM.get('api_version') or 'v1'
-        self.timer_update = bot_conf.STACKSTORM.get('timer_update') or 60
+        self.api_auth = bot_conf.STACKSTORM.get('api_auth', {})
+        self.base_url = bot_conf.STACKSTORM.get('base_url', 'http://localhost')
+        self.api_url = bot_conf.STACKSTORM.get('api_url', 'http://localhost:9100/api/v1')
+        self.auth_url = bot_conf.STACKSTORM.get('auth_url', 'http://localhost:9100')
+        self.stream_url = bot_conf.STACKSTORM.get('stream_url', 'http://localhost:9102/v1/stream')
+        self.api_version = bot_conf.STACKSTORM.get('api_version', 'v1')
+        self.timer_update = bot_conf.STACKSTORM.get('timer_update', 60)
+        self.verify_cert = bot_conf.STACKSTORM.get('verify_cert', True)
 
 
 class St2(BotPlugin):
@@ -68,24 +70,10 @@ class St2(BotPlugin):
 
         msg.body = remove_bot_prefix(match.group())
 
-        LOG.info("""Message received from chat backend.
-\t\tmsg.body [{}] {}
-\t\tmsg.ctx [{}] {}
-\t\tmsg.delayed [{}] {}
-\t\tmsg.extras [{}] {}
-\t\tmsg.flow [{}] {}
-\t\tmsg.frm [{}] {}
-\t\tmsg.is_direct [{}] {}
-\t\tmsg.is_group [{}] {}
-\t\tmsg.to [{}] {}""".format(type(msg.body), msg.body,
-                             type(msg.ctx), msg.ctx,
-                             type(msg.delayed), msg.delayed,
-                             type(msg.extras), msg.extras,
-                             type(msg.flow), msg.flow,
-                             type(msg.frm), msg.frm,
-                             type(msg.is_direct), msg.is_direct,
-                             type(msg.is_group), msg.is_group,
-                             type(msg.to), msg.to))
+        msg_debug = ""
+        for attr, value in msg.__dict__.items():
+            msg_debug += "\t\t{} [{}] {}\n".format(attr, type(value), value)
+        LOG.debug("Message received from chat backend.\n{}\n".format(msg_debug))
 
         matched_result = self.st2api.match(msg.body)
 
@@ -94,7 +82,7 @@ class St2(BotPlugin):
             del matched_result
             if action_alias.enabled is True:
                 res = self.st2api.execute_actionalias(action_alias, representation, msg)
-                LOG.info('action alias execution result: type={} {}'.format(type(res), res))
+                LOG.debug('action alias execution result: type={} {}'.format(type(res), res))
                 result = r"{}".format(res)
             else:
                 result = "st2 command '{}' is disabled.".format(msg.body)
@@ -132,11 +120,13 @@ class St2(BotPlugin):
         """
         Post messages to the chat backend.
         """
-        LOG.info("whisper={}, message={}, user={}, channel={}, extra={}".format(whisper,
-                                                                                message,
-                                                                                user,
-                                                                                channel,
-                                                                                extra))
+        LOG.debug("whisper={}, message={}, user={}, channel={}, extra={}".format(
+            whisper,
+            message,
+            user,
+            channel,
+            extra)
+        )
         if user is not None:
             user_id = self.build_identifier(user)
 
