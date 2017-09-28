@@ -1,16 +1,32 @@
 # err-stackstorm
-A plugin to run Stackstorm actions, bringing Stackstorm's chatops to errbot.
+A plugin to run StackStorm actions, bringing StackStorm's chatops to Errbot.
 
+## Table of Contents
+1. [Installation](#Installation)
+1. [Requirements](#Requirements)
+1. [Supported Chat Backends](#SupportedChatBackends)
+1. [Configuration](#Configuration)
+1. [Setup Action-Aliases](#ActionAliases)
+1. [Webhook](#Webhook)
+1. [Server-Side Events](#ServerSideEvents)
+1. [Chatops Pack](#ChatopsPack)
+1. [Troubleshooting](#Troubleshooting)
 
-## Installation
-Installation of the err-stackstorm plugin is performed from within a running errbot instance.  Ensure errbot is up and running before attempting to install the plugin.  See the errbot installation documentation here https://github.com/errbotio/errbot for instructions on how to setup errbot.
+## Installation <a name="Installation"></a>
+Installation of the err-stackstorm plugin is performed from within a running Errbot instance.  Ensure Errbot is up and running before attempting to install the plugin.  See the Errbot installation documentation here https://github.com/Errbotio/Errbot for instructions on how to setup Errbot on your chat backend.  These instructions assume a running instance of StackStorm is already in place.  See the official [StackStorm documentation](https://docs.stackstorm.com/install/index.html) for details.
+
+ 1. Install Errbot on the target system using standard package manager or Errbot installation method.
+ 1. Configure Errbot, see the [Configuration](#Configuration) section for help.
+ 1. Enable Errbot's internal webserver, see the [Webhook](#Webhook) section for help.
+ 1. Install Chatops pack on StackStorm, see the [Chatops Pack](#ChatopsPack) section for help.
+ 1. Connect to your chat backend and starting interacting with your StackStorm/Errbot instance.
 
 The below command will install the plugin.
 ```
 !repos install https://github.com/fmnisme/err-stackstorm.git
 ```
 
-## Requirements
+## Requirements <a name="Requirements"></a>
 The plugin has been developed and tested against the below software.  For optimal operation it is recommended to use the following versions:
 
 plugin tag (version) | Python | Errbot | StackStorm client
@@ -19,28 +35,37 @@ plugin tag (version) | Python | Errbot | StackStorm client
 1.1 | 3.4 | 4.3 | 2.2
 1.0 | 2.7 | 3.x | 2.1
 
-## Configuration
-Edit the `config.py` configuration file which is used to describe how the plugin will communicate with Stackstorm's API and authentication end points.
-If you followed the errbot setup documentation this file will have been created by downloading a template from the errbot github site.   If this file has not already been created, please create it following the instructions at https://github.com/errbotio/errbot
+## Supported Chat Backends <a name="SupportedChatBackends"></a>
+Errbot provides official support for a few of major chat backends and many more chat backends are avilable through unofficial plugins.
 
-### Authentication
-The errbot plugin must have valid credentials to use Stackstorm's API.  The credentials may be;
+Backend | Mode value | Support type
+--- | --- | ---
+Hipchat | `hipchat` | Integrated
+IRC | `irc` | Integrated
+Slack | `slack` | Integrated
+Telegram Messenger | `telegram` | Integrated
+Text | `text` | Integrated
+XMPP | `xmpp` | Integrated
+[Skype](https://www.skype.com/) | `skype` | [Plugin](https://github.com/errbotio/errbot-backend-skype)
+[Mattermost](https://about.mattermost.com/) | `mattermost` | [Plugin](https://github.com/Vaelor/errbot-mattermost-backend)
+[Rocket Chat](https://rocket.chat/) | `aoikrocketchaterrbot` | [Plugin](https://github.com/AoiKuiyuyou/AoikRocketChatErrbot)
+[Glip](https://glip.com/) | `Glip` | [Plugin](https://github.com/ringcentral/ringcentral-glip-errbot)
+[Gitter](gitter.im/) | `gitter` | [Plugin](https://github.com/errbotio/err-backend-gitter)
+[VK](https://vk.com/) | `VK` | [Plugin](https://github.com/Ax3Effect/errbot-vk)
+[Discord](https://www.discordapp.com/) | `discord` | [Plugin](https://github.com/gbin/err-backend-discord)
+[Cisco Spark](https://www.ciscospark.com/) | `CiscoSpark` | [Plugin](https://github.com/marksull/err-backend-cisco-spark)
+[TOX](https://tox.im/) | `tox` | [Plugin](https://github.com/errbotio/err-backend-tox)
+[CampFire](https://campfirenow.com/) | `campfire` | [Plugin](https://github.com/errbotio/err-backend-campfire)
 
- - username/password
- - user token
- - api key
+Backend support will provide a minimum set of backend chat functionality to the err-stackstorm plugin like `connect` to and `authenticate` with chat backend, `identify` users/rooms and `send_message` to users/rooms.  Advanced formatting may not be available on all backends since adapter code is required in the err-stackstorm plugin to translate ActionAlias `extra` parameter on a per backend basis.
 
-See https://docs.stackstorm.com/authentication.html for more details.
+Currently supported extra backends
+* Slack
 
-#### Username/Password
-Using a username and password will allow errbot to renew the user token when it expires.  If a _User Token_ is supplied, it will be used in preference to username/password authentication until the token expires.
 
-#### User Token
-To avoid using the username/password pair in a configuration file, it's possible to supply a pre-generated _User Token_ as generated by StackStorm.  Note when the token expires, a new one must be generated and updated in `config.py` which in turn requires errbot to be restarted.
-As such, this solution may not be ideal for production environments.
-
-#### API Key
-_API Key_ support has been included since Stackstorm v2.0.  When an _API Key_ is provided, it is used in preference to a _User Token_ or _username/password_ pair.  It is considered a mistake to supply a token or username/password pair when using the API Key.
+## Configuration <a name="Configuration"></a>
+Edit the `config.py` configuration file which is used to describe how the plugin will communicate with StackStorm's API and authentication end points.
+If you followed the Errbot setup documentation this file will have been created by downloading a template from the Errbot github site.   If this file has not already been created, please create it following the instructions at https://github.com/Errbotio/Errbot
 
 ```
 STACKSTORM = {
@@ -49,6 +74,7 @@ STACKSTORM = {
     'api_url': 'https://stackstorm.example.com/api/v1',
     'stream_url': 'https://stackstorm.example.com/stream/v1',
     'api_version': 'v1',
+    'verify_cert': True,
     'api_auth': {
         'user': {
             'name': 'my_username',
@@ -57,28 +83,57 @@ STACKSTORM = {
         'token': "<User token>",
         'key': '<API Key>'
     },
-    'timer_update': 900, #  Unit: second.  Interval for errbot to refresh to list of available action aliases.
+    'timer_update': 900, #  Unit: second.  Interval for Errbot to refresh to list of available action aliases.
 }
 ```
+Option | Description
+--- | ---
+`base_url` | StackStorm's base url.  (deprecated)
+`auth_url` | StackStorm's authentication url end point.  Used to authenticate credentials against StackStorm.
+`api_url` | StackStorm's API url end point.  Used to execute action alises received from the chat backend.
+`stream_url` | StackStorm's Stream url end point.  Used to received chatops notifications.
+`api_version` | StackStorm's API version.  (deprecated)
+`verify_cert` | Default is *True*.  Verify the SSL certificate is valid when using https end points.  Applies to all end points.
+`api_auth.user.name` | Errbot username to authenticate with StackStorm.
+`api_auth.user.password` | Errbot password to authenticate with StackStorm.
+`api_auth.token` | Errbot user token to authenticate with StackStorm.  Used instead of a username/password pair.
+`api_auth.key` | Errbot API key to authenticate with StackStorm.  Used instead of a username/password pair or user token.
+`timer_update` | Unit: seconds.  Default is *60*. Interval for Errbot to refresh to list of available action aliases.  (deprecated)
 
 
-## How to expose action-aliases as plugin commands
- 1. Connect errbot to your chat environment.
- 2. Write an action alias in Stackstorm.
- 3. Either restart errbot or wait for the refresh interval for errbot to update the action alias list.
- 4. Type `!st2help` in your chat program for the list of available commands.
- 5. Type the desired command in your chat program, as shown in the help.
+### Authentication <a name="Authentication"></a>
+Authentication is possible with username/password, User Token or API Key.  In the case of a username and password, the plugin is requests a new User Token after it expires.  In the case of a User Token or API Key, once it expires, the Errbot plugin will no longer have access to the st2 API.
 
+The Errbot plugin must have valid credentials to use StackStorm's API.  The credentials may be;
 
-## Authentication
-Authentication is possible with username/password, User Token or API Key.  In the case of a username and password, the plugin is able to request a new User Token after it expires.  In the case of a User Token or API Key, once it expires, the errbot plugin will no longer have access to the st2 API.
+ - username/password
+ - user token
+ - api key
 
+See https://docs.stackstorm.com/authentication.html for more details.
 
-## Send messages from Stackstorm to Errbot using Errbot's native webhook support
+#### Username/Password
+Using a username and password will allow Errbot to renew the user token when it expires.  If a _User Token_ is supplied, it will be used in preference to username/password authentication until the token expires.
 
-Errbot has a built in webserver which is configured and enabled through the bots admin chat interface.  The Stackstorm plugin is written to listen for Stackstorm's chatops messages and delivers them to the attached chat backend.
+#### User Token
+To avoid using the username/password pair in a configuration file, it's possible to supply a pre-generated _User Token_ as generated by StackStorm.  Note when the token expires, a new one must be generated and updated in `config.py` which in turn requires Errbot to be restarted.
+This method is the least ideal for production environments.
 
-To configure errbot's webserver plugin, the command below can sent to errbot.
+#### API Key
+_API Key_ support has been included since StackStorm v2.0.  When an _API Key_ is provided, it is used in preference to a _User Token_ or _username/password_ pair.  It is considered a mistake to supply a token or username/password pair when using the API Key.
+
+## How to expose action-aliases as plugin commands <a name="ActionAliases"></a>
+ 1. Connect Errbot to your chat environment.
+ 1. Write an [action alias](https://docs.stackstorm.com/chatops/aliases.html) in StackStorm.
+ 1. Errbot will automatically refersh its action alias list.
+ 1. Type `!st2help` in your chat program to list available StackStorm commands.
+ 1. Type the desired command in your chat program, as shown in the help.
+
+## Send messages from StackStorm to Errbot using Errbot's native webhook support <a name="Webhook"></a>
+
+Errbot has a built in webserver which is configured and enabled through the bots admin chat interface.  The StackStorm plugin is written to listen for StackStorm's chatops messages and delivers them to the attached chat backend.
+
+To configure Errbot's webserver plugin, the command below can be sent to Errbot.
 ```
 !plugin config Webserver {'HOST': '0.0.0.0',
 'PORT': 8888,
@@ -88,25 +143,172 @@ To configure errbot's webserver plugin, the command below can sent to errbot.
 'key': '',
 'port': 8889}}
 ```
-**NOTE:** _The variables must be adjusted to match the operating environment in which errbot is running._
+**NOTE:** _The variables must be adjusted to match the operating environment in which Errbot is running.  See Errbot documentation for further configuration information._
 
 Enable to webserver plugin.
 ```
 !plugin activate Webserver
 ```
+In production environments it may be desirable to place a reverse-proxy like nginx in front of errbot.
+
+## Send notifications to Errbot from StackStorm using Server-Side Events (SSE) <a name="ServerSideEvents"></a>
+
+As of StackStorm 1.4. server-sent events (SSE) were added which allowed chatops messages to be
+streamed from StackStorm to a connected listener (err-stackstorm in our case).  The StackStorm
+stream url must be supplied in the configuration so err-stackstorm knows where to establish the
+http connection.  The SSE configuration is complementry to the webhook method and both must be
+enabled for full chatops support between StackStorm and Errbot.
+
+## StackStorm Chatops pack configuration. <a name="ChatopsPack"></a>
+
+StackStorm's [chatop pack](https://github.com/StackStorm/st2/tree/master/contrib/chatops) is required
+to be installed and a notify rule file added to the pack.
+
+The notify rule must be placed in `/<stackstorm installation>/packs/chatops/rules`.  The rule file
+[notify_errbot.yaml](https://raw.githubusercontent.com/fmnisme/err-stackstorm/master/contrib/stackstorm-chatops/rules/notify_errbot.yaml) can be found
+in this repository under
+
+## Troubleshooting <a name="Troubleshooting"></a>
+
+### Is the Errbot process running?
+Check an instnace of Errbot is running on the host
+```
+# ps faux | grep errbo[t]
+root     158707  0.1  0.0 2922228 59640 pts/21  Sl+  Aug14   2:29  |   \_ /opt/errbot/bin/python3 /opt/errbot/bin/errbot -c /data/errbot/etc/config.py
+```
+
+### Is the Errbot webhook listening?
+Check Errbot's internal web server is listening on the correct interface.
+```
+# ss -tlpn | grep 158707
+LISTEN     0      128                       *:8888                     *:*      users:(("errbot",158707,21))
+```
+OR
+```
+# netstat -tlpn | grep 158707
+tcp        0      0 0.0.0.0:8888            0.0.0.0:*               LISTEN      158707/python3
+```
+
+### Is the Errbot machine able to communicate with the StackStorm end points?
+From the errbot machine perform a curl to the StackStorm endpoint:
+
+```
+curl http://<stackstorm_host>/api/v1/rules
+```
+
+### Are the Errbot authentication credentials for StackStorm correct?
+To test if the username/password pair, user token or api key supplied in the configuration is valid.
+In the examples below, the username for the bot is `errbot`.:
+
+#### username/password pair
+A successful username / password authentication is shown below:
+```
+$ st2 auth errbot
+Password:
++----------+----------------------------------+
+| Property | Value                            |
++----------+----------------------------------+
+| user     | errbot                           |
+| token    | 10342978da134ae5bbb7dc94d2ba9c08 |
+| expiry   | 2017-09-29T14:31:20.799212Z      |
++----------+----------------------------------+
+```
+If the username and password are valid and correctly entered in errbot's configuration file, errbot
+will be authorised to interact with StackStorm's API/Stream end points.
+
+#### user token
+
+Test the errbot user token from the configuration using the `st2` command.  Make
+sure no environment variables are set that could provide a valid token or api key already.
+
+```
+$ st2 action-alias list -t 10342978da134ae5bbb7dc94d2ba9c08
++-----------------------------------+------------+---------------------------------------+---------+
+| ref                               | pack       | description                           | enabled |
++-----------------------------------+------------+---------------------------------------+---------+
+| packs.pack_get                    | packs      | Get information about installed       | True    |
+|                                   |            | StackStorm pack.                      |         |
+| packs.pack_install                | packs      | Install/upgrade StackStorm packs.     | True    |
+| packs.pack_search                 | packs      | Search for packs in StackStorm        | True    |
+|                                   |            | Exchange and other directories.       |         |
+| packs.pack_show                   | packs      | Show information about the pack from  | True    |
++-----------------------------------+------------+---------------------------------------+---------+
+```
+If a list of action aliases are shown, the token is valid.
+
+#### api key
+Confirm the api key has been created and still registered with StackStorm by using it with the `st2` command.
+```
+$ st2 apikey list --api-key ZzVk3DEBZ4FiZmMEmDBkM2x5ZmM5jWZkZWZjZjZmMZEwYzQwZD2iYzUyM2RhYTkTNMYmNDYNODIOOTYwMzE20A
++--------------------------+--------+-------------------------------------------+
+| id                       | user   | metadata                                  |
++--------------------------+--------+-------------------------------------------+
+| 586e6deadbeef66deadbeef6 | errbot | {u'used_by': u'errbot api access'}        |
++--------------------------+--------+-------------------------------------------+
+```
 
 
-## Send notifications to Errbot from Stackstorm using Server-Side Events (SSE)
+### Is Errbot connected correctly to the chat backend?
+How to test if the bot is connected to the chat backend is dependant on the backend.  The simplest way is to send a message to the bot user account requesting the built in help.
 
-As of Stackstorm 1.4. server-sent events (SSE) were added which allowed certain chatops messages to be
-streamed from Stackstorm to Errbot.  The Stackstorm stream url must be supplied in the configuration
-to use SSE.  The SSE configuration is complementry to the webhook method and both must be enabled
-for full chatops support between Stackstorm and Errbot.
+E.g. Using a slack client the following command would be used
+```/msg @bot_name !help```.
 
+The bot should respond with its help text.
 
-## Stackstorm Chatops pack configuration.
+```
+bot [11:01 AM]
+_All commands_
 
-StackStorm's chatop pack https://github.com/StackStorm/st2/tree/master/contrib/chatops is required 
-to be installed and a notify rule file added to the pack.  The notify rule must be placed in 
-`/<stackstorm installation>/packs/chatops/rules`.  The rule file `notify_errbot.yaml` can be found 
-in this repository under `contrib/stackstorm-chatops`
+*Backup*
+_Backup related commands._
+• *.backup* - Backup everything.
+*ChatRoom*
+_This is a basic implementation of a chatroom_
+• *.room join* - Join (creating it first if needed) a chatroom.
+• *.room occupants* - List the occupants in a given chatroom.
+• *.room invite* - Invite one or more people into a chatroom.
+• *.room topic* - Get or set the topic for a room.
+```
+
+### Is the StackStorm chatops pack installed and configured correctly?
+Err-stackstorm requires the chatops pack to be installed.  To confirm it is installed, use the st2 cli.
+
+```
+$ st2 pack list
++-------------------+-------------------+--------------------------------+---------+----------------------+
+| ref               | name              | description                    | version | author               |
++-------------------+-------------------+--------------------------------+---------+----------------------+
+| chatops           | chatops           | Chatops integration pack       | 0.2.0   | Kirill Enykeev       |
+```
+
+Confirm the `notify_errbot.yaml` is insde the `chatops/rules` directory
+```
+$ cat /opt/stackstorm/packs/chatops/rules/notify_errbot.yaml
+---
+name: "notify"
+pack: "chatops"
+enabled: true
+description: "Notification rule to send results of action executions to stream for chatops"
+trigger:
+  type: "core.st2.generic.notifytrigger"
+criteria:
+  trigger.route:
+    pattern: "errbot"
+    type: "equals"
+action:
+  ref: chatops.post_result
+  parameters:
+    channel: "{{ trigger.data.source_channel }}"
+    user: "{{ trigger.data.user }}"
+    execution_id: "{{ trigger.execution_id }}"
+```
+
+### Are events being sent via the StackStorm Stream?
+
+From the errbot host connect to the StackStorm stream endpoint and watch for events emitted as actions
+are executed by StackStorm.
+
+```
+curl -s -v -H 'Accept: text/event-stream' -H 'X-Auth-Token: 10342978da134ae5bbb7dc94d2ba9c08' http://<stackstorm_host>/stream/v1
+```
