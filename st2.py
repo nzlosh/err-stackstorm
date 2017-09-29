@@ -2,9 +2,8 @@
 
 import logging
 import threading
-import pprint
 
-from errbot import BotPlugin, re_botcmd, botcmd, webhook
+from errbot import BotPlugin, re_botcmd, botcmd, arg_botcmd, webhook
 from st2pluginapi import St2PluginAPI
 
 LOG = logging.getLogger(__name__)
@@ -40,21 +39,19 @@ class St2(BotPlugin):
         self.st2config = St2Config(self.bot_config)
         self.st2api = St2PluginAPI(self.st2config)
 
-        # Fetch available action-aliases
-        self.st2api.generate_actionaliases()
-
+        # Run the stream listener loop in a separate thread.
+        self.st2api.validate_credentials()
         th1 = threading.Thread(target=self.st2api.st2stream_listener, args=[self.post_message])
         th1.setDaemon(True)
         th1.start()
 
     def activate(self):
         """
-        Activate Errbot's poller to fetch Stackstorm action alias patterns and help.
-        (deprecated with ActionAlias match API)
+        Activate Errbot's poller to validate credentials periodically.  For user/password auth.
         """
         super(St2, self).activate()
         LOG.info("Poller activated")
-        self.start_poller(self.st2config.timer_update, self.st2api.generate_actionaliases)
+        self.start_poller(self.st2config.timer_update, self.st2api.validate_credentials)
 
     @re_botcmd(pattern='^{} .*'.format(PLUGIN_PREFIX))
     def st2_execute_actionalias(self, msg, match):
@@ -87,16 +84,19 @@ class St2(BotPlugin):
             else:
                 result = "st2 command '{}' is disabled.".format(msg.body)
         else:
-            result = "st2 command '{}' not found.  Check help with {}st2help"
+            result = "st2 command '{}' not found.  View available commands with {}st2help."
             result = result.format(msg.body, self.st2config.bot_prefix)
         return result
 
-    @botcmd
-    def st2help(self, msg, args):
+    @arg_botcmd("--pack", dest="pack", type=str)
+    @arg_botcmd("--filter", dest="filter", type=str)
+    @arg_botcmd("--limit", dest="limit", type=int)
+    @arg_botcmd("--offset", dest="offset", type=int)
+    def st2help(self, msg, pack=None, filter=None, limit=None, offset=None):
         """
-        Provide help for stackstorm action aliases.
+        Provide help for StackStorm action aliases.
         """
-        return self.st2api.show_help()
+        return self.st2api.show_help(pack, filter, limit, offset)
 
     @webhook('/chatops/message')
     def chatops_message(self, request):
