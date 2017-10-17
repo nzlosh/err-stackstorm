@@ -3,7 +3,7 @@
 ## Stackstorm client API
 
 ### ActionAlias match
-When st2client matches an actinalias, an object is returned with the following methods
+When st2client matches an actionalias, an object is returned with the following methods
 
     class 'st2client.models.action_alias.ActionAlias'>
     ral_display_name'
@@ -82,6 +82,31 @@ When st2client matches an actinalias, an object is returned with the following m
 
 
 ## Errbot
+
+MESSAGE FROM SLACK CHANNEL TO BOT IN CHANNEL.
+
+_from [<class 'yapsy_loaded_plugin_Slack_0.SlackRoomOccupant'>] #ops/ch
+_extras [<class 'dict'>] {'slack_event': {'text': '.st2 test notify test test', 'source_team': 'T0V6H6HCJ', 'ts': '1506953521.000382', 'user': 'U110FGZSQ', 'type': 'message', 'channel': 'C110T9SMT', 'team': 'T0V6H6HCJ'}, 'attachments': None, 'url': 'https://infradmtest.slack.com/archives/ops/p1506953521000382'}
+_flow [<class 'NoneType'>] None
+_body [<class 'str'>] test notify test test
+_parent [<class 'NoneType'>] None
+ctx [<class 'dict'>] {}
+_delayed [<class 'bool'>] False
+_to [<class 'yapsy_loaded_plugin_Slack_0.SlackRoom'>] #ops
+
+
+[
+  {
+    "name": "notify_errbot_test",
+    "notification_route": "errbot",
+    "command": "test notify test test",
+    "format": "test notify {{tag_key}} {{tag_value}}",
+    "user": "#ops/ch",
+    "source_channel": "#ops",
+    "notification_channel": "#ops"
+  }
+]
+
 
 
 ### Message received from Slack backend

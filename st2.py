@@ -4,7 +4,8 @@ import logging
 import threading
 
 from errbot import BotPlugin, re_botcmd, botcmd, arg_botcmd, webhook
-from st2pluginapi import St2PluginAPI
+from lib.st2pluginapi import St2PluginAPI
+from lib.st2adapters import ChatAdapterFactory
 
 LOG = logging.getLogger(__name__)
 
@@ -15,17 +16,23 @@ PLUGIN_PREFIX = r"st2"
 
 class St2Config(object):
     def __init__(self, bot_conf):
-        self.plugin_prefix = PLUGIN_PREFIX
-        self.bot_prefix = bot_conf.BOT_PREFIX
-        self.full_prefix = "{}{} ".format(bot_conf.BOT_PREFIX, PLUGIN_PREFIX)
-        self.api_auth = bot_conf.STACKSTORM.get('api_auth', {})
-        self.base_url = bot_conf.STACKSTORM.get('base_url', 'http://localhost')
-        self.api_url = bot_conf.STACKSTORM.get('api_url', 'http://localhost:9100/api/v1')
-        self.auth_url = bot_conf.STACKSTORM.get('auth_url', 'http://localhost:9100')
-        self.stream_url = bot_conf.STACKSTORM.get('stream_url', 'http://localhost:9102/v1/stream')
-        self.api_version = bot_conf.STACKSTORM.get('api_version', 'v1')
+        self._configure_prefixes(bot_conf)
+        self._configure_stackstorm(bot_conf)
         self.timer_update = bot_conf.STACKSTORM.get('timer_update', 60)
         self.verify_cert = bot_conf.STACKSTORM.get('verify_cert', True)
+
+    def _configure_prefixes(self, bot_conf):
+        self.bot_prefix = bot_conf.BOT_PREFIX
+        self.plugin_prefix = PLUGIN_PREFIX
+        self.full_prefix = "{}{} ".format(bot_conf.BOT_PREFIX, self.plugin_prefix)
+
+    def _configure_stackstorm(self, bot_conf):
+        self.base_url = bot_conf.STACKSTORM.get('base_url', 'https://localhost')
+        self.api_version = bot_conf.STACKSTORM.get('api_version', 'v1')
+        self.api_auth = bot_conf.STACKSTORM.get('api_auth', {})
+        self.api_url = bot_conf.STACKSTORM.get('api_url', 'http://localhost:9100/api')
+        self.auth_url = bot_conf.STACKSTORM.get('auth_url', 'http://localhost:9100')
+        self.stream_url = bot_conf.STACKSTORM.get('stream_url', 'http://localhost:9102/v1/stream')
 
 
 class St2(BotPlugin):
@@ -38,10 +45,20 @@ class St2(BotPlugin):
 
         self.st2config = St2Config(self.bot_config)
         self.st2api = St2PluginAPI(self.st2config)
+        # The chat backend adapter mediates data format and api calls between
+        # stackstorm, errbot and the chat backend.
+        self.chatbackend = {
+            "slack": ChatAdapterFactory.slack_adapter
+        }.get(self._bot.mode, ChatAdapterFactory.generic_adapter)(self)
 
         # Run the stream listener loop in a separate thread.
-        self.st2api.validate_credentials()
-        th1 = threading.Thread(target=self.st2api.st2stream_listener, args=[self.post_message])
+        if not self.st2api.validate_credentials():
+            LOG.critical("Invalid credentials when communicating with StackStorm API.")
+
+        th1 = threading.Thread(
+            target=self.st2api.st2stream_listener,
+            args=[self.chatbackend.post_message]
+        )
         th1.setDaemon(True)
         th1.start()
 
@@ -78,7 +95,12 @@ class St2(BotPlugin):
             action_alias, representation = matched_result
             del matched_result
             if action_alias.enabled is True:
-                res = self.st2api.execute_actionalias(action_alias, representation, msg)
+                res = self.st2api.execute_actionalias(
+                    action_alias,
+                    representation,
+                    msg,
+                    self.chatbackend
+                )
                 LOG.debug('action alias execution result: type={} {}'.format(type(res), res))
                 result = r"{}".format(res)
             else:
@@ -96,7 +118,11 @@ class St2(BotPlugin):
         """
         Provide help for StackStorm action aliases.
         """
-        return self.st2api.show_help(pack, filter, limit, offset)
+        help_result = self.st2api.actionalias_help(pack, filter, limit, offset)
+        if isinstance(help_result, list) and len(help_result) == 0:
+            return "No help found for the search."
+        else:
+            return self.chatbackend.format_help(help_result)
 
     @webhook('/chatops/message')
     def chatops_message(self, request):
@@ -113,71 +139,13 @@ class St2(BotPlugin):
         whisper = request.get('whisper')
         extra = request.get('extra', {})
 
-        self.post_message(whisper, message, user, channel, extra)
+        self.chatbackend.post_message(whisper, message, user, channel, extra)
         return "Delivered to chat backend."
 
-    def post_message(self, whisper, message, user, channel, extra):
-        """
-        Post messages to the chat backend.
-        """
-        LOG.debug("Posting Message: whisper={}, message={}, user={}, channel={}, extra={}".format(
-            whisper,
-            message,
-            user,
-            channel,
-            extra)
-        )
-        user_id = None
-        channel_id = None
+    @webhook('/login/challenge/<uuid>')
+    def login_uuid(self, request, uuid):
+        return None
 
-        if user is not None:
-            try:
-                user_id = self.build_identifier(user)
-            except ValueError as err:
-                LOG.warning("Invalid user identifier '{}'.  {}".format(channel, err))
-
-        if channel is not None:
-            try:
-                channel_id = self.build_identifier(channel)
-            except ValueError as err:
-                LOG.warning("Invalid channel identifier '{}'.  {}".format(channel, err))
-
-        # Only whisper to users, not channels.
-        if whisper and user_id is not None:
-            target_id = user_id
-        else:
-            if channel_id is None:
-                # Fall back to user if no channel is set.
-                target_id = user_id
-            else:
-                target_id = channel_id
-
-        if target_id is None:
-            LOG.error("Unable to post message as there is no user or channel destination.")
-        else:
-            if extra is {}:
-                self.send(target_id, message)
-            else:
-                LOG.debug("Send card using backend {}".format(self.mode))
-                backend = extra.get(self.mode, {})
-                LOG.debug("fields {}".format(
-                    tuple(
-                        [(field.get("title"), field.get("value")) for field in backend.get("fields", [])]
-                    )))
-                if backend is not {}:
-                    kwargs = {
-                        "body": message,
-                        "to": target_id,
-                        "summary": backend.get("pretext"),
-                        "title": backend.get("title"),
-                        "link": backend.get("title_link"),
-                        "image": backend.get("image_url"),
-                        "thumbnail": backend.get("thumb_url"),
-                        "color": backend.get("color"),
-                        "fields":  tuple([(field.get("title"), field.get("value")) for field in backend.get("fields", [])])
-                    }
-                    LOG.debug("Type: {}, Args: {}".format(type(kwargs), kwargs))
-                    self.send_card(**kwargs)
-                else:
-                    LOG.warning("{} not found.".format(self.mode))
-                    self.send(target_id, message)
+    @webhook('/login/authenticate/<uuid>')
+    def login_auth(self, request, uuid):
+        return None
