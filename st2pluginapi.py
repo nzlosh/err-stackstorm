@@ -28,7 +28,7 @@ class St2PluginAPI(object):
         # -H 'Content-Type: application/json'
         # -XGET localhost:9101/v1/actionalias/help -d '{}'
 
-        # TODO: Replace this function once hellp is implemented in st2client library.
+        # TODO: Replace this function once help is implemented in st2client library.
         url = "/".join([self.st2config.api_url, self.st2config.api_version, "actionalias/help"])
 
         params = {}
@@ -54,12 +54,17 @@ class St2PluginAPI(object):
 
     def _format_help(self, r):
         help_text = ""
+        pack=""
         for help_obj in r:
-            help_text += "{}{} {} - {}\n".format(
-                self.st2config.bot_prefix,
-                self.st2config.plugin_prefix,
-                help_obj["display"],
-                help_obj["description"])
+            if pack != help_obj["pack"]:
+                help_text += "[{}]\n".format(help_obj["pack"])
+                pack = help_obj["pack"]
+            help_text += "\t{}{} {} - {}\n".format(
+                    self.st2config.bot_prefix,
+                    self.st2config.plugin_prefix,
+                    help_obj["display"],
+                    help_obj["description"],
+                )
         return help_text
 
     def match(self, text):
@@ -85,9 +90,11 @@ class St2PluginAPI(object):
             return st2_client.managers['ActionAlias'].match(alias_match)
         except HTTPError as e:
             if e.response is not None and e.response.status_code == 400:
-                print("No match found")
+                LOG.info("No match found - {}".format(str(e)))
             else:
-                print("HTTPError %s" % e)
+                LOG.error("HTTPError {}".format(str(e)))
+        except Exception as e:
+                LOG.error("Unexpected error {}".format(e))
         return None
 
     def execute_actionalias(self, action_alias, representation, msg):
@@ -168,11 +175,10 @@ class St2PluginAPI(object):
                 for event in client.events():
                     data = json.loads(event.data)
                     if event.event in ["st2.announcement__errbot"]:
-                        LOG.debug("*** Errbot announcement event detected! ***")
-                        channel = data["payload"].get('channel')
+                        LOG.debug("*** Errbot announcement event detected! ***\n{}\n".format(event))
                         message = data["payload"].get('message')
-
                         user = data["payload"].get('user')
+                        channel = data["payload"].get('channel')
                         whisper = data["payload"].get('whisper')
                         extra = data["payload"].get('extra')
 
