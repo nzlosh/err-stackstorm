@@ -104,14 +104,14 @@ class St2(BotPlugin):
         Webhook entry point for stackstorm to post messages into
         errbot which will relay them into the chat backend.
         """
-        LOG.debug("Webhook request:".format(request))
+        LOG.debug("Webhook request: {}".format(request))
 
         channel = request.get('channel')
         message = request.get('message')
 
         user = request.get('user')
         whisper = request.get('whisper')
-        extra = request.get('extra')
+        extra = request.get('extra', {})
 
         self.post_message(whisper, message, user, channel, extra)
         return "Delivered to chat backend."
@@ -120,20 +120,64 @@ class St2(BotPlugin):
         """
         Post messages to the chat backend.
         """
-        LOG.debug("whisper={}, message={}, user={}, channel={}, extra={}".format(
+        LOG.debug("Posting Message: whisper={}, message={}, user={}, channel={}, extra={}".format(
             whisper,
             message,
             user,
             channel,
             extra)
         )
+        user_id = None
+        channel_id = None
+
         if user is not None:
-            user_id = self.build_identifier(user)
+            try:
+                user_id = self.build_identifier(user)
+            except ValueError as err:
+                LOG.warning("Invalid user identifier '{}'.  {}".format(channel, err))
 
         if channel is not None:
-            channel_id = self.build_identifier(channel)
+            try:
+                channel_id = self.build_identifier(channel)
+            except ValueError as err:
+                LOG.warning("Invalid channel identifier '{}'.  {}".format(channel, err))
 
-        if whisper is True:
-            self.send(user_id, message)
+        # Only whisper to users, not channels.
+        if whisper and user_id is not None:
+            target_id = user_id
         else:
-            self.send(channel_id, message)
+            if channel_id is None:
+                # Fall back to user if no channel is set.
+                target_id = user_id
+            else:
+                target_id = channel_id
+
+        if target_id is None:
+            LOG.error("Unable to post message as there is no user or channel destination.")
+        else:
+            if extra is {}:
+                self.send(target_id, message)
+            else:
+                LOG.debug("Send card using backend {}".format(self.mode))
+                backend = extra.get(self.mode, {})
+                LOG.debug("fields {}".format(
+                    tuple(
+                        [(field.get("title"), field.get("value")) for field in backend.get("fields", [])]
+                    )))
+                if backend is not {}:
+                    kwargs = {
+                        "body": message,
+                        "to": target_id,
+                        "summary": backend.get("pretext"),
+                        "title": backend.get("title"),
+                        "link": backend.get("title_link"),
+                        "image": backend.get("image_url"),
+                        "thumbnail": backend.get("thumb_url"),
+                        "color": backend.get("color"),
+                        "fields":  tuple([(field.get("title"), field.get("value")) for field in backend.get("fields", [])])
+                    }
+                    LOG.debug("Type: {}, Args: {}".format(type(kwargs), kwargs))
+                    self.send_card(**kwargs)
+                else:
+                    LOG.warning("{} not found.".format(self.mode))
+                    self.send(target_id, message)
