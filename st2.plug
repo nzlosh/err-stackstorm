@@ -3,7 +3,7 @@ Name = St2
 Module = .
 
 [Documentation]
-Description = Stackstorm plugin for chatops
+Description = StackStorm chatops plugin for Errbot.
 
 [Python]
 Version = 3

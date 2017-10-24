@@ -2,12 +2,11 @@
 import six
 import json
 import time
-import pprint
 import logging
 import requests
 import sseclient
 
-from st2pluginauth import St2PluginAuth
+from lib.st2pluginauth import St2PluginAuth
 from st2client.client import Client
 from st2client.models.action_alias import ActionAliasMatch
 from st2client.models.aliasexecution import ActionAliasExecution
@@ -20,7 +19,7 @@ class St2PluginAPI(object):
         self.st2config = st2config
         self.st2auth = St2PluginAuth(st2config)
 
-    def show_help(self, pack=None, filter=None, limit=None, offset=None):
+    def actionalias_help(self, pack=None, filter=None, limit=None, offset=None):
         """
         Call StackStorm API for action alias help.
         """
@@ -44,28 +43,9 @@ class St2PluginAPI(object):
         headers = self.st2auth.auth_method("requests")
         r = requests.get(url, headers=headers, params=params, verify=self.st2config.verify_cert)
         if r.status_code == requests.codes.ok:
-            help_result = r.json().get("helpstrings", [])
-            if isinstance(help_result, list) and len(help_result) == 0:
-                return "No help found for the search."
-            else:
-                return self._format_help(help_result)
+            return r.json().get("helpstrings", [])
         else:
             raise r.raise_for_status()
-
-    def _format_help(self, r):
-        help_text = ""
-        pack=""
-        for help_obj in r:
-            if pack != help_obj["pack"]:
-                help_text += "[{}]\n".format(help_obj["pack"])
-                pack = help_obj["pack"]
-            help_text += "\t{}{} {} - {}\n".format(
-                    self.st2config.bot_prefix,
-                    self.st2config.plugin_prefix,
-                    help_obj["display"],
-                    help_obj["description"],
-                )
-        return help_text
 
     def match(self, text):
         auth_kwargs = self.st2auth.auth_method("st2client")
@@ -97,7 +77,7 @@ class St2PluginAPI(object):
                 LOG.error("Unexpected error {}".format(e))
         return None
 
-    def execute_actionalias(self, action_alias, representation, msg):
+    def execute_actionalias(self, action_alias, representation, msg, backend=None):
         """
         @action_alias: the st2client action_alias object.
         @representation: the st2client representation for the action_alias.
@@ -128,7 +108,7 @@ class St2PluginAPI(object):
             execution.source_channel = str(msg.frm)
 
         execution.notification_route = 'errbot'
-        execution.user = str(msg.frm)
+        execution.user = backend.get_username(msg)
 
         LOG.debug("Execution: {}".format([
             execution.command,
@@ -145,9 +125,9 @@ class St2PluginAPI(object):
 
         try:
             ret_msg = execution.message
-            LOG.debug("Execution: {}\nMessage: {}".format(
-                pprint.pprint(execution.execution),
-                pprint.pprint(execution.message))
+            LOG.debug("Execution Result: {}\nMessage: {}".format(
+                execution.execution,
+                execution.message)
             )
         except AttributeError as e:
             ret_msg = "Something is happening ... "
