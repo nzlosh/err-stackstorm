@@ -168,6 +168,12 @@ The notify rule must be placed in `/<stackstorm installation>/packs/chatops/rule
 [notify_errbot.yaml](https://raw.githubusercontent.com/fmnisme/err-stackstorm/master/contrib/stackstorm-chatops/rules/notify_errbot.yaml) can be found
 in this repository under
 
+Edit the `chatops/actions/post_message.yaml` file to use the errbot route as it's default value.
+```
+  route:
+    default: "errbot"
+```
+
 ## Troubleshooting <a name="Troubleshooting"></a>
 
 ### Is the Errbot process running?
@@ -304,6 +310,48 @@ action:
     execution_id: "{{ trigger.execution_id }}"
 ```
 
+The rule should be available via the st2 command `st2 rule get chatops.notify-errbot`
+
+```
++-------------+--------------------------------------------------------------+
+| Property    | Value                                                        |
++-------------+--------------------------------------------------------------+
+| id          | 5a6b1abc5b3a0f0f5bcd54e7                                     |
+| uid         | rule:chatops:notify-errbot                                   |
+| ref         | chatops.notify-errbot                                        |
+| pack        | chatops                                                      |
+| name        | notify-errbot                                                |
+| description | Notification rule to send results of action executions to    |
+|             | stream for chatops                                           |
+| enabled     | True                                                         |
+| action      | {                                                            |
+|             |     "ref": "chatops.post_result",                            |
+|             |     "parameters": {                                          |
+|             |         "user": "{{trigger.data.user}}",                     |
+|             |         "execution_id": "{{trigger.execution_id}}",          |
+|             |         "channel": "{{trigger.data.source_channel}}"         |
+|             |     }                                                        |
+|             | }                                                            |
+| criteria    | {                                                            |
+|             |     "trigger.route": {                                       |
+|             |         "pattern": "errbot",                                 |
+|             |         "type": "equals"                                     |
+|             |     }                                                        |
+|             | }                                                            |
+| tags        |                                                              |
+| trigger     | {                                                            |
+|             |     "type": "core.st2.generic.notifytrigger",                |
+|             |     "ref": "core.st2.generic.notifytrigger",                 |
+|             |     "parameters": {}                                         |
+|             | }                                                            |
+| type        | {                                                            |
+|             |     "ref": "standard",                                       |
+|             |     "parameters": {}                                         |
+|             | }                                                            |
++-------------+--------------------------------------------------------------+
+```
+
+
 ### Are events being sent via the StackStorm Stream?
 
 From the errbot host connect to the StackStorm stream endpoint and watch for events emitted as actions
@@ -312,3 +360,20 @@ are executed by StackStorm.
 ```
 curl -s -v -H 'Accept: text/event-stream' -H 'X-Auth-Token: 10342978da134ae5bbb7dc94d2ba9c08' http://<stackstorm_host>/stream/v1
 ```
+
+### Are the events seen in the errbot logs using `errbot` as their route?
+
+To see the events in the log, the debug level `BOT_LOG_LEVEL = logging.DEBUG` will need to be added to errbot's configuration file `config.py`.
+
+If events are configured correctly, logs will be shown like this (`st2.announcement__errbot`)
+```
+17:04:12 DEBUG    root                      Dispatching st2.announcement__errbot event, 990 bytes...
+17:04:12 DEBUG    lib.st2pluginapi          *** Errbot announcement event detected! ***
+st2.announcement__errbot event, 990 bytes
+```
+
+If the accouncement event is showing as
+```
+2018-01-26 15:51:55,246 DEBUG    sseclient                 Dispatching st2.announcement__chatops event, 508 bytes...
+```
+This indicates that the route wasn't set to `errbot`, see the Install Chatops section.
