@@ -71,8 +71,8 @@ If you followed the Errbot setup documentation this file will have been created 
 STACKSTORM = {
     'base_url': 'https://stackstorm.example.com',
     'auth_url': 'https://stackstorm.example.com/auth',
-    'api_url': 'https://stackstorm.example.com/api/v1',
-    'stream_url': 'https://stackstorm.example.com/stream/v1',
+    'api_url': 'https://stackstorm.example.com/api',
+    'stream_url': 'https://stackstorm.example.com/stream/v1/stream',
     'api_version': 'v1',
     'verify_cert': True,
     'api_auth': {
@@ -86,6 +86,7 @@ STACKSTORM = {
     'timer_update': 900, #  Unit: second.  Interval for Errbot to refresh to list of available action aliases.
 }
 ```
+
 Option | Description
 --- | ---
 `base_url` | StackStorm's base url.  (deprecated)
