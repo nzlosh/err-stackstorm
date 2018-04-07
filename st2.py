@@ -9,7 +9,7 @@ from lib.st2adapters import ChatAdapterFactory
 
 LOG = logging.getLogger(__name__)
 
-# A plugin prefix for stackstorm action aliases is to avoid name collisions between
+# A plugin prefix for stackstorm action aliases to avoid name collisions between
 # them and native errbot plugins.  Defined here so it's available to errbot's facade decorator.
 PLUGIN_PREFIX = r"st2"
 
@@ -27,12 +27,11 @@ class St2Config(object):
         self.full_prefix = "{}{} ".format(bot_conf.BOT_PREFIX, self.plugin_prefix)
 
     def _configure_stackstorm(self, bot_conf):
-        self.base_url = bot_conf.STACKSTORM.get('base_url', 'https://localhost')
-        self.api_version = bot_conf.STACKSTORM.get('api_version', 'v1')
         self.api_auth = bot_conf.STACKSTORM.get('api_auth', {})
-        self.api_url = bot_conf.STACKSTORM.get('api_url', 'http://localhost:9100/api')
-        self.auth_url = bot_conf.STACKSTORM.get('auth_url', 'http://localhost:9100')
-        self.stream_url = bot_conf.STACKSTORM.get('stream_url', 'http://localhost:9102/v1/stream')
+        self.api_url = bot_conf.STACKSTORM.get('api_url', 'http://localhost:9101/v1')
+        self.auth_url = bot_conf.STACKSTORM.get('auth_url', 'http://localhost:9100/v1')
+        self.stream_url = bot_conf.STACKSTORM.get('stream_url', 'http://localhost:9102/v1')
+
 
 
 class St2(BotPlugin):

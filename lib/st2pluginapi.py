@@ -6,6 +6,7 @@ import logging
 import requests
 import sseclient
 
+from urllib.parse import urlparse, urlunparse
 from lib.st2pluginauth import St2PluginAuth
 from st2client.client import Client
 from st2client.models.action_alias import ActionAliasMatch
@@ -16,7 +17,7 @@ LOG = logging.getLogger(__name__)
 
 class St2PluginAPI(object):
     def __init__(self, st2config):
-        self.st2config = st2config
+        self.cfg = st2config
         self.st2auth = St2PluginAuth(st2config)
 
     def actionalias_help(self, pack=None, filter=None, limit=None, offset=None):
@@ -28,7 +29,7 @@ class St2PluginAPI(object):
         # -XGET localhost:9101/v1/actionalias/help -d '{}'
 
         # TODO: Replace this function once help is implemented in st2client library.
-        url = "/".join([self.st2config.api_url, self.st2config.api_version, "actionalias/help"])
+        url = "/".join([self.cfg.api_url, "actionalias/help"])
 
         params = {}
         if pack is not None:
@@ -41,25 +42,31 @@ class St2PluginAPI(object):
             params["offset"] = offset
 
         headers = self.st2auth.auth_method("requests")
-        r = requests.get(url, headers=headers, params=params, verify=self.st2config.verify_cert)
+        r = requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
         if r.status_code == requests.codes.ok:
             return r.json().get("helpstrings", [])
         else:
             raise r.raise_for_status()
 
+    def _baseurl(self, url):
+        tmp = urlparse(url)
+        return urlunparse((tmp.scheme, tmp.netloc, "", None, None, None))
+
     def match(self, text):
         auth_kwargs = self.st2auth.auth_method("st2client")
 #        auth_kwargs['debug'] = False
 
+        base_url = self._baseurl(self.cfg.api_url)
+
         LOG.debug("Create st2 client with {} {} {}".format(
-            self.st2config.base_url,
-            self.st2config.api_url,
+            base_url,
+            self.cfg.api_url,
             auth_kwargs)
         )
 
         st2_client = Client(
-            base_url=self.st2config.base_url,
-            api_url=self.st2config.api_url,
+            base_url=base_url,
+            api_url=self.cfg.api_url,
             **auth_kwargs
         )
 
@@ -84,15 +91,17 @@ class St2PluginAPI(object):
         @msg: errbot message.
         """
         auth_kwargs = self.st2auth.auth_method("st2client")
+
+        base_url = self._baseurl(self.cfg.api_url)
         LOG.debug("Create st2 client with {} {} {}".format(
-            self.st2config.base_url,
-            self.st2config.api_url,
+            base_url,
+            self.cfg.api_url,
             auth_kwargs)
         )
 
         st2_client = Client(
-            base_url=self.st2config.base_url,
-            api_url=self.st2config.api_url,
+            base_url=base_url,
+            api_url=self.cfg.api_url,
             **auth_kwargs
         )
 
@@ -141,14 +150,15 @@ class St2PluginAPI(object):
 
         def listener(callback=None):
             headers = self.st2auth.auth_method("requests")
-            headers.update({'Accept': 'text/event-stream'})
+            LOG.debug("authentication headers {}".format(headers))
 
+            headers.update({'Accept': 'text/event-stream'})
             with requests.Session() as session:
                 response = session.get(
-                    self.st2config.stream_url,
+                    "".join([self.cfg.stream_url, "/stream"]),
                     headers=headers,
                     stream=True,
-                    verify=self.st2config.verify_cert
+                    verify=self.cfg.verify_cert
                 )
 
                 client = sseclient.SSEClient(response)
@@ -164,21 +174,20 @@ class St2PluginAPI(object):
 
                         callback(whisper, message, user, channel, extra)
 
+        backoff = 10
         while True:
             try:
                 listener(callback)
             except TypeError as err:
-                LOG.critical("St2 stream listener - Type Error: {}".format(err))
-            except Exception as err:
-                backoff = 10
                 LOG.critical(
-                    "St2 stream listener - An error occurred: {} {}. Backing off {} seconds".format(
-                        type(err),
-                        err,
-                        backoff
-                    )
+                    "St2 stream listener - Type Error: {}."
+                    "Backing off {} seconds.".format(err, backoff))
+            except Exception as err:
+                LOG.critical(
+                    "St2 stream listener - An error occurred: {} {}."
+                    "Backing off {} seconds.".format(type(err), err, backoff)
                 )
-                time.sleep(backoff)
+            time.sleep(backoff)
 
     def validate_credentials(self):
         """

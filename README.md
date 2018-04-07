@@ -13,13 +13,13 @@ A plugin to run StackStorm actions, bringing StackStorm's chatops to Errbot.
 1. [Troubleshooting](#Troubleshooting)
 
 ## Installation <a name="Installation"></a>
-Installation of the err-stackstorm plugin is performed from within a running Errbot instance.  Ensure Errbot is up and running before attempting to install the plugin.  See the Errbot installation documentation here https://github.com/Errbotio/Errbot for instructions on how to setup Errbot on your chat backend.  These instructions assume a running instance of StackStorm is already in place.  See the official [StackStorm documentation](https://docs.stackstorm.com/install/index.html) for details.
+Installation of the err-stackstorm plugin is performed from within a running Errbot instance.  Ensure Errbot is up and running before attempting to install the plugin.  See the Errbot installation documentation here https://github.com/Errbotio/Errbot for instructions on how to setup Errbot on your chat back-end.  These instructions assume a running instance of StackStorm is already in place.  See the official [StackStorm documentation](https://docs.stackstorm.com/install/index.html) for details.
 
  1. Install Errbot on the target system using standard package manager or Errbot installation method.
  1. Configure Errbot, see the [Configuration](#Configuration) section for help.
- 1. Enable Errbot's internal webserver, see the [Webhook](#Webhook) section for help.
+ 1. Enable Errbot's internal web server, see the [Webhook](#Webhook) section for help.
  1. Install Chatops pack on StackStorm, see the [Chatops Pack](#ChatopsPack) section for help.
- 1. Connect to your chat backend and starting interacting with your StackStorm/Errbot instance.
+ 1. Connect to your chat back-end and starting interacting with your StackStorm/Errbot instance.
 
 The below command will install the plugin.
 ```
@@ -31,14 +31,16 @@ The plugin has been developed and tested against the below software.  For optima
 
 plugin tag (version) | Python | Errbot | StackStorm client
 --- | --- | --- | ---
-1.2 | 3.4 | 5.0 | 2.2
-1.1 | 3.4 | 4.3 | 2.2
-1.0 | 2.7 | 3.x | 2.1
+1.4 | 3.4 | 5.1.2 | 2.5
+1.3 | 3.4 | 5.1.2 | 2.5
+1.2 | 3.4 | 5.0   | 2.2
+1.1 | 3.4 | 4.3   | 2.2
+1.0 | 2.7 | 3.x   | 2.1
 
-## Supported Chat Backends <a name="SupportedChatBackends"></a>
-Errbot provides official support for a few of major chat backends and many more chat backends are avilable through unofficial plugins.
+## Supported Chat Back-ends <a name="SupportedChatBackends"></a>
+Errbot provides official support for a few of major chat back-ends and many more chat back-ends are available through unofficial plugins.
 
-Backend | Mode value | Support type
+Back end | Mode value | Support type
 --- | --- | ---
 Hipchat | `hipchat` | Integrated
 IRC | `irc` | Integrated
@@ -57,23 +59,22 @@ XMPP | `xmpp` | Integrated
 [TOX](https://tox.im/) | `tox` | [Plugin](https://github.com/errbotio/err-backend-tox)
 [CampFire](https://campfirenow.com/) | `campfire` | [Plugin](https://github.com/errbotio/err-backend-campfire)
 
-Backend support will provide a minimum set of backend chat functionality to the err-stackstorm plugin like `connect` to and `authenticate` with chat backend, `identify` users/rooms and `send_message` to users/rooms.  Advanced formatting may not be available on all backends since adapter code is required in the err-stackstorm plugin to translate ActionAlias `extra` parameter on a per backend basis.
+Back-end support will provide a minimum set of back-end chat functionality to the err-stackstorm plugin like `connect` to and `authenticate` with chat back-end, `identify` users/rooms and `send_message` to users/rooms.  Advanced formatting may not be available on all back-ends since adaptor code is required in the err-stackstorm plugin to translate ActionAlias `extra` parameter on a per back-end basis.
 
-Currently supported extra backends
+Currently supported extra back-ends
 * Slack
 
 
 ## Configuration <a name="Configuration"></a>
 Edit the `config.py` configuration file which is used to describe how the plugin will communicate with StackStorm's API and authentication end points.
-If you followed the Errbot setup documentation this file will have been created by downloading a template from the Errbot github site.   If this file has not already been created, please create it following the instructions at https://github.com/Errbotio/Errbot
+If you followed the Errbot setup documentation this file will have been created by downloading a template from the Errbot GitHub site.   If this file has not already been created, please create it following the instructions at https://github.com/Errbotio/Errbot
 
 ```
 STACKSTORM = {
-    'base_url': 'https://stackstorm.example.com',
-    'auth_url': 'https://stackstorm.example.com/auth',
-    'api_url': 'https://stackstorm.example.com/api',
-    'stream_url': 'https://stackstorm.example.com/stream/v1/stream',
-    'api_version': 'v1',
+    'auth_url': 'https://stackstorm.example.com/auth/v1',
+    'api_url': 'https://stackstorm.example.com/api/v1',
+    'stream_url': 'https://stackstorm.example.com/stream/v1',
+
     'verify_cert': True,
     'api_auth': {
         'user': {
@@ -89,11 +90,9 @@ STACKSTORM = {
 
 Option | Description
 --- | ---
-`base_url` | StackStorm's base url.  (deprecated)
 `auth_url` | StackStorm's authentication url end point.  Used to authenticate credentials against StackStorm.
-`api_url` | StackStorm's API url end point.  Used to execute action alises received from the chat backend.
+`api_url` | StackStorm's API url end point.  Used to execute action aliases received from the chat back-end.
 `stream_url` | StackStorm's Stream url end point.  Used to received chatops notifications.
-`api_version` | StackStorm's API version.  (deprecated)
 `verify_cert` | Default is *True*.  Verify the SSL certificate is valid when using https end points.  Applies to all end points.
 `api_auth.user.name` | Errbot username to authenticate with StackStorm.
 `api_auth.user.password` | Errbot password to authenticate with StackStorm.
@@ -126,17 +125,17 @@ _API Key_ support has been included since StackStorm v2.0.  When an _API Key_ is
 ## How to expose action-aliases as plugin commands <a name="ActionAliases"></a>
  1. Connect Errbot to your chat environment.
  1. Write an [action alias](https://docs.stackstorm.com/chatops/aliases.html) in StackStorm.
- 1. Errbot will automatically refersh its action alias list.
+ 1. Errbot will automatically refresh its action alias list.
  1. Type `!st2help` in your chat program to list available StackStorm commands.
  1. Type the desired command in your chat program, as shown in the help.
 
 ## Send messages from StackStorm to Errbot using Errbot's native webhook support <a name="Webhook"></a>
 
-Errbot has a built in webserver which is configured and enabled through the bots admin chat interface.  The StackStorm plugin is written to listen for StackStorm's chatops messages and delivers them to the attached chat backend.
+Errbot has a built in web server which is configured and enabled through the bots admin chat interface.  The StackStorm plugin is written to listen for StackStorm's chatops messages and delivers them to the attached chat back-end.
 
-To configure Errbot's webserver plugin, the command below can be sent to Errbot.
+To configure Errbot's web server plugin, the command below can be sent to Errbot.
 ```
-!plugin config Webserver {'HOST': '0.0.0.0',
+!plugin config Web server {'HOST': '0.0.0.0',
 'PORT': 8888,
 'SSL': {'certificate': '',
 'enabled': False,
@@ -146,7 +145,7 @@ To configure Errbot's webserver plugin, the command below can be sent to Errbot.
 ```
 **NOTE:** _The variables must be adjusted to match the operating environment in which Errbot is running.  See Errbot documentation for further configuration information._
 
-Enable to webserver plugin.
+Enable to web server plugin.
 ```
 !plugin activate Webserver
 ```
@@ -157,12 +156,12 @@ In production environments it may be desirable to place a reverse-proxy like ngi
 As of StackStorm 1.4. server-sent events (SSE) were added which allowed chatops messages to be
 streamed from StackStorm to a connected listener (err-stackstorm in our case).  The StackStorm
 stream url must be supplied in the configuration so err-stackstorm knows where to establish the
-http connection.  The SSE configuration is complementry to the webhook method and both must be
+http connection.  The SSE configuration is complementary to the webhook method and both must be
 enabled for full chatops support between StackStorm and Errbot.
 
 ## StackStorm Chatops pack configuration. <a name="ChatopsPack"></a>
 
-StackStorm's [chatop pack](https://github.com/StackStorm/st2/tree/master/contrib/chatops) is required
+StackStorm's [chatops pack](https://github.com/StackStorm/st2/tree/master/contrib/chatops) is required
 to be installed and a notify rule file added to the pack.
 
 The notify rule must be placed in `/<stackstorm installation>/packs/chatops/rules`.  The rule file
@@ -178,7 +177,7 @@ Edit the `chatops/actions/post_message.yaml` file to use the errbot route as it'
 ## Troubleshooting <a name="Troubleshooting"></a>
 
 ### Is the Errbot process running?
-Check an instnace of Errbot is running on the host
+Check an instance of Errbot is running on the host
 ```
 # ps faux | grep errbo[t]
 root     158707  0.1  0.0 2922228 59640 pts/21  Sl+  Aug14   2:29  |   \_ /opt/errbot/bin/python3 /opt/errbot/bin/errbot -c /data/errbot/etc/config.py
@@ -255,8 +254,8 @@ $ st2 apikey list --api-key ZzVk3DEBZ4FiZmMEmDBkM2x5ZmM5jWZkZWZjZjZmMZEwYzQwZD2i
 ```
 
 
-### Is Errbot connected correctly to the chat backend?
-How to test if the bot is connected to the chat backend is dependant on the backend.  The simplest way is to send a message to the bot user account requesting the built in help.
+### Is Errbot connected correctly to the chat back-end?
+How to test if the bot is connected to the chat back-end is dependant on the back-end.  The simplest way is to send a message to the bot user account requesting the built in help.
 
 E.g. Using a slack client the following command would be used
 ```/msg @bot_name !help```.
@@ -289,7 +288,7 @@ $ st2 pack list
 | chatops           | chatops           | Chatops integration pack       | 0.2.0   | Kirill Enykeev       |
 ```
 
-Confirm the `notify_errbot.yaml` is insde the `chatops/rules` directory
+Confirm the `notify_errbot.yaml` is inside the `chatops/rules` directory
 ```
 $ cat /opt/stackstorm/packs/chatops/rules/notify_errbot.yaml
 ---
@@ -373,7 +372,7 @@ If events are configured correctly, logs will be shown like this (`st2.announcem
 st2.announcement__errbot event, 990 bytes
 ```
 
-If the accouncement event is showing as
+If the announcement event is showing as
 ```
 2018-01-26 15:51:55,246 DEBUG    sseclient                 Dispatching st2.announcement__chatops event, 508 bytes...
 ```
