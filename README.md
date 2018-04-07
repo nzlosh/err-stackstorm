@@ -74,6 +74,7 @@ STACKSTORM = {
     'auth_url': 'https://stackstorm.example.com/auth/v1',
     'api_url': 'https://stackstorm.example.com/api/v1',
     'stream_url': 'https://stackstorm.example.com/stream/v1',
+
     'verify_cert': True,
     'api_auth': {
         'user': {
@@ -86,6 +87,7 @@ STACKSTORM = {
     'timer_update': 900, #  Unit: second.  Interval for Errbot to refresh to list of available action aliases.
 }
 ```
+
 Option | Description
 --- | ---
 `auth_url` | StackStorm's authentication url end point.  Used to authenticate credentials against StackStorm.
