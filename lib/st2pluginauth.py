@@ -2,6 +2,7 @@
 import json
 import logging
 import requests
+
 from urllib.parse import urlparse, urljoin
 from requests.auth import HTTPBasicAuth
 
@@ -13,11 +14,7 @@ class St2PluginAuth(object):
     Helper to manage API key or user token authentication with the stackstorm API
     """
     def __init__(self, st2config):
-        self.st2config = st2config
-        self.base_url = st2config.base_url
-        self.api_url = st2config.api_url
-        self.auth_url = st2config.auth_url
-        self.api_version = st2config.api_version
+        self.cfg = st2config
         self.verify_cert = st2config.verify_cert
 
         self.api_key = st2config.api_auth.get('key')
@@ -49,13 +46,13 @@ class St2PluginAuth(object):
 
     def valid_credentials(self):
         """
-        Attempt to access API endpoint '<stackstorm api host>/'
+        Attempt to access API endpoint.
 
         Check if the credentials a valid to access stackstorm API
         Returns: True if access is permitted and false if access fails.
         """
         add_headers = self.auth_method("requests")
-        r = self._http_request('GET', self.api_url, '/', headers=add_headers)
+        r = self._http_request('GET', self.cfg.api_url, '/', headers=add_headers)
         if r.status_code in [200]:
             return True
         LOG.info('API response to token = {} {}'.format(r.status_code, r.reason))
@@ -70,8 +67,7 @@ class St2PluginAuth(object):
         if self.username and self.password:
             auth = HTTPBasicAuth(self.username, self.password)
 
-            r = self._http_request('POST', self.auth_url, "/{}/tokens".format(self.api_version),
-                                   auth=auth)
+            r = self._http_request('POST', self.cfg.auth_url, "/tokens", auth=auth)
             if r.status_code == 201:  # created.
                 auth_info = r.json()
                 self.token = auth_info["token"]
