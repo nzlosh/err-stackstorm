@@ -135,7 +135,7 @@ Errbot has a built in web server which is configured and enabled through the bot
 
 To configure Errbot's web server plugin, the command below can be sent to Errbot.
 ```
-!plugin config Web server {'HOST': '0.0.0.0',
+!plugin config Webserver {'HOST': '0.0.0.0',
 'PORT': 8888,
 'SSL': {'certificate': '',
 'enabled': False,
