@@ -292,7 +292,7 @@ Confirm the `notify_errbot.yaml` is inside the `chatops/rules` directory
 ```
 $ cat /opt/stackstorm/packs/chatops/rules/notify_errbot.yaml
 ---
-name: "notify"
+name: "notify-errbot"
 pack: "chatops"
 enabled: true
 description: "Notification rule to send results of action executions to stream for chatops"
