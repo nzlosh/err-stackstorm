@@ -5,6 +5,7 @@ import time
 import logging
 import requests
 import sseclient
+import urllib3
 
 from urllib.parse import urlparse, urlunparse
 from lib.st2pluginauth import St2PluginAuth
@@ -19,6 +20,8 @@ class St2PluginAPI(object):
     def __init__(self, st2config):
         self.cfg = st2config
         self.st2auth = St2PluginAuth(st2config)
+        if self.cfg.verify_cert is False:
+            urllib3.disable_warnings()
 
     def actionalias_help(self, pack=None, filter=None, limit=None, offset=None):
         """
@@ -160,7 +163,11 @@ class St2PluginAPI(object):
                     stream=True,
                     verify=self.cfg.verify_cert
                 )
-
+                if response.status_code >= 400:
+                    raise HTTPError("HTTP Error {} ({})".format(
+                        response.reason,
+                        response.status_code
+                    ))
                 client = sseclient.SSEClient(response)
                 for event in client.events():
                     data = json.loads(event.data)
@@ -193,8 +200,18 @@ class St2PluginAPI(object):
         """
         A wrapper method to check for API access authorisation and refresh expired user token.
         """
+        def backoff(wait_time):
+            if wait_time > 0:
+                LOG.info("Backing off {} seconds.".format(backoff))
+                time.sleep(wait_time)
+
+        timeout = 10
         try:
             if not self.st2auth.valid_credentials():
                 self.st2auth.renew_token()
+                timeout = 0
         except requests.exceptions.HTTPError as e:
-            LOG.error("Error while validating credentials %s (%s)" % (e.reason, e.code))
+            LOG.error("Error while validating credentials {} ({}).".format(e.reason, e.code))
+        except Exception as e:
+            LOG.exception("An unexpected error has occurred.")
+            backoff(timeout)

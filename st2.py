@@ -6,6 +6,7 @@ import threading
 from errbot import BotPlugin, re_botcmd, botcmd, arg_botcmd, webhook
 from lib.st2pluginapi import St2PluginAPI
 from lib.st2adapters import ChatAdapterFactory
+from lib.st2outofbandsauth import AuthenticationController
 
 LOG = logging.getLogger(__name__)
 
@@ -33,10 +34,9 @@ class St2Config(object):
         self.stream_url = bot_conf.STACKSTORM.get('stream_url', 'http://localhost:9102/v1')
 
 
-
 class St2(BotPlugin):
     """
-    Stackstorm plugin for authentication and Action Alias execution.
+    StackStorm plugin for authentication and Action Alias execution.
     Try !st2help for action alias help.
     """
     def __init__(self, bot, name):
@@ -49,6 +49,8 @@ class St2(BotPlugin):
         self.chatbackend = {
             "slack": ChatAdapterFactory.slack_adapter
         }.get(self._bot.mode, ChatAdapterFactory.generic_adapter)(self)
+
+        self.oobauth = AuthenticationController(self)
 
         # Run the stream listener loop in a separate thread.
         if not self.st2api.validate_credentials():
@@ -68,6 +70,29 @@ class St2(BotPlugin):
         super(St2, self).activate()
         LOG.info("Poller activated")
         self.start_poller(self.st2config.timer_update, self.st2api.validate_credentials)
+
+    @botcmd
+    def st2listsessions(self, msg, args):
+        return "Sessions: " + "\n".join(self.oobauth.list_sessions())
+
+    @botcmd
+    def st2authenticate(self, msg, args):
+        """
+        Usage: st2authenticate <secret>
+        Establish a link between the chat backend and StackStorm by authenticating over an out of
+        bands communication channel.
+        """
+        ret = ""
+
+        if msg.is_direct:
+            if len(args) > 0:
+                ret = self.oobauth.request_session(msg.frm, args)
+            else:
+                ret = "Please provide a secret word to use during the authenication process."
+        else:
+            ret = "Requests for authentication in a public channel aren't possible." \
+                  "  Request authentication in a private one to one message."
+        return ret
 
     @re_botcmd(pattern='^{} .*'.format(PLUGIN_PREFIX))
     def st2_execute_actionalias(self, msg, match):
@@ -141,10 +166,16 @@ class St2(BotPlugin):
         self.chatbackend.post_message(whisper, message, user, channel, extra)
         return "Delivered to chat backend."
 
-    @webhook('/login/challenge/<uuid>')
-    def login_uuid(self, request, uuid):
-        return None
+    @webhook('/login/initiate/<uuid>')
+    def login_initiate(self, request, uuid):
+        return '{} {}'.format(uuid, request)
 
     @webhook('/login/authenticate/<uuid>')
     def login_auth(self, request, uuid):
-        return None
+        m = ""
+        LOG.debug("Request is a {}".format(type(request)))
+        if self.oobauth.use_session_id(uuid):
+            m = "Session created successfully."
+        else:
+            m = "Session already used."
+        return "{} : {} {}".format(m, uuid, request)

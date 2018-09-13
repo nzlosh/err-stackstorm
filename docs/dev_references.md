@@ -1,5 +1,9 @@
 # Reference material
 
+Chatops commands must traverse multiple software stacks when being sent from the users chat device
+through to StackStorm's backend and back again.  The information here are based on observations of the
+interactions between the adjacent components.
+
 ## Stackstorm client API
 
 ### ActionAlias match

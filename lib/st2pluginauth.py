@@ -1,6 +1,7 @@
 # coding:utf-8
 import json
 import logging
+import urllib3
 import requests
 
 from urllib.parse import urlparse, urljoin
@@ -16,6 +17,8 @@ class St2PluginAuth(object):
     def __init__(self, st2config):
         self.cfg = st2config
         self.verify_cert = st2config.verify_cert
+        if self.verify_cert is False:
+            urllib3.disable_warnings()
 
         self.api_key = st2config.api_auth.get('key')
         self.token = st2config.api_auth.get('token')
@@ -48,7 +51,7 @@ class St2PluginAuth(object):
         """
         Attempt to access API endpoint.
 
-        Check if the credentials a valid to access stackstorm API
+        Check if the credentials are valid to access stackstorm API
         Returns: True if access is permitted and false if access fails.
         """
         add_headers = self.auth_method("requests")

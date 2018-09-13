@@ -40,6 +40,10 @@ class AbstractChatAdapter(metaclass=abc.ABCMeta):
     def format_help(self, help_strings):
         pass
 
+    @abc.abstractmethod
+    def normalise_user_id(self, user):
+        pass
+
 
 class GenericChatAdapter(AbstractChatAdapter):
     def __init__(self, bot_plugin):
@@ -106,6 +110,30 @@ class GenericChatAdapter(AbstractChatAdapter):
             LOG.error("Unable to post message as there is no user or channel destination.")
         else:
             self.botplugin.send(target_id, message)
+
+    def normalise_user_id(self, user):
+        return "GENERIC NORMALISE {}".format([
+            user.aclattr,
+            user.client,
+            user.fullname,
+            user.nick,
+            user.person])
+
+
+# Inheriting from Generic Chat Adapter until IRC backend specific methods are required.
+class IRCChatAdapter(GenericChatAdapter):
+    def __init__(self, bot_plugin):
+        self.botplugin = bot_plugin
+
+    def normalise_user_id(self, user):
+        return "IRC NORMALISE {}".format([
+            user.aclattr,
+            user.client,
+            user.fullname,
+            user.host,
+            user.nick,
+            user.person,
+            user.user])
 
 
 class SlackChatAdapter(AbstractChatAdapter):
@@ -212,3 +240,13 @@ class SlackChatAdapter(AbstractChatAdapter):
                     help_obj["description"],
                 )
         return help_text
+
+    def normalise_user_id(self, user):
+        return "SLACK NORMALISE {}".format([user.aclattr,
+            user.client,
+            user.fullname,
+            user.domain,
+            user.nick,
+            user.person,
+            user.userid,
+            user.username])
