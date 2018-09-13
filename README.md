@@ -133,22 +133,23 @@ _API Key_ support has been included since StackStorm v2.0.  When an _API Key_ is
 
 Errbot has a built in web server which is configured and enabled through the bots admin chat interface.  The StackStorm plugin is written to listen for StackStorm's chatops messages and delivers them to the attached chat back-end.
 
-To configure Errbot's web server plugin, the command below can be sent to Errbot.
+To configure Errbot's web server plugin, the command below can be sent to Errbot:
 ```
-!plugin config Webserver {'HOST': '0.0.0.0',
-'PORT': 8888,
-'SSL': {'certificate': '',
-'enabled': False,
-'host': '0.0.0.0',
-'key': '',
-'port': 8889}}
+!plugin config Webserver {'HOST': '0.0.0.0', 'PORT': 3141,
+'SSL': {'enabled': False, 'host': '0.0.0.0', 'port': 3142, 'certificate': '', 'key': ''}}
 ```
+
 **NOTE:** _The variables must be adjusted to match the operating environment in which Errbot is running.  See Errbot documentation for further configuration information._
 
-Enable to web server plugin.
+The configuration above is only applied for the current runtime and will not
+persist after the errbot process being restarted. Making the configuration
+change permanent is as simple as installing a special plugin:
 ```
-!plugin activate Webserver
+!repos install https://github.com/tkit/errbot-plugin-webserverconfiguration
 ```
+The configuration command from above is not required prior to installing this
+plugin.
+
 In production environments it may be desirable to place a reverse-proxy like nginx in front of errbot.
 
 ## Send notifications to Errbot from StackStorm using Server-Side Events (SSE) <a name="ServerSideEvents"></a>
@@ -292,7 +293,7 @@ Confirm the `notify_errbot.yaml` is inside the `chatops/rules` directory
 ```
 $ cat /opt/stackstorm/packs/chatops/rules/notify_errbot.yaml
 ---
-name: "notify"
+name: "notify-errbot"
 pack: "chatops"
 enabled: true
 description: "Notification rule to send results of action executions to stream for chatops"
