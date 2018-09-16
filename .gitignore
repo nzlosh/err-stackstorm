@@ -1,5 +1,10 @@
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
+
+# Custom
+html/
+untracked/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -65,7 +70,7 @@ target/
 .Python
 [Bb]in
 [Ii]nclude
-[Ll]ib
+Lib
 [Ss]cripts
 pyvenv.cfg
 pip-selfcheck.json

@@ -18,9 +18,22 @@ PLUGIN_PREFIX = r"st2"
 class St2Config(object):
     def __init__(self, bot_conf):
         self._configure_prefixes(bot_conf)
+        self._configure_oobauth(bot_conf)
         self._configure_stackstorm(bot_conf)
         self.timer_update = bot_conf.STACKSTORM.get('timer_update', 60)
         self.verify_cert = bot_conf.STACKSTORM.get('verify_cert', True)
+
+    def _configure_oobauth(self, bot_conf):
+        rbac_auth = bot_conf.STACKSTORM.get('rbac_auth', {})
+        if "proxied" in rbac_auth:
+            self.rbac_auth_type = "proxied"
+            self.rbac_auth_opts = rbac_auth["proxied"]
+        if "extended" in rbac_auth:
+            self.rbac_auth_type = "extended"
+            self.rbac_auth_opts = rbac_auth["extended"]
+        if rbac_auth == {}:
+            self.rbac_auth_type = "simple"
+            self.rbac_auth_opts = {}
 
     def _configure_prefixes(self, bot_conf):
         self.bot_prefix = bot_conf.BOT_PREFIX
@@ -72,8 +85,19 @@ class St2(BotPlugin):
         self.start_poller(self.st2config.timer_update, self.st2api.validate_credentials)
 
     @botcmd
-    def st2listsessions(self, msg, args):
+    def st2sessionlist(self, msg, args):
+        """
+        List any established sessions between the chat service and StackStorm API.
+        """
         return "Sessions: " + "\n".join(self.oobauth.list_sessions())
+
+    @botcmd
+    def st2sessiondelete(self, msg, args):
+        """
+        Delete an established session.
+        """
+        if len(args) > 0:
+            self.oobauth.delete_session(args)
 
     @botcmd
     def st2authenticate(self, msg, args):
@@ -90,8 +114,8 @@ class St2(BotPlugin):
             else:
                 ret = "Please provide a secret word to use during the authenication process."
         else:
-            ret = "Requests for authentication in a public channel aren't possible." \
-                  "  Request authentication in a private one to one message."
+            ret = "Requests for authentication in a public channel is nt possible." \
+                  "  Request authentication in a private one-to-one message."
         return ret
 
     @re_botcmd(pattern='^{} .*'.format(PLUGIN_PREFIX))
@@ -166,16 +190,12 @@ class St2(BotPlugin):
         self.chatbackend.post_message(whisper, message, user, channel, extra)
         return "Delivered to chat backend."
 
-    @webhook('/login/initiate/<uuid>')
-    def login_initiate(self, request, uuid):
-        return '{} {}'.format(uuid, request)
-
     @webhook('/login/authenticate/<uuid>')
     def login_auth(self, request, uuid):
         m = ""
-        LOG.debug("Request is a {}".format(type(request)))
+        LOG.debug("Request: {}".format(request))
         if self.oobauth.use_session_id(uuid):
             m = "Session created successfully."
         else:
-            m = "Session already used."
+            m = "Session has already been used or has expired."
         return "{} : {} {}".format(m, uuid, request)

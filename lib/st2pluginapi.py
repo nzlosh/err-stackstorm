@@ -1,5 +1,4 @@
 # coding:utf-8
-import six
 import json
 import time
 import logging
@@ -13,7 +12,8 @@ from st2client.client import Client
 from st2client.models.action_alias import ActionAliasMatch
 from st2client.models.aliasexecution import ActionAliasExecution
 from requests.exceptions import HTTPError
-LOG = logging.getLogger(__name__)
+
+LOG = logging.getLogger("{}".format(__name__))
 
 
 class St2PluginAPI(object):

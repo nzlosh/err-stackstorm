@@ -1,0 +1,95 @@
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.3.3/semantic.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.3.3/semantic.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            var params = window.location.href.split("?")[1].split("&");
+            for (p in params) {
+                kv = params[p].split("=")
+                if (kv.length == 2 && kv[0] == "uuid") {
+                    console.log("FOUND " + kv[0] + " " + kv[1]);
+                    url = "/login/authenticate/" + kv[1];
+                    console.log("Setting action to " + url);
+                    document.getElementById("login").setAttribute("action", url);
+                } else {
+                    console.log("KeyValue Pair not 'uuid' - " + kv);
+                }
+            }
+            // Required initialisation for accordion.
+            $('.ui.accordion').accordion();
+        });
+    </script>
+</head>
+
+<body>
+    <div class="ui container">
+        <div class="ui card">
+
+            <div class="content">
+                <div class="right floated meta">
+                    <img class="right floated mini ui image" src="errbot_icon.png">
+                </div>
+                <div class="header">Err-stackstorm Authentication</div>
+                <div class="meta">Associate your StackStorm token/key with your chat account.</div>
+            </div>
+            <div class="content">
+                <div class="ui styled accordion">
+                    <div class="active title">
+                        <i class="dropdown icon"></i>
+                        <i class="user icon"></i> Username/password
+                    </div>
+                    <div class="active content">
+                        <form class="ui form" id="login" method="post" enctype="application/json">
+                            <div class="field">
+                                <input type="text" name="shared_word" placeholder="Chat secret word">
+                            </div>
+                            <div class="field">
+                                <input type="text" name="username" placeholder="StackStorm username">
+                            </div>
+                            <div class="field">
+                                <input type="password" name="password" placeholder="StackStorm password">
+                            </div>
+                            <button class="ui button" type="submit">Submit</button>
+                        </form>
+                    </div>
+                    <div class="title">
+                        <i class="dropdown icon"></i>
+                        <i class="ticket icon"></i> User Token
+                    </div>
+                    <div class="content">
+                        <form class="ui form" id="user_token" method="post" enctype="application/json">
+                            <div class="field">
+                                <input type="text" name="shared_word" placeholder="Chat secret word">
+                            </div>
+                            <div class="field">
+                                <input type="text" name="user_token" placeholder="User Token">
+                            </div>
+                            <button class="ui button" type="submit">Submit</button>
+                        </form>
+                    </div>
+                    <div class="title">
+                        <i class="dropdown icon"></i>
+                        <i class="key icon"></i> API Key
+                    </div>
+                    <div class="content">
+                        <form class="ui form" id="api_key" method="post" enctype="application/json">
+                            <div class="field">
+                                <input type="text" name="shared_word" placeholder="Chat secret word">
+                            </div>
+                            <div class="field">
+                                <input type="text" name="api_key" placeholder="API key">
+                            </div>
+                            <button class="ui button" type="submit">Submit</button>
+                        </form>
+                    </div>
+                </div>
+                <!-- accordion -->
+            </div>
+        </div>
+        <!-- cards -->
+    </div>
+    <!-- container -->
+</body>
+</html>

@@ -1,7 +1,8 @@
 # coding:utf-8
 import abc
 import logging
-LOG = logging.getLogger(__name__)
+
+LOG = logging.getLogger("{}".format(__name__))
 
 
 class AbstractChatAdapterFactory(metaclass=abc.ABCMeta):
@@ -198,12 +199,10 @@ class SlackChatAdapter(AbstractChatAdapter):
                 LOG.debug("Send card using backend {}".format(self.botplugin.mode))
                 backend = extra.get(self.botplugin.mode, {})
                 LOG.debug("fields {}".format(
-                    tuple(
-                            [
-                                (field.get("title"), field.get("value"))
-                                for field in backend.get("fields", [])
-                            ]
-                        )
+                    tuple([
+                        (field.get("title"), field.get("value"))
+                        for field in backend.get("fields", [])
+                    ])
                 ))
                 if backend is not {}:
                     kwargs = {
@@ -242,11 +241,4 @@ class SlackChatAdapter(AbstractChatAdapter):
         return help_text
 
     def normalise_user_id(self, user):
-        return "SLACK NORMALISE {}".format([user.aclattr,
-            user.client,
-            user.fullname,
-            user.domain,
-            user.nick,
-            user.person,
-            user.userid,
-            user.username])
+        return str(user.userid)

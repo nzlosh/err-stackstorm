@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-import datetime
 import uuid
 import string
-from random import SystemRandom
 import hashlib
 import logging
-LOG = logging.getLogger(__name__)
+import datetime
+from random import SystemRandom
+from lib.st2storeadapters import StoreAdapterFactory
+LOG = logging.getLogger("{}".format(__name__))
 
 
 class SessionStore(object):
@@ -20,11 +21,12 @@ class SessionStore(object):
     def list(self):
         return [k+str(self.memory[k]) for k in self.memory.keys()]
 
-    def get_by_userid(self, key):
+    def get_by_userid(self, user_id):
         """
         Get information by user_id.
         """
-        return self.memory.get(key, False)
+        LOG.debug("Fetch user_id '{}' in store.".format(user_id))
+        return self.memory.get(user_id, False)
 
     def put(self, session):
         """
@@ -39,10 +41,10 @@ class SessionStore(object):
         Delete a session by user_id.  Delete the reverse mapping
         if it exists.
         """
-        self.memory[user_id] = session
+        session = self.memory.get(user_id, False)
         if session:
-            if session.id in self.id_to_user_map:
-                del self.id_to_user_map[session.id]
+            if session.id() in self.id_to_user_map:
+                del self.id_to_user_map[session.id()]
             del self.memory[user_id]
 
     def put_by_id(self, session_id, session):
@@ -56,28 +58,45 @@ class SessionStore(object):
         return self.memory.pop(self.id_to_user_map.pop(session_id, ""), False)
 
     def get_by_uuid(self, session_id):
-        return self.memory.get(self.id_to_user_map.get(session_id, ""), False)
+        user_id = self.id_to_user_map.get(session_id, False)
+        LOG.debug("Session id '{}' is associated with user_id {}".format(session_id, user_id))
+        session = self.memory.get(user_id, False)
+        if session is False:
+            LOG.debug("Error: Session id '{}' points to a missing session.".format(""))
+        return session
 
 
 class Session(object):
     def __init__(self, user_id, user_secret):
+        self.bot_secret = None
         self.hashed_secret = self._hash_secret(user_secret)
         del user_secret
         self.user_id = user_id
         self._session_id_available = True
         self.session_id = uuid.uuid4()
-        self.create_date = datetime.datetime.now()
+        self.create_date = int(datetime.datetime.now().timestamp())
         self.modified_date = self.create_date
         self.ttl_in_seconds = 3600
 
+    def expired(self):
+        """
+        Returns true if both create and modified timestamps have exceeded the ttl.
+        """
+        now = int(datetime.datetime.now().timestamp())
+        create_expiry = self.create_date + self.ttl_in_seconds
+        modified_expiry = self.modified_date + self.ttl_in_seconds
+        return create_expiry < now and modified_expiry < now
+
     def __repr__(self):
-        return "{}".format([
-            str(self.user_id),
-            str(self._session_id_available),
-            str(self.session_id),
-            str(self.create_date),
-            str(self.modified_date),
-            str(self.ttl_in_seconds)
+        return "".join([
+            "UserID: {}, ".format(str(self.user_id)),
+            "Session Consumed: {}, ".format(str(self._session_id_available)),
+            "SessionID: {}, ".format(str(self.session_id)),
+            "Creation Data: {}, ".format(str(datetime.datetime.fromtimestamp(self.create_date))),
+            "Modified Date: {}, ".format(str(datetime.datetime.fromtimestamp(self.modified_date))),
+            "Expiry Date: {}".format(
+                str(datetime.datetime.fromtimestamp(self.modified_date + self.ttl_in_seconds))
+            )
         ])
 
     def use_session_id(self):
@@ -93,7 +112,7 @@ class Session(object):
         return self._session_id_available
 
     def id(self):
-        return self.session_id
+        return str(self.session_id)
 
     def ttl(self, ttl=None):
         if ttl is None:
@@ -103,7 +122,7 @@ class Session(object):
             self.ttl = ttl
             self.modified_date = datetime.datetime.now()
         else:
-            LOG.warning("session ttl must by an integer type, got '{}'".format(ttl))
+            LOG.warning("session ttl must be an integer type, got '{}'".format(ttl))
 
     def _hash_secret(self, user_secret):
         """
@@ -111,68 +130,34 @@ class Session(object):
         param: user_secret[string] - The users secret provided in the chat backend.
         """
         rnd = SystemRandom(user_secret)
-        bot_secret = "".join([rnd.choice(string.hexdigits) for _ in range(8)])
+        if self.bot_secret is None:
+            self.bot_secret = "".join([rnd.choice(string.hexdigits) for _ in range(8)])
         h = hashlib.sha256()
         h.update(bytes(user_secret, "utf-8"))
         del user_secret
-        h.update(bytes(bot_secret, "utf-8"))
+        h.update(bytes(self.bot_secret, "utf-8"))
         return h.hexdigest()
-
-
-def ChallengeRequest(username, user_secret, bot_secret):
-    """
-    Generate a random bot_secret and use it to sign the username
-    and user_secret values.
-    Use the resulting value as a salt to create UUID.
-    """
-    raise NotImplementedError
-
-
-def ChallengeResponseURL(uuid):
-    """
-    Takes a uuid and generates a one time use url to be consumed by
-    the chat backend user.  An entry is created in the session hashtable
-    with session information, chatbackend username, user_secret, bot_secret,
-    uuid.
-    """
-    raise NotImplementedError
-
-
-def PrivateMessageToChatUser(username, message):
-    """
-    param: username - The chat backend username to send the private message to.
-    param: message - A string containing the message to be sent.
-    """
-    raise NotImplementedError
-
-
-def OneTimeURLLogin(username, uuid):
-    """
-    This function is only called by the url uuid challenge end point.
-    The url must contain a valid uuid.  The uuid is looked up in the
-    sessions hash table.  The uuid token is removed and a redirect
-    is sent to signal to the client that they should proceed to the
-    authentication form.
-    """
-    raise NotImplementedError
 
 
 class SessionManager(object):
     def __init__(self):
         self.store = SessionStore()
+        self.secure_store = StoreAdapterFactory.keyring_adapter()
+        self.secure_store.setup()
 
     def get_by_userid(self, user_id):
         """
-        Fetch information related to session.
+        Fetch information from the store by user_id.
+        @user_id: A string uniquely identifying the chat user.
         """
         return self.store.get_by_userid(user_id)
 
-    def get_by_uuid(self, uuid):
+    def get_by_uuid(self, _uuid):
         """
         Fetch information related to a session by its UUID.
         If a session doesn't exist, False is returned.
         """
-        return self.store.get_by_userid(self.store.get_by_uuid(uuid))
+        return self.store.get_by_uuid(_uuid)
 
     def create(self, user_id, user_secret):
         """
@@ -209,33 +194,59 @@ class AuthenticationController(object):
         self.bot = bot
         self.sessions = SessionManager()
 
-    def use_session_id(self, id):
+    def use_session_id(self, session_id):
         ret = False
-        session = self.sessions.get_by_uuid(id)
-        LOG.debug("UUID {} has a session: {}".format(id, session))
-        if session:
-            if session.session_id_available():
-                ret = session.use_session_id()
+        session = self.sessions.get_by_uuid(session_id)
+        if session is False:
+            LOG.debug("Invalid session id '{}'.".format(session_id))
+        else:
+            ret = session.use_session_id()
+            if ret is False:
+                LOG.debug("Session id '{}' has already been consumed.".format(session_id))
+            if session.expired():
+                ret = False
+                LOG.debug("Session has expired '{}'.".format(session_id))
         return ret
 
     def list_sessions(self):
         return self.sessions.list_sessions()
 
-    def session_url(self, session_id):
+    def session_url(self, session_id, url_path="/"):
+        """
+        Return a URL formatted with the UUID query sting attached.
+        """
+        return "{}{}?uuid={}".format(
+            self.bot.st2config.rbac_auth_opts.get("url"), url_path, session_id
+        )
+
+    def delete_session(self, session_id):
         session = self.sessions.get_by_uuid(session_id)
-        return "https://{}/{}?uuid={}".format("some_host", "some_path", session.id())
+        if session is False:
+            LOG.debug("Session '{}' doesn't exist to be deleted".format(session_id))
+        else:
+            self.sessions.delete(session.user_id)
 
     def request_session(self, user, user_secret):
         """
         Handle an initial request to establish a session.  If a session already exists, return it.
         """
+        auth_msg = ""
         user_id = self.bot.chatbackend.normalise_user_id(user)
         session = self.sessions.get_by_userid(user_id)
-        if session:
-            LOG.debug("Session already exists for {}.", user_id)
+
+        if session is False:
+            session = self.sessions.create(user_id, user_secret)
+            auth_msg = "Your challenge response is {}".format(
+                self.session_url(session.id(), "/index.html")
+            )
         else:
-            self.sessions.create(user_id, user_secret)
-            session = self.sessions.get_by_userid(user_id)
-            return "Your challenge response is " \
-                   "https://carlos.dev.dc3.dailymotion.com:8888/index.html?uuid=" \
-                   "{}".format(session.id())
+            if session.expired():
+                self.sessions.delete(user_id)
+                session = self.sessions.create(user_id, user_secret)
+                auth_msg = "Your challenge response is {}".format(
+                    self.session_url(session.id(), "/index.html")
+                )
+            else:
+                auth_msg = "A valid session already exists for {}.".format(user_id)
+
+        return auth_msg

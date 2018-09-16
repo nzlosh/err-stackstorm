@@ -1,2 +1,4 @@
 st2client>=2.5.0
 sseclient-py
+keyring
+hvac
