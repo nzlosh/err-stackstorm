@@ -1,8 +1,8 @@
 # coding:utf-8
-
+import json
 import logging
 import threading
-
+from types import SimpleNamespace
 from errbot import BotPlugin, re_botcmd, botcmd, arg_botcmd, webhook
 from lib.st2pluginapi import St2PluginAPI
 from lib.st2adapters import ChatAdapterFactory
@@ -20,6 +20,7 @@ class St2Config(object):
         self._configure_prefixes(bot_conf)
         self._configure_oobauth(bot_conf)
         self._configure_stackstorm(bot_conf)
+        self.oob_auth_url = bot_conf.STACKSTORM.get('oob_auth_url', "https://localhost:8888/")
         self.timer_update = bot_conf.STACKSTORM.get('timer_update', 60)
         self.verify_cert = bot_conf.STACKSTORM.get('verify_cert', True)
 
@@ -138,7 +139,6 @@ class St2(BotPlugin):
         LOG.debug("Message received from chat backend.\n{}\n".format(msg_debug))
 
         matched_result = self.st2api.match(msg.body)
-
         if matched_result is not None:
             action_alias, representation = matched_result
             del matched_result
@@ -149,7 +149,7 @@ class St2(BotPlugin):
                     msg,
                     self.chatbackend
                 )
-                LOG.debug('action alias execution result: type={} {}'.format(type(res), res))
+                LOG.debug("action alias execution result: type={} {}".format(type(res), res))
                 result = r"{}".format(res)
             else:
                 result = "st2 command '{}' is disabled.".format(msg.body)
@@ -192,10 +192,41 @@ class St2(BotPlugin):
 
     @webhook('/login/authenticate/<uuid>')
     def login_auth(self, request, uuid):
-        m = ""
         LOG.debug("Request: {}".format(request))
-        if self.oobauth.use_session_id(uuid):
-            m = "Session created successfully."
-        else:
-            m = "Session has already been used or has expired."
-        return "{} : {} {}".format(m, uuid, request)
+        r = SimpleNamespace(**{
+            "authenticated": False,
+            "return_code": 0,
+            "message": "Session has already been used or has expired."
+        })
+        # ~ try:
+            # ~ auth_result = json.loads(request)
+        # ~ except ValueError as e:
+            # ~ r.return_code = 1
+            # ~ r.message = "Error decoding JSON authentication payload {}".format(e)
+            # ~ LOG.error(r.message)
+
+        if not self.oobauth.use_session_id(uuid):
+            r.return_code = 2
+            r.message = "Invalid session id '{}'".format(uuid)
+
+        if r.return_code == 0:
+            shared_word = request.get("shared_word", None)
+            if "username" in request:
+                username = request.get("username", "")
+                password = request.get("password", "")
+                r.message = "Would have authenticated username/password"
+                r.authenticated = True
+            elif "user_token" in request:
+                user_token = request.get("user_token", None)
+                r.message = "Would have authenticated user token."
+                r.authenticated = True
+            elif "api_key" in request:
+                api_key = request.get("api_key", None)
+                r.message = "Would have authenticated api key."
+                r.authenticated = True
+            else:
+                r.return_code = 3
+                r.message = "Invalid authentication payload."
+                LOG.warning(r.message)
+
+        return json.dumps(vars(r))

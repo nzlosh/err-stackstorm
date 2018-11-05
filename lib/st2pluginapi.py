@@ -142,7 +142,7 @@ class St2PluginAPI(object):
                 execution.message)
             )
         except AttributeError as e:
-            ret_msg = "Something is happening ... "
+            ret_msg = ""
         return ret_msg
 
     def st2stream_listener(self, callback=None):

@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
+# coding:utf-8
 import uuid
 import string
 import hashlib
 import logging
-import datetime
+from datetime import datetime as dt
 from random import SystemRandom
 from lib.st2storeadapters import StoreAdapterFactory
 LOG = logging.getLogger("{}".format(__name__))
@@ -74,7 +74,7 @@ class Session(object):
         self.user_id = user_id
         self._session_id_available = True
         self.session_id = uuid.uuid4()
-        self.create_date = int(datetime.datetime.now().timestamp())
+        self.create_date = int(dt.now().timestamp())
         self.modified_date = self.create_date
         self.ttl_in_seconds = 3600
 
@@ -82,7 +82,7 @@ class Session(object):
         """
         Returns true if both create and modified timestamps have exceeded the ttl.
         """
-        now = int(datetime.datetime.now().timestamp())
+        now = int(dt.now().timestamp())
         create_expiry = self.create_date + self.ttl_in_seconds
         modified_expiry = self.modified_date + self.ttl_in_seconds
         return create_expiry < now and modified_expiry < now
@@ -92,10 +92,10 @@ class Session(object):
             "UserID: {}, ".format(str(self.user_id)),
             "Session Consumed: {}, ".format(str(self._session_id_available)),
             "SessionID: {}, ".format(str(self.session_id)),
-            "Creation Data: {}, ".format(str(datetime.datetime.fromtimestamp(self.create_date))),
-            "Modified Date: {}, ".format(str(datetime.datetime.fromtimestamp(self.modified_date))),
+            "Creation Data: {}, ".format(str(dt.fromtimestamp(self.create_date))),
+            "Modified Date: {}, ".format(str(dt.fromtimestamp(self.modified_date))),
             "Expiry Date: {}".format(
-                str(datetime.datetime.fromtimestamp(self.modified_date + self.ttl_in_seconds))
+                str(dt.fromtimestamp(self.modified_date + self.ttl_in_seconds))
             )
         ])
 
@@ -120,7 +120,7 @@ class Session(object):
 
         if isinstance(ttl, int()):
             self.ttl = ttl
-            self.modified_date = datetime.datetime.now()
+            self.modified_date = dt.now()
         else:
             LOG.warning("session ttl must be an integer type, got '{}'".format(ttl))
 

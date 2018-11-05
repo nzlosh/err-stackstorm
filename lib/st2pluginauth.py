@@ -1,5 +1,4 @@
 # coding:utf-8
-import json
 import logging
 import urllib3
 import requests
@@ -8,6 +7,33 @@ from urllib.parse import urlparse, urljoin
 from requests.auth import HTTPBasicAuth
 
 LOG = logging.getLogger("{}".format(__name__))
+
+
+class QRCode(object):
+    """
+    Decorator used to extract OTP from ChatOps command
+    """
+    def __init__(self, deco_func):
+        self.deco_func = deco_func
+
+        # Get access to QRCode store backend.
+
+    def __call__(self, deco_func):
+        raise NotImplementedError
+
+
+class RBACCredentials(object):
+    """
+    Decorator used to lookup RBAC credentials or errbot service credentials.
+    """
+    def __init__(self, deco_func):
+        self.deco_func = deco_func
+        # get bot credentials
+
+        # get access to secrets store backend.
+
+    def __call__(self, args, kwargs):
+        self.deco_func(args, kwargs)
 
 
 class St2PluginAuth(object):

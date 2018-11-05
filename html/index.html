@@ -13,6 +13,8 @@
                     url = "/login/authenticate/" + kv[1];
                     console.log("Setting action to " + url);
                     document.getElementById("login").setAttribute("action", url);
+                    document.getElementById("user_token").setAttribute("action", url);
+                    document.getElementById("api_key").setAttribute("action", url);
                 } else {
                     console.log("KeyValue Pair not 'uuid' - " + kv);
                 }
