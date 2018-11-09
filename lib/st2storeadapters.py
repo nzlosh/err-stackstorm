@@ -38,18 +38,39 @@ class AbstractStoreAdapter(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def setup(self, *args, **kwargs):
-        pass
+        raise NotImplementedError
 
     @abc.abstractmethod
     def set(self, name, secret, namespace):
-        pass
+        raise NotImplementedError
 
     @abc.abstractmethod
     def get(self, name, namespace):
-        pass
+        raise NotImplementedError
 
     @abc.abstractmethod
     def teardown(self, user):
+        raise NotImplementedError
+
+
+class DeveloperStoreAdapater(AbstractStoreAdapter):
+    """
+    This is only intended for use in development environments.
+    Never use this in production, it offers no security.
+    """
+    def __init__(self):
+        self.associations = {}
+
+    def setup(self):
+        pass
+
+    def set(self, name, secret, namespace=""):
+        self.associations[name] = secret
+
+    def get(self, name, namespace=""):
+        return self.associations.get(name)
+
+    def teardown(self):
         pass
 
 
