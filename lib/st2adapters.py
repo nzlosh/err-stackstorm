@@ -12,6 +12,10 @@ class AbstractChatAdapterFactory(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
+    def xmpp_adapter(self, bot_plugin):
+        pass
+
+    @abc.abstractmethod
     def generic_adpater(self, bot_plugin):
         pass
 
@@ -21,6 +25,10 @@ class ChatAdapterFactory(AbstractChatAdapterFactory):
     @staticmethod
     def slack_adapter(bot_plugin):
         return SlackChatAdapter(bot_plugin)
+
+    @staticmethod
+    def xmpp_adapter(bot_plugin):
+        return XMPPChatAdapter(bot_plugin)
 
     @staticmethod
     def generic_adapter(bot_plugin):
@@ -119,6 +127,14 @@ class GenericChatAdapter(AbstractChatAdapter):
             user.fullname,
             user.nick,
             user.person])
+
+
+class XMPPChatAdapter(GenericChatAdapter):
+    def __init__(self, bot_plugin):
+        self.bot_plugin = bot_plugin
+
+    def normalise_user_id(self, user):
+        return " ".join([user.nick, user.domain, user.resource])
 
 
 # Inheriting from Generic Chat Adapter until IRC backend specific methods are required.

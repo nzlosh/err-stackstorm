@@ -61,7 +61,8 @@ class St2(BotPlugin):
         # The chat backend adapter mediates data format and api calls between
         # stackstorm, errbot and the chat backend.
         self.chatbackend = {
-            "slack": ChatAdapterFactory.slack_adapter
+            "slack": ChatAdapterFactory.slack_adapter,
+            "xmpp": ChatAdapterFactory.xmpp_adapter
         }.get(self._bot.mode, ChatAdapterFactory.generic_adapter)(self)
 
         self.oobauth = AuthenticationController(self)
@@ -198,12 +199,6 @@ class St2(BotPlugin):
             "return_code": 0,
             "message": "Session has already been used or has expired."
         })
-        # ~ try:
-            # ~ auth_result = json.loads(request)
-        # ~ except ValueError as e:
-            # ~ r.return_code = 1
-            # ~ r.message = "Error decoding JSON authentication payload {}".format(e)
-            # ~ LOG.error(r.message)
 
         if not self.oobauth.use_session_id(uuid):
             r.return_code = 2
