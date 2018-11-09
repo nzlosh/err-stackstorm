@@ -131,7 +131,7 @@ class GenericChatAdapter(AbstractChatAdapter):
 
 class XMPPChatAdapter(GenericChatAdapter):
     def __init__(self, bot_plugin):
-        self.bot_plugin = bot_plugin
+        self.botplugin = bot_plugin
 
     def normalise_user_id(self, user):
         return " ".join([user.nick, user.domain, user.resource])
