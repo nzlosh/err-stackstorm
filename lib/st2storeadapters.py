@@ -9,7 +9,7 @@ import hvac
 import abc
 import logging
 
-LOG = logging.getLogger("{}".format(__name__))
+LOG = logging.getLogger(__name__)
 
 
 class AbstractStoreAdapterFactory(metaclass=abc.ABCMeta):

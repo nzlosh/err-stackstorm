@@ -6,7 +6,7 @@ import logging
 from datetime import datetime as dt
 from random import SystemRandom
 from lib.st2storeadapters import StoreAdapterFactory
-LOG = logging.getLogger("{}".format(__name__))
+LOG = logging.getLogger(__name__)
 
 
 class SessionStore(object):
@@ -52,7 +52,7 @@ class SessionStore(object):
         Put a session in the store using the session id.
         """
         if session.user_id in self.memory:
-            self.self.id_to_user_map[session_id] = session.user_id
+            self.id_to_user_map[session_id] = session.user_id
 
     def pop_by_id(self, session_id):
         return self.memory.pop(self.id_to_user_map.pop(session_id, ""), False)

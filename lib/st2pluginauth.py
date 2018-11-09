@@ -6,7 +6,7 @@ import requests
 from urllib.parse import urlparse, urljoin
 from requests.auth import HTTPBasicAuth
 
-LOG = logging.getLogger("{}".format(__name__))
+LOG = logging.getLogger(__name__)
 
 
 class QRCode(object):
