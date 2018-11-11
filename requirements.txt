@@ -1,4 +1,5 @@
 st2client>=2.9.1
 sseclient-py
+sseclient
 keyring
 hvac

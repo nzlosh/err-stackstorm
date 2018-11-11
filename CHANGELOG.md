@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-
+ - setup.py to be able to install plugin from the command line.
+ - Dockerfile to build an image and run err-stackstorm from within a Docker container. (alpine linux based)
+ - Support for Out-of-Bands authentication.
 
 ### Changed
+ - Updated err-stacksotorm python module requirements.
 
 ### Removed
 
