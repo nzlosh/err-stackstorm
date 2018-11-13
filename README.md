@@ -454,3 +454,9 @@ If the announcement event is showing as
 2018-01-26 15:51:55,246 DEBUG    sseclient                 Dispatching st2.announcement__chatops event, 508 bytes...
 ```
 This indicates that the route wasn't set to `errbot`, see the Install ChatOps section.
+
+
+## Legal
+
+StackStorm logo used with permission by StackStorm.
+Errbot logo used with permission by Errbot development team.

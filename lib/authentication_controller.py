@@ -5,8 +5,15 @@ import hashlib
 import logging
 from datetime import datetime as dt
 from random import SystemRandom
-from lib.st2storeadapters import StoreAdapterFactory
+from lib.store_adapters import StoreAdapterFactory
 LOG = logging.getLogger(__name__)
+
+
+def generate_password(length=8):
+    rnd = SystemRandom()
+    if length > 255:
+        length = 255
+    return "".join([rnd.choice(string.hexdigits) for _ in range(length)])
 
 
 class SessionStore(object):
@@ -116,10 +123,10 @@ class Session(object):
 
     def ttl(self, ttl=None):
         if ttl is None:
-            return self.ttl
+            return self.ttl_in_seconds
 
         if isinstance(ttl, int()):
-            self.ttl = ttl
+            self.ttl_in_seconds = ttl
             self.modified_date = dt.now()
         else:
             LOG.warning("session ttl must be an integer type, got '{}'".format(ttl))
@@ -129,9 +136,8 @@ class Session(object):
         Generate a unique token by hashing a random bot secret with the user secrets.
         param: user_secret[string] - The users secret provided in the chat backend.
         """
-        rnd = SystemRandom(user_secret)
         if self.bot_secret is None:
-            self.bot_secret = "".join([rnd.choice(string.hexdigits) for _ in range(8)])
+            self.bot_secret = generate_password(8)
         h = hashlib.sha256()
         h.update(bytes(user_secret, "utf-8"))
         del user_secret
@@ -226,27 +232,34 @@ class AuthenticationController(object):
         else:
             self.sessions.delete(session.user_id)
 
+    def get_stackstorm_credentials(self, user):
+        raise NotImplementedError
+        # Lookup chat user to get session id.
+        # check session id is valid
+        # get user token by session id.
+        # return token
+
     def request_session(self, user, user_secret):
         """
         Handle an initial request to establish a session.  If a session already exists, return it.
         """
-        auth_msg = ""
+        #~ auth_msg = ("", True)
         user_id = self.bot.chatbackend.normalise_user_id(user)
         session = self.sessions.get_by_userid(user_id)
 
         if session is False:
             session = self.sessions.create(user_id, user_secret)
-            auth_msg = "Your challenge response is {}".format(
-                self.session_url(session.id(), "/index.html")
-            )
+            #~ auth_msg = "Your challenge response is {}".format(
+                #~ self.session_url(session.id(), "/index.html")
+            #~ )
         else:
             if session.expired():
                 self.sessions.delete(user_id)
                 session = self.sessions.create(user_id, user_secret)
-                auth_msg = "Your challenge response is {}".format(
-                    self.session_url(session.id(), "/index.html")
-                )
-            else:
-                auth_msg = "A valid session already exists for {}.".format(user_id)
+                #~ auth_msg = "Your challenge response is {}".format(
+                    #~ self.session_url(session.id(), "/index.html")
+                #~ )
+            #~ else:
+                #~ auth_msg = "A valid session already exists for {}.".format(user_id)
 
-        return auth_msg
+        return session

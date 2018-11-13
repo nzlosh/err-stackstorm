@@ -5,8 +5,8 @@ import threading
 from types import SimpleNamespace
 from errbot import BotPlugin, re_botcmd, botcmd, arg_botcmd, webhook
 from lib.st2pluginapi import St2PluginAPI
-from lib.st2adapters import ChatAdapterFactory
-from lib.st2outofbandsauth import AuthenticationController
+from lib.chat_adapters import ChatAdapterFactory
+from lib.authentication_controller import AuthenticationController, password_generator
 
 LOG = logging.getLogger(__name__)
 
@@ -60,23 +60,27 @@ class St2(BotPlugin):
         self.st2api = St2PluginAPI(self.st2config)
         # The chat backend adapter mediates data format and api calls between
         # stackstorm, errbot and the chat backend.
-        self.chatbackend = {
-            "slack": ChatAdapterFactory.slack_adapter,
-            "xmpp": ChatAdapterFactory.xmpp_adapter
-        }.get(self._bot.mode, ChatAdapterFactory.generic_adapter)(self)
+        self.chatbackend = ChatAdapterFactory.instance(self._bot.mode)(self)
+        self.access_control = AuthenticationController(self)
 
-        self.oobauth = AuthenticationController(self)
+        self.session_user = "errbot%service"
+        self.session_secret = password_generator(16)
+
+        self.bot_session = self.access_control.request_session(
+            self.session_user,
+            self.session_secret
+        )
 
         # Run the stream listener loop in a separate thread.
         if not self.st2api.validate_credentials():
             LOG.critical("Invalid credentials when communicating with StackStorm API.")
 
-        th1 = threading.Thread(
+        st2events_listener = threading.Thread(
             target=self.st2api.st2stream_listener,
             args=[self.chatbackend.post_message]
         )
-        th1.setDaemon(True)
-        th1.start()
+        st2events_listener.setDaemon(True)
+        st2events_listener.start()
 
     def activate(self):
         """
@@ -91,7 +95,7 @@ class St2(BotPlugin):
         """
         List any established sessions between the chat service and StackStorm API.
         """
-        return "Sessions: " + "\n".join(self.oobauth.list_sessions())
+        return "Sessions: " + "\n".join(self.access_control.list_sessions())
 
     @botcmd
     def st2sessiondelete(self, msg, args):
@@ -99,7 +103,7 @@ class St2(BotPlugin):
         Delete an established session.
         """
         if len(args) > 0:
-            self.oobauth.delete_session(args)
+            self.access_control.delete_session(args)
 
     @botcmd
     def st2authenticate(self, msg, args):
@@ -112,11 +116,14 @@ class St2(BotPlugin):
 
         if msg.is_direct:
             if len(args) > 0:
-                ret = self.oobauth.request_session(msg.frm, args)
+                session = self.access_control.request_session(msg.frm, args)
+                ret = "Your challenge response is {}".format(
+                    self.access_control.session_url(session.id(), "/index.html")
+                )
             else:
-                ret = "Please provide a secret word to use during the authenication process."
+                ret = "Please provide a shared word to use during the authenication process."
         else:
-            ret = "Requests for authentication in a public channel is nt possible." \
+            ret = "Requests for authentication in a public channel isn't possible." \
                   "  Request authentication in a private one-to-one message."
         return ret
 
@@ -200,7 +207,7 @@ class St2(BotPlugin):
             "message": "Session has already been used or has expired."
         })
 
-        if not self.oobauth.use_session_id(uuid):
+        if not self.access_control.use_session_id(uuid):
             r.return_code = 2
             r.message = "Invalid session id '{}'".format(uuid)
 

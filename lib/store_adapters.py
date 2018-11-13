@@ -2,10 +2,8 @@
 from pathlib import Path
 import time
 import string
-import keyring
 # TODO: replace SystemRandom secrets which is added to Python 3.6
 from random import SystemRandom
-import hvac
 import abc
 import logging
 
@@ -32,6 +30,10 @@ class StoreAdapterFactory(AbstractStoreAdapterFactory):
     @staticmethod
     def vault_adapter():
         return VaultStoreAdapter()
+
+    @staticmethod
+    def developer_adapter():
+        return DeveloperStoreAdapater()
 
 
 class AbstractStoreAdapter(metaclass=abc.ABCMeta):
@@ -76,6 +78,7 @@ class DeveloperStoreAdapater(AbstractStoreAdapter):
 
 class KeyringStoreAdapter(AbstractStoreAdapter):
     def __init__(self):
+        import keyring
         rnd = SystemRandom(str(int(time.time()) % 1000))
         self.password = "".join([rnd.choice(string.hexdigits) for _ in range(46)])
 
@@ -99,6 +102,7 @@ class KeyringStoreAdapter(AbstractStoreAdapter):
 
 class VaultStoreAdapter(AbstractStoreAdapter):
     def __init__(self):
+        import hvac
         self.client = None
 
     def setup(self, filename):

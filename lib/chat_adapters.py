@@ -21,6 +21,12 @@ class AbstractChatAdapterFactory(metaclass=abc.ABCMeta):
 
 
 class ChatAdapterFactory(AbstractChatAdapterFactory):
+    @staticmethod
+    def instance(chat_backend):
+        return {
+            "slack": ChatAdapterFactory.slack_adapter,
+            "xmpp": ChatAdapterFactory.xmpp_adapter
+        }.get(chat_backend, ChatAdapterFactory.generic_adapter)
 
     @staticmethod
     def slack_adapter(bot_plugin):
