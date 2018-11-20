@@ -4,48 +4,17 @@ import logging
 import threading
 from types import SimpleNamespace
 from errbot import BotPlugin, re_botcmd, botcmd, arg_botcmd, webhook
-from lib.st2pluginapi import St2PluginAPI
+from lib.config import PluginConfiguration
+from lib.stackstorm_api import St2PluginAPI
 from lib.chat_adapters import ChatAdapterFactory
-from lib.authentication_controller import AuthenticationController, password_generator
+from lib.authentication_controller import AuthenticationController, generate_password, BotPluginIdentity
 
 LOG = logging.getLogger(__name__)
 
+# TODO: FIXME: Set the PLUGIN_PREFIX based on configuration from errbot config.py.
 # A plugin prefix for stackstorm action aliases to avoid name collisions between
 # them and native errbot plugins.  Defined here so it's available to errbot's facade decorator.
 PLUGIN_PREFIX = r"st2"
-
-
-class St2Config(object):
-    def __init__(self, bot_conf):
-        self._configure_prefixes(bot_conf)
-        self._configure_oobauth(bot_conf)
-        self._configure_stackstorm(bot_conf)
-        self.oob_auth_url = bot_conf.STACKSTORM.get('oob_auth_url', "https://localhost:8888/")
-        self.timer_update = bot_conf.STACKSTORM.get('timer_update', 60)
-        self.verify_cert = bot_conf.STACKSTORM.get('verify_cert', True)
-
-    def _configure_oobauth(self, bot_conf):
-        rbac_auth = bot_conf.STACKSTORM.get('rbac_auth', {})
-        if "proxied" in rbac_auth:
-            self.rbac_auth_type = "proxied"
-            self.rbac_auth_opts = rbac_auth["proxied"]
-        if "extended" in rbac_auth:
-            self.rbac_auth_type = "extended"
-            self.rbac_auth_opts = rbac_auth["extended"]
-        if rbac_auth == {}:
-            self.rbac_auth_type = "simple"
-            self.rbac_auth_opts = {}
-
-    def _configure_prefixes(self, bot_conf):
-        self.bot_prefix = bot_conf.BOT_PREFIX
-        self.plugin_prefix = PLUGIN_PREFIX
-        self.full_prefix = "{}{} ".format(bot_conf.BOT_PREFIX, self.plugin_prefix)
-
-    def _configure_stackstorm(self, bot_conf):
-        self.api_auth = bot_conf.STACKSTORM.get('api_auth', {})
-        self.api_url = bot_conf.STACKSTORM.get('api_url', 'http://localhost:9101/v1')
-        self.auth_url = bot_conf.STACKSTORM.get('auth_url', 'http://localhost:9100/v1')
-        self.stream_url = bot_conf.STACKSTORM.get('stream_url', 'http://localhost:9102/v1')
 
 
 class St2(BotPlugin):
@@ -56,20 +25,20 @@ class St2(BotPlugin):
     def __init__(self, bot, name):
         super(St2, self).__init__(bot, name)
 
-        self.st2config = St2Config(self.bot_config)
+        self.st2config = PluginConfiguration(self.bot_config, PLUGIN_PREFIX)
         self.st2api = St2PluginAPI(self.st2config)
         # The chat backend adapter mediates data format and api calls between
         # stackstorm, errbot and the chat backend.
         self.chatbackend = ChatAdapterFactory.instance(self._bot.mode)(self)
         self.access_control = AuthenticationController(self)
 
-        self.session_user = "errbot%service"
-        self.session_secret = password_generator(16)
-
+        # Wrap err-stackstorm credentials to distinguish it from chat backend credentials.
+        self.internal_identity = BotPluginIdentity()
         self.bot_session = self.access_control.request_session(
-            self.session_user,
-            self.session_secret
+            self.internal_identity,
+            self.internal_identity.secret
         )
+        self.log.debug("err-stackstorm requested session {}".format(self.bot_session))
 
         # Run the stream listener loop in a separate thread.
         if not self.st2api.validate_credentials():
@@ -90,14 +59,14 @@ class St2(BotPlugin):
         LOG.info("Poller activated")
         self.start_poller(self.st2config.timer_update, self.st2api.validate_credentials)
 
-    @botcmd
+    @botcmd(admin_only=True)
     def st2sessionlist(self, msg, args):
         """
         List any established sessions between the chat service and StackStorm API.
         """
         return "Sessions: " + "\n".join(self.access_control.list_sessions())
 
-    @botcmd
+    @botcmd(admin_only=True)
     def st2sessiondelete(self, msg, args):
         """
         Delete an established session.
@@ -217,15 +186,18 @@ class St2(BotPlugin):
                 username = request.get("username", "")
                 password = request.get("password", "")
                 r.message = "Would have authenticated username/password"
+                # validate user credentials against st2.
                 r.authenticated = True
             elif "user_token" in request:
                 user_token = request.get("user_token", None)
                 r.message = "Would have authenticated user token."
+                # validate user token against st2.
                 r.authenticated = True
             elif "api_key" in request:
                 api_key = request.get("api_key", None)
                 r.message = "Would have authenticated api key."
                 r.authenticated = True
+                #validate api key against st2.
             else:
                 r.return_code = 3
                 r.message = "Invalid authentication payload."

@@ -22,6 +22,13 @@ class AbstractStoreAdapterFactory(metaclass=abc.ABCMeta):
 
 
 class StoreAdapterFactory(AbstractStoreAdapterFactory):
+    @staticmethod
+    def instantiate(store_type):
+        return {
+            "developer": DeveloperStoreAdapater,
+            "keyring": KeyringStoreAdapter,
+            "valut": VaultStoreAdapter
+        }.get(store_type, KeyringStoreAdapter)
 
     @staticmethod
     def keyring_adapter():
@@ -77,13 +84,13 @@ class DeveloperStoreAdapater(AbstractStoreAdapter):
 
 
 class KeyringStoreAdapter(AbstractStoreAdapter):
+    import keyring
     def __init__(self):
-        import keyring
         rnd = SystemRandom(str(int(time.time()) % 1000))
         self.password = "".join([rnd.choice(string.hexdigits) for _ in range(46)])
 
     def setup(self, filename='errbot_secrets.conf'):
-        self.kr = keyring.get_keyring()
+        self.kr = KeyringStoreAdapter.keyring.get_keyring()
         self.kr.filename = filename
         # TODO: fix calls to remove stored file when bot stops running.
         # Path.unlink(self.kr.file_path)
@@ -101,12 +108,12 @@ class KeyringStoreAdapter(AbstractStoreAdapter):
 
 
 class VaultStoreAdapter(AbstractStoreAdapter):
+    import hvac
     def __init__(self):
-        import hvac
         self.client = None
 
     def setup(self, filename):
-        self.client = hvac.Client()
+        self.client = VaultStoreAdapter.hvac.Client()
 
     def set(self, name, secret, namespace="errst2"):
         raise NotImplementedError
@@ -116,3 +123,61 @@ class VaultStoreAdapter(AbstractStoreAdapter):
 
     def teardown():
         raise NotImplementedError
+
+
+
+class SessionStore(object):
+    def __init__(self):
+        """
+        Sessions are stored by userid with a lookup index for
+        uuid's to user_ids.
+        """
+        self.memory = {}
+        self.id_to_user_map = {}
+
+    def list(self):
+        return [k+str(self.memory[k]) for k in self.memory.keys()]
+
+    def get_by_userid(self, user_id):
+        """
+        Get information by user_id.
+        """
+        LOG.debug("Fetch user_id '{}' in store.".format(user_id))
+        return self.memory.get(user_id, False)
+
+    def put(self, session):
+        """
+        Put a new session in the store using the user_id as the key
+        and create a reverse mapping between the user_id and the session_id.
+        """
+        self.memory[session.user_id] = session
+        self.id_to_user_map[session.id()] = session.user_id
+
+    def delete(self, user_id):
+        """
+        Delete a session by user_id.  Delete the reverse mapping
+        if it exists.
+        """
+        session = self.memory.get(user_id, False)
+        if session:
+            if session.id() in self.id_to_user_map:
+                del self.id_to_user_map[session.id()]
+            del self.memory[user_id]
+
+    def put_by_id(self, session_id, session):
+        """
+        Put a session in the store using the session id.
+        """
+        if session.user_id in self.memory:
+            self.id_to_user_map[session_id] = session.user_id
+
+    def pop_by_id(self, session_id):
+        return self.memory.pop(self.id_to_user_map.pop(session_id, ""), False)
+
+    def get_by_uuid(self, session_id):
+        user_id = self.id_to_user_map.get(session_id, False)
+        LOG.debug("Session id '{}' is associated with user_id {}".format(session_id, user_id))
+        session = self.memory.get(user_id, False)
+        if session is False:
+            LOG.debug("Error: Session id '{}' points to a missing session.".format(""))
+        return session

@@ -32,6 +32,7 @@ The plugin has been developed and tested against the below software.  For optima
 
 plugin tag (version) | Python | Errbot | StackStorm client
 --- | --- | --- | ---
+2.0 | 3.4 | 6? | 2.10
 1.4 | 3.4 | 5.1.2 | 2.5
 1.3 | 3.4 | 5.1.2 | 2.5
 1.2 | 3.4 | 5.0   | 2.2
@@ -86,7 +87,8 @@ STACKSTORM = {
         'key': '<API Key>'
     },
     'rbac_auth': {
-        'extended': {}
+        'simple': {},
+        'extended': {},
         'proxied': {
             'url': '<url_to_errbot_webserver>',
             'keyring_password': "<keyring_password>"
