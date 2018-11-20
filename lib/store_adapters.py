@@ -1,11 +1,10 @@
 # coding:utf-8
-from pathlib import Path
+import abc
 import time
 import string
-# TODO: replace SystemRandom secrets which is added to Python 3.6
-from random import SystemRandom
-import abc
 import logging
+from pathlib import Path
+from random import SystemRandom  # TODO: replace SystemRandom secrets which is added to Python 3.6
 
 LOG = logging.getLogger(__name__)
 
@@ -75,6 +74,7 @@ class DeveloperStoreAdapater(AbstractStoreAdapter):
 
     def set(self, name, secret, namespace=""):
         self.associations[name] = secret
+        return True
 
     def get(self, name, namespace=""):
         return self.associations.get(name)
@@ -85,6 +85,7 @@ class DeveloperStoreAdapater(AbstractStoreAdapter):
 
 class KeyringStoreAdapter(AbstractStoreAdapter):
     import keyring
+
     def __init__(self):
         rnd = SystemRandom(str(int(time.time()) % 1000))
         self.password = "".join([rnd.choice(string.hexdigits) for _ in range(46)])
@@ -109,6 +110,7 @@ class KeyringStoreAdapter(AbstractStoreAdapter):
 
 class VaultStoreAdapter(AbstractStoreAdapter):
     import hvac
+
     def __init__(self):
         self.client = None
 
@@ -123,7 +125,6 @@ class VaultStoreAdapter(AbstractStoreAdapter):
 
     def teardown():
         raise NotImplementedError
-
 
 
 class SessionStore(object):

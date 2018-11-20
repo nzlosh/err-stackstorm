@@ -2,7 +2,6 @@
 import string
 import logging
 from random import SystemRandom
-from lib.stackstorm_api import St2PluginAPI
 from lib.session_manager import SessionManager
 from lib.authentication_handler import OutOfBandsAuthHandler, ProxiedAuthHandler, StandaloneAuthHandler
 
@@ -18,9 +17,8 @@ def generate_password(length=8):
 
 class BotPluginIdentity(object):
     """
-    For internal use only by err-stackstorm.  The object is used to call
-    methods that will create a session and authenticate err-stackstorm credentials
-    with StackStorm
+    For internal use only by err-stackstorm.  The object is used to call methods that will create a
+    session and authenticate err-stackstorm credentials with StackStorm.
     """
     def __init__(self, name="errbot%service", secret=generate_password(16)):
         self.name = name
@@ -65,17 +63,16 @@ class AuthenticationController(object):
         else:
             self.sessions.delete(session.user_id)
 
-    def get_stackstorm_credentials(self, user):
+    def get_st2_token(self, user):
         raise NotImplementedError
-        if isinstance(user, BotPluginIdentity):
-            self.auth_handler.(user)
+#        if isinstance(user, BotPluginIdentity):
+#            self.auth_handler.(user)
 
-    def set_stackstorm_credentials(self, creds, session_id):
-        if self.validate_credentials(creds):
-
+    def register_st2_token(self, session, token):
+        return self.sessions.put_secret(session.session_id, token)
 
     def validate_stackstorm_credentials(self, creds):
-
+        raise NotImplementedError
 # Lookup chat user to get session id.
 # check session id is valid
 # get user token by session id.

@@ -1,20 +1,10 @@
 # coding:utf-8
-import uuid
 import logging
-from datetime import datetime as dt
-from random import SystemRandom
+from lib.session import Session
+from lib.store_adapters import SessionStore
 from lib.store_adapters import StoreAdapterFactory
-from lib.stackstorm_api import St2PluginAPI
 
 LOG = logging.getLogger(__name__)
-
-
-class SessionExpiredError(Exception):
-    pass
-
-
-class SessionInvalidError(Exception):
-    pass
 
 
 class SessionManager(object):
@@ -41,8 +31,8 @@ class SessionManager(object):
     def create(self, user_id, user_secret):
         """
         param: user_id - Chat user unique identifier.
-        param: ser_secret - A pseudo-secret word provided
-                      by the user and used as part of the UUID hashing process
+        param: user_secret - A pseudo-secret word provided by
+        the user and used as part of the UUID hashing process.
         """
         session = self.store.get_by_userid(user_id)
         # Create a new session if one doesn't exist already.
@@ -66,3 +56,9 @@ class SessionManager(object):
 
     def exists(self, user_id):
         return user_id in self.store.keys()
+
+    def put_secret(self, session_id, secret):
+        return self.secure_store.set(session_id, secret)
+
+    def get_secret(self, session_id):
+        self.secure_store.get(session_id)

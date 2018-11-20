@@ -5,8 +5,6 @@ import hashlib
 import logging
 from datetime import datetime as dt
 from random import SystemRandom
-from lib.store_adapters import StoreAdapterFactory
-from lib.stackstorm_api import St2PluginAPI
 
 LOG = logging.getLogger(__name__)
 
@@ -26,11 +24,10 @@ class SessionInvalidError(Exception):
     pass
 
 
-
 class Session(object):
     def __init__(self, user_id, user_secret):
         self.bot_secret = None
-        self.hashed_secret = self._hash_secret(user_secret)
+        self.hashed_secret = self.hash_secret(user_secret)
         del user_secret
         self.user_id = user_id
         self._session_id_available = True
@@ -85,7 +82,7 @@ class Session(object):
         else:
             LOG.warning("session ttl must be an integer type, got '{}'".format(ttl))
 
-    def _hash_secret(self, user_secret):
+    def hash_secret(self, user_secret):
         """
         Generate a unique token by hashing a random bot secret with the user secrets.
         param: user_secret[string] - The users secret provided in the chat backend.

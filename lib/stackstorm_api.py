@@ -16,72 +16,6 @@ from urllib.parse import urlparse, urlunparse, urljoin
 LOG = logging.getLogger(__name__)
 
 
-def QRCode(decoratee):
-    """
-    Decorator used to extract OTP from ChatOps command
-    """
-    print("Initialisation of QRCode OTP")
-    def decorate(self, *args, **kwargs):
-        print("Calling '{}' for QRCode decorator.".format(decoratee.__name__))
-        return decoratee(self, *args, **kwargs)
-        # Get access to QRCode store backend.
-
-
-def RBACCredentials(decoratee):
-    """
-    Decorator used to lookup RBAC credentials or errbot service credentials.
-    """
-    print("Initialisation of RBAC Credentials")
-    def decorate(self, *args, **kwargs):
-        # get bot credentials
-        # get access to secrets store backend.
-        print("Calling '{}' with RBAC Credentials".format(decoratee.__name__))
-        return decoratee(self, *args, **kwargs)
-    return decorate
-
-
-class St2UserCredentials(object):
-    def __init__(self, username=None, password=None):
-        self.username = None
-        self.password = None
-        if username:
-            self.username = username
-        if password:
-            self.password = password
-
-    def requests(self):
-        return HTTPBasicAuth(self.username, self.password)
-
-    def st2client(self):
-        raise NotImplementedError
-
-
-class St2UserToken(object):
-    def __init__(self, token=None):
-        self.token = None
-        if token:
-            self.token = token
-
-    def requests(self):
-        return {"X-Auth-Token": self.token}
-
-    def st2client(self):
-        return {"token": self.token}
-
-
-class St2ApiKey(object):
-    def __init__(self, apikey=None):
-        self.apikey = None
-        if apikey:
-            self.apikey = apikey
-
-    def requests(self):
-        return {'St2-Api-Key': self.apikey}
-
-    def st2client(self):
-        return {'api_key': self.apikey}
-
-
 class St2PluginAuth(object):
     """
     Helper to manage API key or user token authentication with the stackstorm API
@@ -92,7 +26,6 @@ class St2PluginAuth(object):
         if self.verify_cert is False:
             urllib3.disable_warnings()
 
-    @RBACCredentials
     def validate_credentials(self, credentials):
         """
         Attempt to access API endpoint.
@@ -147,7 +80,7 @@ class St2PluginAuth(object):
         return requests.request(verb, url, **get_kwargs)
 
 
-class St2PluginAPI(object):
+class StackStormAPI(object):
     stream_backoff = 10
     authenticate_backoff = 10
 
@@ -157,7 +90,6 @@ class St2PluginAPI(object):
         if self.cfg.verify_cert is False:
             urllib3.disable_warnings()
 
-    @RBACCredentials
     def actionalias_help(self, pack=None, filter=None, limit=None, offset=None):
         """
         Call StackStorm API for action alias help.
@@ -179,7 +111,8 @@ class St2PluginAPI(object):
         if offset is not None:
             params["offset"] = offset
 
-        # TODO: Fetch bot credentials for action-alias call. (This may change if filtering by user is implemented on the st2 api side)
+        # TODO: Fetch bot credentials for action-alias call.
+        # (This may change if filtering by user is implemented on the st2 api side)
         headers = self.st2auth.auth_method("requests")
         r = requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
         if r.status_code == requests.codes.ok:
@@ -191,7 +124,6 @@ class St2PluginAPI(object):
         tmp = urlparse(url)
         return urlunparse((tmp.scheme, tmp.netloc, "", None, None, None))
 
-    @RBACCredentials
     def match(self, text):
         auth_kwargs = self.st2auth.auth_method("st2client")
 #        auth_kwargs['debug'] = False
@@ -224,8 +156,6 @@ class St2PluginAPI(object):
                 LOG.error("Unexpected error {}".format(e))
         return None
 
-    @QRCode
-    @RBACCredentials
     def execute_actionalias(self, action_alias, representation, msg, backend=None):
         """
         @action_alias: the st2client action_alias object.
@@ -291,7 +221,7 @@ class St2PluginAPI(object):
         LOG.info("*** Starting stream listener ***")
 
         def listener(callback=None):
-            headers = self.st2auth.auth_method("requests")
+            headers = self.cfg.bot_creds.requests()
             LOG.debug("authentication headers {}".format(headers))
 
             headers.update({'Accept': 'text/event-stream'})
@@ -321,22 +251,32 @@ class St2PluginAPI(object):
                             p.get('extra')
                         )
 
-        St2PluginAPI.stream_backoff = 10
+        StackStormAPI.stream_backoff = 10
         while True:
             try:
                 listener(callback)
             except TypeError as err:
                 LOG.critical(
                     "St2 stream listener - Type Error: {}."
-                    "Backing off {} seconds.".format(err, St2PluginAPI.backoff))
+                    "Backing off {} seconds.".format(err, StackStormAPI.backoff))
             except Exception as err:
                 LOG.critical(
                     "St2 stream listener - An error occurred: {} {}."
-                    "Backing off {} seconds.".format(type(err), err, St2PluginAPI.backoff)
+                    "Backing off {} seconds.".format(type(err), err, StackStormAPI.backoff)
                 )
-            time.sleep(St2PluginAPI.backoff)
+            time.sleep(StackStormAPI.backoff)
 
-    @RBACCredentials
+    def validate_bot_credentials(self, bot_creds):
+        headers = bot_creds.requests()
+        payload = {}
+        url = "".join([self.cfg.auth_url, "/tokens"])
+
+        r = requests.post(url, headers=headers, data=payload, verify=self.cfg.verify_cert)
+        if r.status_code == requests.codes.ok:
+            return r.json().get("token", None)
+        else:
+            raise r.raise_for_status()
+
     def validate_credentials(self):
         """
         A wrapper method to check for API access authorisation and refresh expired user token.
@@ -346,13 +286,13 @@ class St2PluginAPI(object):
                 LOG.info("Backing off {} seconds.".format(backoff))
                 time.sleep(wait_time)
 
-        St2PluginAPI.authenticate_backoff = 10
+        StackStormAPI.authenticate_backoff = 10
         try:
             if not self.st2auth.valid_credentials():
                 self.st2auth.renew_token()
-                St2PluginAPI.authenticate_backoff = 0
+                StackStormAPI.authenticate_backoff = 0
         except requests.exceptions.HTTPError as e:
             LOG.error("Error while validating credentials {} ({}).".format(e.reason, e.code))
         except Exception as e:
             LOG.exception("An unexpected error has occurred.")
-            backoff(St2PluginAPI.authenticate_backoff)
+            backoff(StackStormAPI.authenticate_backoff)

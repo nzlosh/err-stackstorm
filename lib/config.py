@@ -1,6 +1,6 @@
 # coding:utf-8
 import logging
-from lib.stackstorm_api import St2ApiKey, St2UserToken, St2UserCredentials
+from lib.authentication_handler import St2ApiKey, St2UserToken, St2UserCredentials
 
 LOG = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class PluginConfiguration(object):
         self.oob_auth_url = bot_conf.STACKSTORM.get('oob_auth_url', "https://localhost:8888/")
         self.timer_update = bot_conf.STACKSTORM.get('timer_update', 60)
         self.verify_cert = bot_conf.STACKSTORM.get('verify_cert', True)
-        
+
         self.client_cert = bot_conf.STACKSTORM.get('client_cert', None)
         self.client_key = bot_conf.STACKSTORM.get("client_key", None)
         self.ca_cert = bot_conf.STACKSTORM.get("ca_cert", None)
@@ -43,15 +43,20 @@ class PluginConfiguration(object):
 
     def _configure_credentials(self, bot_conf):
         self.api_auth = bot_conf.STACKSTORM.get('api_auth', {})
-        self.bot_creds = St2ApiKey(self.api_auth.get("key", None))
-        if self.bot_creds is None:
-            self.bot_creds = St2UserToken(self.api_auth.get('token', None))
-        if self.bot_creds is None:
-            self.bot_creds = bot_conf.self.get("user", None)
-            if self.bot_creds is not None:
-                self.bot_creds = St2UserCredentials(
-                    self.bot_creds.get('name', None),
-                    self.bot_creds.get('password', None)
-                )
-                if self.bot_creds.username is None or self.bot_creds.password is None:
-                    LOG.warning("Empty username/password credentials ... check the configuration.")
+        c = self.api_auth.get("token")
+        if c:
+            self.bot_creds = St2UserToken(c)
+            return True
+        c = self.api_auth.get("key")
+        if c:
+            self.bot_creds = St2ApiKey(c)
+            return True
+        c = self.api_auth.get("user")
+        if c:
+            self.bot_creds = St2UserCredentials(
+                c.get('name'),
+                c.get('password')
+            )
+            return True
+        LOG.warning("Failed to find any valid st2 credentials for the bot.")
+        return False

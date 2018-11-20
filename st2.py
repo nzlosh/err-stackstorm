@@ -5,9 +5,9 @@ import threading
 from types import SimpleNamespace
 from errbot import BotPlugin, re_botcmd, botcmd, arg_botcmd, webhook
 from lib.config import PluginConfiguration
-from lib.stackstorm_api import St2PluginAPI
 from lib.chat_adapters import ChatAdapterFactory
-from lib.authentication_controller import AuthenticationController, generate_password, BotPluginIdentity
+from lib.stackstorm_api import StackStormAPI
+from lib.authentication_controller import AuthenticationController, BotPluginIdentity
 
 LOG = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class St2(BotPlugin):
         super(St2, self).__init__(bot, name)
 
         self.st2config = PluginConfiguration(self.bot_config, PLUGIN_PREFIX)
-        self.st2api = St2PluginAPI(self.st2config)
+        self.st2api = StackStormAPI(self.st2config)
         # The chat backend adapter mediates data format and api calls between
         # stackstorm, errbot and the chat backend.
         self.chatbackend = ChatAdapterFactory.instance(self._bot.mode)(self)
@@ -39,10 +39,15 @@ class St2(BotPlugin):
             self.internal_identity.secret
         )
         self.log.debug("err-stackstorm requested session {}".format(self.bot_session))
+        self.validate_bot_credentials()
 
+    def validate_bot_credentials(self):
         # Run the stream listener loop in a separate thread.
-        if not self.st2api.validate_credentials():
-            LOG.critical("Invalid credentials when communicating with StackStorm API.")
+        bot_token = self.st2api.validate_bot_credentials(self.st2config.bot_creds)
+        if bot_token:
+            self.access_control.register_st2_token(self.bot_session, bot_token)
+        else:
+            LOG.critical("Failed to authenticate bot credentials with StackStorm API.")
 
         st2events_listener = threading.Thread(
             target=self.st2api.st2stream_listener,
@@ -197,7 +202,7 @@ class St2(BotPlugin):
                 api_key = request.get("api_key", None)
                 r.message = "Would have authenticated api key."
                 r.authenticated = True
-                #validate api key against st2.
+                # validate api key against st2.
             else:
                 r.return_code = 3
                 r.message = "Invalid authentication payload."
