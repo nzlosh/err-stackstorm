@@ -49,7 +49,7 @@ class St2ApiKey(object):
 
 
 class AuthUserStandalone(object):
-    def __init__(self, username, password):
+    def __init__(self, creds):
         # set X-Authenticate: username/password
         # connect to api/v1/auth
         # if return 200 return (0, Token)
@@ -58,12 +58,12 @@ class AuthUserStandalone(object):
 
 
 class AuthUserProxied(object):
-    def __init__(self, username, password, bot_token):
+    def __init__(self, creds, bot_creds):
         raise NotImplementedError
 
 
 class ValidateTokenStandalone(object):
-    def __init__(self, token):
+    def __init__(self, creds):
         # connect to api/v1/token/validate
         # if return http 200 return (0, Token)
         # else return (x, ErrorMessage)
@@ -71,12 +71,12 @@ class ValidateTokenStandalone(object):
 
 
 class ValidateTokenProxied(object):
-    def __init__(self, username, password, bot_token):
+    def __init__(self, creds, bot_creds):
         raise NotImplementedError
 
 
 class ValidateApiKeyStandalone(object):
-    def __init__(self, api_key):
+    def __init__(self, creds):
         # connect to api/v1/token/validate
         # if return http 200 return (0, ApiKey)
         # else return (x, ErrorMessage)
@@ -84,7 +84,7 @@ class ValidateApiKeyStandalone(object):
 
 
 class ValidateApiKeyProxied(object):
-    def __init__(self, api_key, bot_token):
+    def __init__(self, creds, bot_creds):
         raise NotImplementedError
 
 
@@ -94,16 +94,16 @@ class StandaloneAuthHandler(object):
     authentication credentials provided in the errbot configuration
     for all stackstorm api calls.
     """
-    def __init__(self):
-        pass
+    def __init__(self, kwconf={}):
+        self.kwconf = kwconf
 
     def authenticate(self, creds):
         if isinstance(creds, St2UserCredentials):
-            return AuthUserStandalone(creds.username, creds.password)
+            return AuthUserStandalone(creds)
         if isinstance(creds, St2UserToken):
-            return ValidateTokenStandalone(creds.token)
+            return ValidateTokenStandalone(creds)
         if isinstance(creds, St2ApiKey):
-            return ValidateApiKeyStandalone(creds.api_key)
+            return ValidateApiKeyStandalone(creds)
         LOG.warning("Unsupported st2 authentication object {} - '{}'".format(type(creds), creds))
         return False
 
@@ -114,14 +114,18 @@ class ProxiedAuthHandler(object):
     expectation they are defined as a service in StackStorm.  Calls to the StackStorm API will
     made with cached credentials, or looked up if no credentials are currently cached.
     """
-    def authenticate_user(self, username, password):
-        self.user_auth = AuthUserProxied(username, password)
+    def __init__(self, kwconf={}):
+        self.kwconf = kwconf
 
-    def validate_token(self, token):
-        self.token_validate = ValidateTokenProxied(token)
-
-    def validate_api_key(self, api_key):
-        self.api_key_validate = ValidateApiKeyProxied(api_key)
+    def authenticate(self, creds, bot_creds):
+        if isinstance(creds, St2UserCredentials):
+            return AuthUserProxied(creds, bot_creds)
+        if isinstance(creds, St2UserToken):
+            return ValidateTokenProxied(creds, bot_creds)
+        if isinstance(creds, St2ApiKey):
+            return ValidateApiKeyProxied(creds, bot_creds)
+        LOG.warning("Unsupported st2 authentication object {} - '{}'".format(type(creds), creds))
+        return False
 
 
 class OutOfBandsAuthHandler(object):
@@ -131,11 +135,15 @@ class OutOfBandsAuthHandler(object):
     validated, the returned token is cached by errbot.  Authenticated chat users will be looked up
     in the session manager to fetch their StackStorm token with each call to the StackStorm API.
     """
-    def authenticate_user(self, username, password):
-        self.user_auth = AuthUserProxied(username, password)
+    def __init__(self, kwconf={}):
+        self.kwconf = kwconf
 
-    def validate_token(self, token):
-        self.token_validate = ValidateTokenProxied(token)
-
-    def validate_api_key(self, api_key):
-        self.api_key_validate = ValidateApiKeyProxied(api_key)
+    def authenticate(self, creds, bot_creds):
+        if isinstance(creds, St2UserCredentials):
+            return AuthUserProxied(creds, bot_creds)
+        if isinstance(creds,  St2UserToken):
+            return ValidateTokenProxied(token, bot_creds)
+        if isinstance(creds, St2ApiKey):
+            return ValidateApiKeyProxied(api_key, bot_creds)
+        LOG.warning("Unsupported st2 authentication object {} - '{}'".format(type(creds), creds))
+        return False

@@ -1,6 +1,7 @@
 # coding:utf-8
 import logging
 from lib.authentication_handler import St2ApiKey, St2UserToken, St2UserCredentials
+from lib.authentication_handler import OutOfBandsAuthHandler, ProxiedAuthHandler, StandaloneAuthHandler
 
 LOG = logging.getLogger(__name__)
 
@@ -23,14 +24,16 @@ class PluginConfiguration(object):
     def _configure_rbac_auth(self, bot_conf):
         rbac_auth = bot_conf.STACKSTORM.get('rbac_auth', {})
         if "proxied" in rbac_auth:
-            self.rbac_auth_type = "proxied"
-            self.rbac_auth_opts = rbac_auth["proxied"]
+            self.auth_handler = ProxiedAuthHandler(rbac_auth["proxied"])
+            return
         if "extended" in rbac_auth:
-            self.rbac_auth_type = "extended"
-            self.rbac_auth_opts = rbac_auth["extended"]
+            self.auth_handler = OutOfBandsAuthHandler(rbac_auth["extended"])
+            return
         if rbac_auth == {}:
-            self.rbac_auth_type = "simple"
-            self.rbac_auth_opts = {}
+            self.auth_handler = StandaloneAuthHandler()
+            return
+        LOG.warning("Failed to configure RBAC authentication handler.  Check the configuration.")
+        return False
 
     def _configure_prefixes(self, bot_conf):
         self.bot_prefix = bot_conf.BOT_PREFIX
