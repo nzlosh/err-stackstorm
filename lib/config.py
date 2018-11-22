@@ -1,7 +1,8 @@
 # coding:utf-8
 import logging
 from lib.authentication_handler import St2ApiKey, St2UserToken, St2UserCredentials
-from lib.authentication_handler import OutOfBandsAuthHandler, ProxiedAuthHandler, StandaloneAuthHandler
+from lib.authentication_handler import OutOfBandsAuthHandler, ProxiedAuthHandler
+from lib.authentication_handler import StandaloneAuthHandler
 
 LOG = logging.getLogger(__name__)
 

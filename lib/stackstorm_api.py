@@ -34,10 +34,10 @@ class St2PluginAuth(object):
         Returns: True if access is permitted and false if access fails.
         """
         add_headers = credentials.requests()
-        r = self._http_request('GET', self.cfg.api_url, '/', headers=add_headers)
-        if r.status_code in [200]:
+        response = self._http_request('GET', self.cfg.api_url, '/', headers=add_headers)
+        if response.status_code in [200]:
             return True
-        LOG.info('API response to token = {} {}'.format(r.status_code, r.reason))
+        LOG.info('API response to token = {} {}'.format(response.status_code, response.reason))
         return False
 
     def renew_token(self):
@@ -49,13 +49,16 @@ class St2PluginAuth(object):
         if self.username and self.password:
             auth = HTTPBasicAuth(self.username, self.password)
 
-            r = self._http_request('POST', self.cfg.auth_url, "/tokens", auth=auth)
-            if r.status_code == 201:  # created.
-                auth_info = r.json()
+            response = self._http_request('POST', self.cfg.auth_url, "/tokens", auth=auth)
+            if response.status_code == 201:  # created.
+                auth_info = response.json()
                 self.token = auth_info["token"]
-                LOG.info("Received new token %s" % self.token)
+                LOG.info("Received new token {}".format(self.token))
             else:
-                LOG.warning('Failed to get new user token. {} {}'.format(r.status_code, r.reason))
+                LOG.warning('Failed to get new user token. {} {}'.format(
+                    response.status_code,
+                    response.reason
+                ))
         else:
             LOG.warning("Unable to renew user token because user credentials are missing.")
 
@@ -86,6 +89,7 @@ class StackStormAPI(object):
 
     def __init__(self, st2config):
         self.cfg = st2config
+        self.thread_test = 0
         self.st2auth = St2PluginAuth(st2config)
         if self.cfg.verify_cert is False:
             urllib3.disable_warnings()
@@ -113,12 +117,12 @@ class StackStormAPI(object):
 
         # TODO: Fetch bot credentials for action-alias call.
         # (This may change if filtering by user is implemented on the st2 api side)
-        headers = self.st2auth.auth_method("requests")
-        r = requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
-        if r.status_code == requests.codes.ok:
-            return r.json().get("helpstrings", [])
+        headers = self.cfg.bot_creds.requests()
+        response = requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
+        if response.status_code == requests.codes.ok:
+            return response.json().get("helpstrings", [])
         else:
-            raise r.raise_for_status()
+            response.raise_for_status()
 
     def _baseurl(self, url):
         tmp = urlparse(url)
@@ -127,7 +131,7 @@ class StackStormAPI(object):
     def match(self, text):
         auth_kwargs = self.st2auth.auth_method("st2client")
 #        auth_kwargs['debug'] = False
-
+        self.thread_test = 1
         base_url = self._baseurl(self.cfg.api_url)
 
         LOG.debug("Create st2 client with {} {} {}".format(
@@ -232,7 +236,7 @@ class StackStormAPI(object):
                     stream=True,
                     verify=self.cfg.verify_cert
                 )
-                if response.status_code >= 400:
+                if response.raise_for_status():
                     raise HTTPError("HTTP Error {} ({})".format(
                         response.reason,
                         response.status_code
@@ -240,6 +244,7 @@ class StackStormAPI(object):
                 client = sseclient.SSEClient(response)
                 for event in client.events():
                     data = json.loads(event.data)
+                    LOG.info("(Thread test={})".format(self.thread_test))
                     if event.event in ["st2.announcement__errbot"]:
                         LOG.debug("*** Errbot announcement event detected! ***\n{}\n".format(event))
                         p = data["payload"]
@@ -271,13 +276,14 @@ class StackStormAPI(object):
         payload = {}
         url = "".join([self.cfg.auth_url, "/tokens"])
 
-        r = requests.post(url, headers=headers, data=payload, verify=self.cfg.verify_cert)
-        if r.status_code == requests.codes.ok:
-            return r.json().get("token", None)
+        response = requests.post(url, headers=headers, data=payload, verify=self.cfg.verify_cert)
+        if response.status_code == requests.codes.ok:
+            LOG.debug("Successfully validated bot credentials against StackStorm API")
+            return response.json().get("token", None)
         else:
-            raise r.raise_for_status()
+            response.raise_for_status()
 
-    def validate_credentials(self):
+    def validate_credentials(self, credentials):
         """
         A wrapper method to check for API access authorisation and refresh expired user token.
         """
@@ -288,7 +294,7 @@ class StackStormAPI(object):
 
         StackStormAPI.authenticate_backoff = 10
         try:
-            if not self.st2auth.valid_credentials():
+            if not self.st2auth.validate_credentials(credentials):
                 self.st2auth.renew_token()
                 StackStormAPI.authenticate_backoff = 0
         except requests.exceptions.HTTPError as e:

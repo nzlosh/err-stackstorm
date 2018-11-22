@@ -15,7 +15,7 @@ class St2UserCredentials(object):
     def requests(self):
         # Nasty hack until I find a nice way for requests to produce the header.
         return HTTPBasicAuth(self.username, self.password).__call__(
-            SimpleNamespace(**{"headers":{}})
+            SimpleNamespace(**{"headers": {}})
         ).headers
 
     def st2client(self):
@@ -90,14 +90,16 @@ class ValidateApiKeyProxied(object):
 
 class StandaloneAuthHandler(object):
     """
-    Standalone authentication handler will only use the stackstorm
-    authentication credentials provided in the errbot configuration
-    for all stackstorm api calls.
+    Standalone authentication handler will only use the stackstorm authentication credentials
+    provided in the errbot configuration for all stackstorm api calls.
     """
     def __init__(self, kwconf={}):
         self.kwconf = kwconf
 
-    def authenticate(self, creds):
+    def authenticate(self, creds, bot_creds=None):
+        """
+        param: bot_creds - not used, but present to have the same signature as other AuthHandlers.
+        """
         if isinstance(creds, St2UserCredentials):
             return AuthUserStandalone(creds)
         if isinstance(creds, St2UserToken):
@@ -110,9 +112,9 @@ class StandaloneAuthHandler(object):
 
 class ProxiedAuthHandler(object):
     """
-    Proxied authentication handler will use the configured errbot credentials with the
-    expectation they are defined as a service in StackStorm.  Calls to the StackStorm API will
-    made with cached credentials, or looked up if no credentials are currently cached.
+    Proxied authentication handler will use the configured errbot credentials with the expectation
+    they are defined as a service in StackStorm.  Calls to the StackStorm API will made with cached
+    credentials, or looked up if no credentials are currently cached.
     """
     def __init__(self, kwconf={}):
         self.kwconf = kwconf
@@ -142,8 +144,8 @@ class OutOfBandsAuthHandler(object):
         if isinstance(creds, St2UserCredentials):
             return AuthUserProxied(creds, bot_creds)
         if isinstance(creds,  St2UserToken):
-            return ValidateTokenProxied(token, bot_creds)
+            return ValidateTokenProxied(creds, bot_creds)
         if isinstance(creds, St2ApiKey):
-            return ValidateApiKeyProxied(api_key, bot_creds)
+            return ValidateApiKeyProxied(creds, bot_creds)
         LOG.warning("Unsupported st2 authentication object {} - '{}'".format(type(creds), creds))
         return False

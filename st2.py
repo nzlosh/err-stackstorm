@@ -8,6 +8,7 @@ from lib.config import PluginConfiguration
 from lib.chat_adapters import ChatAdapterFactory
 from lib.stackstorm_api import StackStormAPI
 from lib.authentication_controller import AuthenticationController, BotPluginIdentity
+from lib.authentication_handler import St2ApiKey, St2UserToken, St2UserCredentials
 
 LOG = logging.getLogger(__name__)
 
@@ -34,21 +35,41 @@ class St2(BotPlugin):
 
         # Wrap err-stackstorm credentials to distinguish it from chat backend credentials.
         self.internal_identity = BotPluginIdentity()
+        self.authenticate_bot_credentials()
+
+    def authenticate_bot_credentials(self):
+        """
+        Create a session and associate valid StackStorm credentials with it for the bot to use.
+        """
         self.bot_session = self.access_control.request_session(
             self.internal_identity,
             self.internal_identity.secret
         )
-        self.log.debug("err-stackstorm requested session {}".format(self.bot_session))
-        self.validate_bot_credentials()
+        LOG.debug("err-stackstorm requested session {}".format(self.bot_session))
 
-    def validate_bot_credentials(self):
         # Run the stream listener loop in a separate thread.
         bot_token = self.st2api.validate_bot_credentials(self.st2config.bot_creds)
+        LOG.debug("Validate response {}".format(bot_token))
         if bot_token:
-            self.access_control.register_st2_token(self.bot_session, bot_token)
+            self.access_control.set_session_token(self.bot_session, bot_token)
         else:
             LOG.critical("Failed to authenticate bot credentials with StackStorm API.")
 
+    def validate_bot_credentials(self):
+        """
+        Check the session and StackStorm credentials are still valid.
+        """
+        if self.bot_session.expired():
+            LOG.debug("err-stackstorm session expired, attempting to renew")
+            self.authenticate_bot_credentials()
+        else:
+            # Fetch the stackstorm token and check it hasn't expired.  If it has, renew it.
+            raise NotImplementedError
+
+    def st2listener(self):
+        """
+        Start a new thread to listen to StackStorm's stream events.
+        """
         st2events_listener = threading.Thread(
             target=self.st2api.st2stream_listener,
             args=[self.chatbackend.post_message]
@@ -62,7 +83,7 @@ class St2(BotPlugin):
         """
         super(St2, self).activate()
         LOG.info("Poller activated")
-        self.start_poller(self.st2config.timer_update, self.st2api.validate_credentials)
+        self.start_poller(self.st2config.timer_update, self.st2api.validate_bot_credentials)
 
     @botcmd(admin_only=True)
     def st2sessionlist(self, msg, args):
@@ -181,29 +202,37 @@ class St2(BotPlugin):
             "message": "Session has already been used or has expired."
         })
 
-        if not self.access_control.use_session_id(uuid):
+        if not self.access_control.consume_session(uuid):
             r.return_code = 2
             r.message = "Invalid session id '{}'".format(uuid)
 
         if r.return_code == 0:
             shared_word = request.get("shared_word", None)
+
             if "username" in request:
                 username = request.get("username", "")
                 password = request.get("password", "")
-                r.message = "Would have authenticated username/password"
-                # validate user credentials against st2.
+                self.st2config.auth_handler.authenticate(
+                    St2UserCredentials(username, password),
+                    self.st2config.bot_creds
+                )
                 r.authenticated = True
             elif "user_token" in request:
                 user_token = request.get("user_token", None)
-                r.message = "Would have authenticated user token."
-                # validate user token against st2.
+                self.st2config.auth_handler.authenticate(
+                    St2UserToken(user_token),
+                    self.st2config.bot_creds
+                )
                 r.authenticated = True
             elif "api_key" in request:
                 api_key = request.get("api_key", None)
-                r.message = "Would have authenticated api key."
+                self.st2config.auth_handler.authenticate(
+                    St2ApiKey(api_key),
+                    self.st2config.bot_creds
+                )
                 r.authenticated = True
-                # validate api key against st2.
-            else:
+
+            if r.authenticate is False or shared_word is None:
                 r.return_code = 3
                 r.message = "Invalid authentication payload."
                 LOG.warning(r.message)

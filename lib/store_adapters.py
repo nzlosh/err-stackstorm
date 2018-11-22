@@ -24,7 +24,7 @@ class StoreAdapterFactory(AbstractStoreAdapterFactory):
     @staticmethod
     def instantiate(store_type):
         return {
-            "developer": DeveloperStoreAdapater,
+            "cleartext": ClearTextStoreAdapater,
             "keyring": KeyringStoreAdapter,
             "valut": VaultStoreAdapter
         }.get(store_type, KeyringStoreAdapter)
@@ -39,7 +39,7 @@ class StoreAdapterFactory(AbstractStoreAdapterFactory):
 
     @staticmethod
     def developer_adapter():
-        return DeveloperStoreAdapater()
+        return ClearTextStoreAdapater()
 
 
 class AbstractStoreAdapter(metaclass=abc.ABCMeta):
@@ -61,7 +61,7 @@ class AbstractStoreAdapter(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
 
-class DeveloperStoreAdapater(AbstractStoreAdapter):
+class ClearTextStoreAdapater(AbstractStoreAdapter):
     """
     This is only intended for use in development environments.
     Never use this in production, it offers no security.

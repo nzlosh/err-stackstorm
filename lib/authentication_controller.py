@@ -3,7 +3,6 @@ import string
 import logging
 from random import SystemRandom
 from lib.session_manager import SessionManager
-from lib.authentication_handler import OutOfBandsAuthHandler, ProxiedAuthHandler, StandaloneAuthHandler
 
 LOG = logging.getLogger(__name__)
 
@@ -29,9 +28,8 @@ class AuthenticationController(object):
     def __init__(self, bot):
         self.bot = bot
         self.sessions = SessionManager()
-        self.auth_handler = StandaloneAuthHandler()
 
-    def use_session_id(self, session_id):
+    def consume_session(self, session_id):
         ret = False
         session = self.sessions.get_by_uuid(session_id)
         if session is False:
@@ -63,20 +61,23 @@ class AuthenticationController(object):
         else:
             self.sessions.delete(session.user_id)
 
-    def get_st2_token(self, user):
-        raise NotImplementedError
-#        if isinstance(user, BotPluginIdentity):
-#            self.auth_handler.(user)
+    def get_session_token(self, user):
+        """
+        Get the associated StackStorm token/key given chat backend username.
+        Return StackStorm token/key associated with the user or False if session isn't valid or
+        secret is missing.
+        """
+        secret = False
+        if isinstance(user, BotPluginIdentity):
+            user = user.name
+        session = self.sessions.get_by_userid(user)
+        if session:
+            LOG.debug("Get token for '{}' with session id {}".format(user, session.session_id))
+            secret = self.sessions.get_secret(session.session_id)
+        return secret
 
-    def register_st2_token(self, session, token):
+    def set_session_token(self, session, token):
         return self.sessions.put_secret(session.session_id, token)
-
-    def validate_stackstorm_credentials(self, creds):
-        raise NotImplementedError
-# Lookup chat user to get session id.
-# check session id is valid
-# get user token by session id.
-# return token
 
     def request_session(self, user, user_secret):
         """
