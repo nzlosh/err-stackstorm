@@ -87,9 +87,9 @@ STACKSTORM = {
         'key': '<API Key>'
     },
     'rbac_auth': {
-        'simple': {},
-        'extended': {},
-        'proxied': {
+        'standalone': {},
+        'serverside': {},
+        'clientside': {
             'url': '<url_to_errbot_webserver>',
             'keyring_password': "<keyring_password>"
         }
@@ -134,51 +134,64 @@ _API Key_ support has been included since StackStorm v2.0.  When an _API Key_ is
 
 ### Role Based Access Control Authentication
 
-#### Single RBAC account
+#### Standalone RBAC
 
-This is the original authentication method where by Errbot uses valid credentials from its configuration file to authenticate with the StackStorm API.  All action-alias' issued by chat service users execute the underlying workflows with the credentials of Errbot.
+This is the original authentication method where by err-stackstorm uses its own credentials for all 
+calls to the StackStorm API.  All action-alias' issued by chat service users execute the underlying 
+workflows with err-stackstorm credentials.
 
 
 ##### Configuration
-An empty dictionary in the *rbac_auth* key is all that is required to maintain Err-stackstorm's
+It is considered an error to have multiple RBAC authentication configurations present at the same time.
+An empty dictionary in the *standalone* key is all that is required to maintain Err-stackstorm's
 original authentication method.
 ```
-    'rbac_auth': {},
-```
-
-#### StackStorm's extended RBAC for ChatOps
-
-To be implemented.
-
-##### Configuration
-It is considered an error to have both *extended* and *proxied* RBAC authentication configurations
-present at the same time.  Only the *extended* key with an empty dictionary is required to enable
-extended RBAC for ChatOps.
-
-```
     'rbac_auth': {
-        'extended': {}
+        'simple': {},
     },
 ```
 
-#### Err-stackstorm's Out-of-bands authentication for ChatOps
+#### Server-side RBAC
 
-The Err-stackstorm plugin provides a way to associate the chat service user account with a
-username/password, user token or api token for StackStorm.
+The "server-side" RBAC implementation uses err-stackstorm credentials to call the StackStorm API
+to pass chat service user identification.  The err-stackstorm credentials must be defined as a
+service.  Chat service user identifications must be registered with StackStorm before being used.
 
-This implementation is specific to Err-stackstorm and is achieved by means of requesting an
-authentication session with Errbot.  A URL with a universally unique identifier is given over the
-chat service channel.  By following the URL, the user is taken out of the chat service channel to an
-authentication web page which is hosted by Errbot.
+When a chat service user matches, StackStorm will return the associated user token and err-stackstorm
+will cache the result.  When a chat user triggers an action-alias, the associated workflow will be
+executed with the cached user token.
 
-The user provides authentication credentials to Errbot which will use them to authenticate against
-StackStorm's API.  Upon a successful authentication, Errbot will store the user token or api key in
-a secure store using Keyring to protect the contents.
+##### Configuration
+It is considered an error to have multiple RBAC authentication configurations present at the same time.
+Only the *serverside* key with an empty dictionary is required to enable Server-side RBAC for ChatOps.
 
-At this point, the user may resume issuing action-aliases on the chat service channel.  With the new
-Err-stackstorm session established, each action-alias requested, Errbot will lookup the chat user session
-to find a stored StackStorm API credential.  If one exists, Errbot will call the API using the users
-credentials and not its own.
+```
+    'rbac_auth': {
+        'serverside': {}
+    },
+```
+
+#### Client-side RBAC
+
+Err-stackstorm provides a way to associate the chat service user account with a StackStorm
+username/password, user token or api token.
+
+This implementation is specific to err-stackstorm.  It is achieved by requesting a new authentication
+session with err-stackstorm.  A Universally Unique Identifier (UUID) is generated for the session
+and the chat user is invited to follow a URL to the authentication page hosted by errbot.  For
+security reasons, the UUID is a one time use and is consumed when the page is accessed. 
+
+The login page must be protected by TLS encryption and ideally require an ssl client certificate.
+The login page should not be exposed directly to the internet, but have a reverse proxy such as
+nginx place between it and any external service consumers.
+
+The user enters their StackStorm credentials via the login page which err-stackstorm will validate
+against the StackStorm API.  If the credentials are valid, the user token or api key will be cached
+by err-stackstorm and the supplied credentials discarded.
+
+Once a chat user is associated with their StackStorm credentials, any action-alias will be executed
+using the associated StackStorm credentials.
+
 
 ##### Configuration
 It is considered an error to have both *extended* and *proxied* RBAC authentication configurations

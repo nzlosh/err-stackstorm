@@ -1,53 +1,12 @@
 # coding:utf-8
+import abc
 import logging
-from types import SimpleNamespace
 from requests.auth import HTTPBasicAuth
 
 LOG = logging.getLogger(__name__)
 
 
 # Strategy pattern to vary authentication behaviour amoung the authentication handler classes.
-class St2UserCredentials(object):
-    def __init__(self, username=None, password=None):
-        self.username = username
-        self.password = password
-
-    def requests(self):
-        # Nasty hack until I find a nice way for requests to produce the header.
-        return HTTPBasicAuth(self.username, self.password).__call__(
-            SimpleNamespace(**{"headers": {}})
-        ).headers
-
-    def st2client(self):
-        raise NotImplementedError
-
-
-class St2UserToken(object):
-    def __init__(self, token=None):
-        self.token = None
-        if token:
-            self.token = token
-
-    def requests(self):
-        return {"X-Auth-Token": self.token}
-
-    def st2client(self):
-        return {"token": self.token}
-
-
-class St2ApiKey(object):
-    def __init__(self, apikey=None):
-        self.apikey = None
-        if apikey:
-            self.apikey = apikey
-
-    def requests(self):
-        return {'St2-Api-Key': self.apikey}
-
-    def st2client(self):
-        return {'api_key': self.apikey}
-
-
 class AuthUserStandalone(object):
     def __init__(self, creds):
         # set X-Authenticate: username/password
@@ -88,7 +47,37 @@ class ValidateApiKeyProxied(object):
         raise NotImplementedError
 
 
-class StandaloneAuthHandler(object):
+class AbstractAuthHandlerFactory(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def instantiate(self, handler_type):
+        raise NotImplementedError
+
+
+class AuthHandlerFactory(AbstractAuthHandlerFactory):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def instantiate(handler_type):
+        if handler_type == "serverside":
+            return ServerSideAuthHandler
+        elif handler_type == "clientside":
+            return ClientSideAuthHandler
+        else:
+            return StandaloneAuthHandler
+
+
+class AbstractAuthHandler(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def __init__(self, kwconf={}):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def authenticate(self, creds, bot_creds):
+        raise NotImplementedError
+
+
+class StandaloneAuthHandler(AbstractAuthHandler):
     """
     Standalone authentication handler will only use the stackstorm authentication credentials
     provided in the errbot configuration for all stackstorm api calls.
@@ -110,11 +99,16 @@ class StandaloneAuthHandler(object):
         return False
 
 
-class ProxiedAuthHandler(object):
+class ServerSideAuthHandler(AbstractAuthHandler):
     """
-    Proxied authentication handler will use the configured errbot credentials with the expectation
-    they are defined as a service in StackStorm.  Calls to the StackStorm API will made with cached
-    credentials, or looked up if no credentials are currently cached.
+    Server side authentication handler is used when StackStorm maintains a list of chat user
+    accounts and associates them with a StackStorm login accuont.
+
+    err-stackstorm's authentication credentials must be configured as a service in StackStorm.
+    This will permit err-stackstorm to request a user token on behalf of the chat user account.
+
+    StackStorm will return a user token for a valid user and err-stackstorm will cache this token
+    for subsequence action-alias executions by the corresponding chat user account.
     """
     def __init__(self, kwconf={}):
         self.kwconf = kwconf
@@ -130,12 +124,13 @@ class ProxiedAuthHandler(object):
         return False
 
 
-class OutOfBandsAuthHandler(object):
+class ClientSideAuthHandler(AbstractAuthHandler):
     """
-    OutOfBands authentication handler will use the configured errbot credentials to query StackStorm
-    credentials supplied via the authentication login page.  If the credentials are successfully
-    validated, the returned token is cached by errbot.  Authenticated chat users will be looked up
-    in the session manager to fetch their StackStorm token with each call to the StackStorm API.
+    Client side authentication handler will use the configured errbot credentials to query
+    StackStorm credentials supplied via the authentication login page.  If the credentials are
+    successfully validated, the returned token is cached by errbot.  Authenticated chat users will
+    be looked up in the session manager to fetch their StackStorm token with each call to the
+    StackStorm API.
     """
     def __init__(self, kwconf={}):
         self.kwconf = kwconf

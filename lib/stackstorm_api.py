@@ -89,7 +89,6 @@ class StackStormAPI(object):
 
     def __init__(self, st2config):
         self.cfg = st2config
-        self.thread_test = 0
         self.st2auth = St2PluginAuth(st2config)
         if self.cfg.verify_cert is False:
             urllib3.disable_warnings()
@@ -131,7 +130,7 @@ class StackStormAPI(object):
     def match(self, text):
         auth_kwargs = self.st2auth.auth_method("st2client")
 #        auth_kwargs['debug'] = False
-        self.thread_test = 1
+
         base_url = self._baseurl(self.cfg.api_url)
 
         LOG.debug("Create st2 client with {} {} {}".format(
@@ -244,7 +243,6 @@ class StackStormAPI(object):
                 client = sseclient.SSEClient(response)
                 for event in client.events():
                     data = json.loads(event.data)
-                    LOG.info("(Thread test={})".format(self.thread_test))
                     if event.event in ["st2.announcement__errbot"]:
                         LOG.debug("*** Errbot announcement event detected! ***\n{}\n".format(event))
                         p = data["payload"]

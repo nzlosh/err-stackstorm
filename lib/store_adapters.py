@@ -10,14 +10,17 @@ LOG = logging.getLogger(__name__)
 
 
 class AbstractStoreAdapterFactory(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def instantiate(store_type):
+        raise NotImplementedError
 
     @abc.abstractmethod
     def keyring_adapter(self):
-        pass
+        raise NotImplementedError
 
     @abc.abstractmethod
     def vault_adpater(self):
-        pass
+        raise NotImplementedError
 
 
 class StoreAdapterFactory(AbstractStoreAdapterFactory):
@@ -43,7 +46,6 @@ class StoreAdapterFactory(AbstractStoreAdapterFactory):
 
 
 class AbstractStoreAdapter(metaclass=abc.ABCMeta):
-
     @abc.abstractmethod
     def setup(self, *args, **kwargs):
         raise NotImplementedError

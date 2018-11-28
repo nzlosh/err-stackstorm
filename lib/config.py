@@ -1,8 +1,7 @@
 # coding:utf-8
 import logging
-from lib.authentication_handler import St2ApiKey, St2UserToken, St2UserCredentials
-from lib.authentication_handler import OutOfBandsAuthHandler, ProxiedAuthHandler
-from lib.authentication_handler import StandaloneAuthHandler
+from lib.credentials_adapaters import CredentialsFactory
+from lib.authentication_handler import AuthHandlerFactory
 
 LOG = logging.getLogger(__name__)
 
@@ -23,12 +22,12 @@ class PluginConfiguration(object):
         self.ca_cert = bot_conf.STACKSTORM.get("ca_cert", None)
 
     def _configure_rbac_auth(self, bot_conf):
-        rbac_auth = bot_conf.STACKSTORM.get('rbac_auth', {})
-        if "proxied" in rbac_auth:
-            self.auth_handler = ProxiedAuthHandler(rbac_auth["proxied"])
+        rbac_auth = bot_conf.STACKSTORM.get('rbac_auth', {"standalone": {}})
+        if "clientside" in rbac_auth:
+            self.auth_handler = ProxiedAuthHandler(rbac_auth["clientside"])
             return
-        if "extended" in rbac_auth:
-            self.auth_handler = OutOfBandsAuthHandler(rbac_auth["extended"])
+        elif "serverside" in rbac_auth:
+            self.auth_handler = OutOfBandsAuthHandler(rbac_auth["serverside"])
             return
         if rbac_auth == {}:
             self.auth_handler = StandaloneAuthHandler()
@@ -47,20 +46,19 @@ class PluginConfiguration(object):
 
     def _configure_credentials(self, bot_conf):
         self.api_auth = bot_conf.STACKSTORM.get('api_auth', {})
-        c = self.api_auth.get("token")
-        if c:
-            self.bot_creds = St2UserToken(c)
-            return True
-        c = self.api_auth.get("key")
-        if c:
-            self.bot_creds = St2ApiKey(c)
-            return True
-        c = self.api_auth.get("user")
-        if c:
-            self.bot_creds = St2UserCredentials(
-                c.get('name'),
-                c.get('password')
-            )
-            return True
-        LOG.warning("Failed to find any valid st2 credentials for the bot.")
-        return False
+        self.bot_creds = None
+        for cred_type in ["key", "user", "token"]:
+            c = self.api_auth.get(cred_type)
+            if c:
+                if cred_type == "user":
+                    self.bot_creds = CredentialsFactory.instantiate(cred_type)(
+                        c.get('name'),
+                        c.get('password')
+                    )
+                    break
+                else:
+                    self.bot_creds = CredentialsFactory.instantiate(cred_type)(c)
+                    break
+        if self.bot_creds is None:
+            LOG.warning("Failed to find any valid st2 credentials for the bot, check the bots configuration.")
+
