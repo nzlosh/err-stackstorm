@@ -201,14 +201,33 @@ class St2(BotPlugin):
             "return_code": 0,
             "message": "Session has already been used or has expired."
         })
-
-        if not self.access_control.consume_session(uuid):
+        session = None
+        try:
+            self.access_control.consume_session(uuid)
+        except SessionConsumedError:
             r.return_code = 2
-            r.message = "Invalid session id '{}'".format(uuid)
+            r.message = "Session '{}' has already been consumed.".format(uuid)
+        except SessionExpiredError:
+            r.return_code = 3
+            r.message = "Session '{}' has expired.".format(uuid)
+        except SessionInvalidError:
+            r.return_code = 4
+            r.message = "Session '{}' is invalid.".format(uuid)
+        except Exception as e:
+            r.return_code = 90
+            r.message = "An unexpected error has occurred."
 
         if r.return_code == 0:
-            shared_word = request.get("shared_word", None)
+            try:
+                shared_word = request.get("shared_word", None)
+                if self.access_control.match_secret(uuid, shared_word) is False:
+                    r.return_code 5
+                    r.message = "Invalid credentials"
+            except Exception as e:
+                r.return_code = 91
+            r.message = "An unexpected error has occurred."
 
+        if r.return_code == 0:
             if "username" in request:
                 username = request.get("username", "")
                 password = request.get("password", "")
