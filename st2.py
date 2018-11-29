@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from errbot import BotPlugin, re_botcmd, botcmd, arg_botcmd, webhook
 from lib.config import PluginConfiguration
 from lib.chat_adapters import ChatAdapterFactory
+from lib.errors import SessionConsumedError, SessionExpiredError, SessionInvalidError
 from lib.stackstorm_api import StackStormAPI
 from lib.authentication_controller import AuthenticationController, BotPluginIdentity
 from lib.authentication_handler import St2ApiKey, St2UserToken, St2UserCredentials
@@ -201,18 +202,12 @@ class St2(BotPlugin):
             "return_code": 0,
             "message": "Session has already been used or has expired."
         })
-        session = None
+
         try:
             self.access_control.consume_session(uuid)
-        except SessionConsumedError:
+        except (SessionConsumedError, SessionExpiredError, SessionInvalidError) as e:
             r.return_code = 2
-            r.message = "Session '{}' has already been consumed.".format(uuid)
-        except SessionExpiredError:
-            r.return_code = 3
-            r.message = "Session '{}' has expired.".format(uuid)
-        except SessionInvalidError:
-            r.return_code = 4
-            r.message = "Session '{}' is invalid.".format(uuid)
+            r.message = "Session '{}' {}.".format(uuid, e)
         except Exception as e:
             r.return_code = 90
             r.message = "An unexpected error has occurred."
@@ -221,7 +216,7 @@ class St2(BotPlugin):
             try:
                 shared_word = request.get("shared_word", None)
                 if self.access_control.match_secret(uuid, shared_word) is False:
-                    r.return_code 5
+                    r.return_code = 5
                     r.message = "Invalid credentials"
             except Exception as e:
                 r.return_code = 91

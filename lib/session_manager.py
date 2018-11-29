@@ -18,7 +18,7 @@ class SessionManager(object):
     def get_by_userid(self, user_id):
         """
         Fetch information from the store by user_id.
-        @user_id: A string uniquely identifying the chat user.
+        param: user_id[string]  A string uniquely identifying the chat user.
         """
         return self.store.get_by_userid(user_id)
 
@@ -35,12 +35,12 @@ class SessionManager(object):
         param: user_secret - A pseudo-secret word provided by
         the user and used as part of the UUID hashing process.
         """
-        session = self.store.get_by_userid(user_id)
-        # Create a new session if one doesn't exist already.
-        if session is False:
-            session = Session(user_id, user_secret)
-            # Store the session.
-            self.store.put(session)
+        # Don't create a new session if one already exists.
+        if self.exist(user_id):
+            raise SessionInvalidError
+        session = Session(user_id, user_secret)
+        # Store the session.
+        self.store.put(session)
         return session
 
     def delete(self, user_id):
@@ -50,6 +50,9 @@ class SessionManager(object):
         self.store.delete(user_id)
 
     def list_sessions(self):
+        """
+        List all available sessions.
+        """
         return self.store.list()
 
     def update(self, session):
