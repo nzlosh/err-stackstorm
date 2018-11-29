@@ -47,7 +47,6 @@ class St2(BotPlugin):
         )
         LOG.debug("err-stackstorm requested session {}".format(self.bot_session))
 
-        # Run the stream listener loop in a separate thread.
         bot_token = self.st2api.validate_bot_credentials(self.st2config.bot_creds)
         LOG.debug("Validate response {}".format(bot_token))
         if bot_token:
@@ -70,6 +69,7 @@ class St2(BotPlugin):
         """
         Start a new thread to listen to StackStorm's stream events.
         """
+        # Run the stream listener loop in a separate thread.
         st2events_listener = threading.Thread(
             target=self.st2api.st2stream_listener,
             args=[self.chatbackend.post_message]
