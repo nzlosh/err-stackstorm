@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="err-stackstorm",
-    version="1.4.0",
+    version="2.0.0",
     author="Err-StackStorm Plugin contributors",
     author_email="nobody@localhost",
     description="An Errbot plugin for StackStorm ChatOps.",
