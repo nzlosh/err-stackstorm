@@ -3,6 +3,7 @@ import logging
 from lib.session import Session
 from lib.store_adapters import SessionStore
 from lib.store_adapters import StoreAdapterFactory
+from lib.session import SessionInvalidError
 
 LOG = logging.getLogger(__name__)
 

@@ -16,17 +16,6 @@ def generate_password(length=8):
     return "".join([rnd.choice(string.hexdigits) for _ in range(length)])
 
 
-class SessionExpiredError(Exception):
-    pass
-
-
-class SessionInvalidError(Exception):
-    pass
-
-
-class SessionConsumedError(Exception):
-    pass
-
 
 class Session(object):
     def __init__(self, user_id, user_secret):
