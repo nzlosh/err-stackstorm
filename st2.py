@@ -42,7 +42,7 @@ class St2(BotPlugin):
         """
         Create a session and associate valid StackStorm credentials with it for the bot to use.
         """
-        self.bot_session = self.access_control.request_session(
+        self.bot_session = self.access_control.create_session(
             self.internal_identity,
             self.internal_identity.secret
         )
@@ -112,7 +112,7 @@ class St2(BotPlugin):
 
         if msg.is_direct:
             if len(args) > 0:
-                session = self.access_control.request_session(msg.frm, args)
+                session = self.access_control.create_session(msg.frm, args)
                 ret = "Your challenge response is {}".format(
                     self.access_control.session_url(session.id(), "/index.html")
                 )
@@ -223,24 +223,29 @@ class St2(BotPlugin):
             r.message = "An unexpected error has occurred."
 
         if r.return_code == 0:
+            # Get the user associated with the session id.
+            user = self.access_control.get_session_user(uuid)
             if "username" in request:
                 username = request.get("username", "")
                 password = request.get("password", "")
-                self.st2config.auth_handler.authenticate(
+                self.access_control.associate_credentials(
+                    user,
                     St2UserCredentials(username, password),
                     self.st2config.bot_creds
                 )
                 r.authenticated = True
             elif "user_token" in request:
                 user_token = request.get("user_token", None)
-                self.st2config.auth_handler.authenticate(
+                self.access_control.associate_credentials(
+                    user,
                     St2UserToken(user_token),
                     self.st2config.bot_creds
                 )
                 r.authenticated = True
             elif "api_key" in request:
                 api_key = request.get("api_key", None)
-                self.st2config.auth_handler.authenticate(
+                self.access_control.associate_credentials(
+                    user,
                     St2ApiKey(api_key),
                     self.st2config.bot_creds
                 )

@@ -1,14 +1,46 @@
 # coding:utf-8
 import abc
+import requests
 import logging
 from requests.auth import HTTPBasicAuth
+from lib.stackstorm_api import StackStormAPI
 
 LOG = logging.getLogger(__name__)
 
 
 # Strategy pattern to vary authentication behaviour amoung the authentication handler classes.
-class AuthUserStandalone(object):
-    def __init__(self, creds):
+class AuthBase(object):
+	def _http_request(self, verb="GET", base="", path="/", headers={}, auth=None):
+	"""
+	Generic HTTP call.
+	"""
+	get_kwargs = {
+		'headers': headers,
+		'timeout': 5,
+		'verify': self.verify_cert
+	}
+
+	if auth:
+		get_kwargs['auth'] = auth
+
+	o = urlparse(base)
+	new_path = "{}{}".format(o.path, path)
+
+	url = urljoin(base, new_path)
+	LOG.debug("HTTP Request: {} {} {}".format(verb, url, get_kwargs))
+	return requests.request(verb, url, **get_kwargs)
+
+class AuthUserStandalone(AuthBase):
+    def __init__(self, cfg, creds):
+        add_headers = credentials.requests()
+        add_headers["X-Authenticate"] = add_headers["Authorization"]
+        response = self._http_request('GET', cfg.api_url, '/api/v1/auth', headers=add_headers)
+        if response.status_code in [200]:
+            return True
+        else:
+			
+        LOG.info('API response to token = {} {}'.format(response.status_code, response.reason))
+        return False
         # set X-Authenticate: username/password
         # connect to api/v1/auth
         # if return 200 return (0, Token)
@@ -17,12 +49,12 @@ class AuthUserStandalone(object):
 
 
 class AuthUserProxied(object):
-    def __init__(self, creds, bot_creds):
+    def __init__(self, cfg, creds, bot_creds):
         raise NotImplementedError
 
 
 class ValidateTokenStandalone(object):
-    def __init__(self, creds):
+    def __init__(self, cfg, creds):
         # connect to api/v1/token/validate
         # if return http 200 return (0, Token)
         # else return (x, ErrorMessage)
@@ -30,12 +62,12 @@ class ValidateTokenStandalone(object):
 
 
 class ValidateTokenProxied(object):
-    def __init__(self, creds, bot_creds):
+    def __init__(self, cfg, creds, bot_creds):
         raise NotImplementedError
 
 
 class ValidateApiKeyStandalone(object):
-    def __init__(self, creds):
+    def __init__(self, cfg, creds):
         # connect to api/v1/token/validate
         # if return http 200 return (0, ApiKey)
         # else return (x, ErrorMessage)
@@ -43,7 +75,7 @@ class ValidateApiKeyStandalone(object):
 
 
 class ValidateApiKeyProxied(object):
-    def __init__(self, creds, bot_creds):
+    def __init__(self, cfg, creds, bot_creds):
         raise NotImplementedError
 
 
@@ -82,8 +114,8 @@ class StandaloneAuthHandler(AbstractAuthHandler):
     Standalone authentication handler will only use the stackstorm authentication credentials
     provided in the errbot configuration for all stackstorm api calls.
     """
-    def __init__(self, kwconf={}):
-        self.kwconf = kwconf
+    def __init__(self, cfg=None):
+        self.cfg = cfg
 
     def authenticate(self, creds, bot_creds=None):
         """
@@ -110,8 +142,8 @@ class ServerSideAuthHandler(AbstractAuthHandler):
     StackStorm will return a user token for a valid user and err-stackstorm will cache this token
     for subsequence action-alias executions by the corresponding chat user account.
     """
-    def __init__(self, kwconf={}):
-        self.kwconf = kwconf
+    def __init__(self, cfg=None):
+        self.cfg = cfg
 
     def authenticate(self, creds, bot_creds):
         if isinstance(creds, St2UserCredentials):
@@ -132,15 +164,29 @@ class ClientSideAuthHandler(AbstractAuthHandler):
     be looked up in the session manager to fetch their StackStorm token with each call to the
     StackStorm API.
     """
-    def __init__(self, kwconf={}):
-        self.kwconf = kwconf
+    def __init__(self, cfg=None):
+        self.cfg = cfg
+
+    def authenticate_user(self, creds, bot_creds, st2api):
+        auth = AuthUserProxied(self.cfg, creds, bot_creds)
+
+    def authenticate_token(self, creds, bot_creds):
+        st2api = StackStormAPI(self.cfg)
+        ValidateTokenProxied(creds, bot_creds)
+        st2api.validate_credentials(creds)
+
+    def authenticate_key(self, creds, bot_creds):
+        auth = AuthUserProxied(self.cfg, creds, bot_creds)
+        ValidateApiKeyProxied(creds, bot_creds)
 
     def authenticate(self, creds, bot_creds):
+        token = False
         if isinstance(creds, St2UserCredentials):
-            return AuthUserProxied(creds, bot_creds)
+            token = self.authenticate_user(cred, bot_creds)
         if isinstance(creds,  St2UserToken):
-            return ValidateTokenProxied(creds, bot_creds)
+            token = self.authenticate_token(creds, bot_creds)
         if isinstance(creds, St2ApiKey):
-            return ValidateApiKeyProxied(creds, bot_creds)
-        LOG.warning("Unsupported st2 authentication object {} - '{}'".format(type(creds), creds))
-        return False
+            token self.authenticate_key(cred, bot_creds)
+        if token is False:
+            LOG.warning("Unsupported st2 authentication object {} - '{}'".format(type(creds), creds))
+        return token

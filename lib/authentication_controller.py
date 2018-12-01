@@ -2,8 +2,10 @@
 import string
 import logging
 from random import SystemRandom
+from lib.stackstorm_api import StackStormAPI
 from lib.session_manager import SessionManager
 from lib.errors import SessionInvalidError
+
 
 LOG = logging.getLogger(__name__)
 
@@ -29,6 +31,7 @@ class AuthenticationController(object):
     def __init__(self, bot):
         self.bot = bot
         self.sessions = SessionManager()
+        self.st2api = StackStormAPI(self.bot.st2config)
 
     def consume_session(self, session_id):
         """
@@ -66,6 +69,11 @@ class AuthenticationController(object):
         else:
             self.sessions.delete(session.user_id)
 
+    def get_session_user(self, session_id):
+        session = self.sessions.get_by_uuid(session_id)
+        session.is_expired()
+        return session.user_id
+
     def get_session_token(self, user):
         """
         Get the associated StackStorm token/key given chat backend username.
@@ -82,9 +90,12 @@ class AuthenticationController(object):
         return secret
 
     def set_session_token(self, session, token):
+        """
+        Stores a StackStorm user token or api key in the secrets store using the session id.
+        """
         return self.sessions.put_secret(session.session_id, token)
 
-    def request_session(self, user, user_secret):
+    def create_session(self, user, user_secret):
         """
         Handle an initial request to establish a session.  If a session already exists, return it.
         """
@@ -93,18 +104,20 @@ class AuthenticationController(object):
         else:
             user_id = self.bot.chatbackend.normalise_user_id(user)
 
-        try:
-            session = self.sessions.create(user_id, user_secret)
-        except SessionInvalidError:
-            session = self.sessions.get_by_userid(user_id)
+        return self.sessions.create(user_id, user_secret)
 
-        try:
-            session.expired()
-        except:
+    def get_session(self, user):
+        """
+        Returns the session associated with the user.
+        """
+        if isinstance(user, BotPluginIdentity):
+            user_id = user.name
+        else:
+            user_id = self.bot.chatbackend.normalise_user_id(user)
 
-            self.sessions.delete(user_id)
-            session = self.sessions.create(user_id, user_secret)
-
+        session = self.sessions.get_by_userid(user_id)
+        if session is False:
+            raise SessionInvalidError
         return session
 
     def match_secret(self, session_id, user_secret):
@@ -119,5 +132,14 @@ class AuthenticationController(object):
         if session.is_sealed():
             LOG.warning("Attempting to check secret while session is sealed.")
             return False
-        else:
-            return session.match_secret(user_secret)
+
+        return session.match_secret(user_secret)
+
+    def associate_credentials(self, user, creds, bot_creds):
+        """
+        Verify credentials against stackstorm and if successful, store them using the user id.
+        """
+        st2_creds = self.st2api.validate_credentials(creds, bot_creds)
+        if st2_creds:
+            print("OK")
+        print("DONE")

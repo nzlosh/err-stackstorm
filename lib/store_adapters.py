@@ -132,8 +132,7 @@ class VaultStoreAdapter(AbstractStoreAdapter):
 class SessionStore(object):
     def __init__(self):
         """
-        Sessions are stored by userid with a lookup index for
-        uuid's to user_ids.
+        Sessions are stored by userid with a lookup index for uuid's to user_ids.
         """
         self.memory = {}
         self.id_to_user_map = {}

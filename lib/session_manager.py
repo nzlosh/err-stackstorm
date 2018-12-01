@@ -3,7 +3,7 @@ import logging
 from lib.session import Session
 from lib.store_adapters import SessionStore
 from lib.store_adapters import StoreAdapterFactory
-from lib.session import SessionInvalidError
+from lib.session import SessionExistsError
 
 LOG = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class SessionManager(object):
         """
         # Don't create a new session if one already exists.
         if self.exist(user_id):
-            raise SessionInvalidError
+            raise SessionExistsError
         session = Session(user_id, user_secret)
         # Store the session.
         self.store.put(session)

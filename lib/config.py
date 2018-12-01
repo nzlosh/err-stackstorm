@@ -22,18 +22,15 @@ class PluginConfiguration(object):
         self.ca_cert = bot_conf.STACKSTORM.get("ca_cert", None)
 
     def _configure_rbac_auth(self, bot_conf):
+        self.auth_handler = None
         rbac_auth = bot_conf.STACKSTORM.get('rbac_auth', {"standalone": {}})
-        if "clientside" in rbac_auth:
-            self.auth_handler = ProxiedAuthHandler(rbac_auth["clientside"])
-            return
-        elif "serverside" in rbac_auth:
-            self.auth_handler = OutOfBandsAuthHandler(rbac_auth["serverside"])
-            return
-        if rbac_auth == {}:
-            self.auth_handler = StandaloneAuthHandler()
-            return
-        LOG.warning("Failed to configure RBAC authentication handler.  Check the configuration.")
-        return False
+        for rbac_type in list(rbac_auth.keys()):
+            self.auth_handler = AuthHandlerFactory.instantiate(rbac_type)(self)
+        if self.auth_handler is None:
+            LOG.warning(
+                "Failed to configure RBAC authentication handler.  Check the configuration."
+            )
+        return True
 
     def _configure_prefixes(self, bot_conf):
         self.bot_prefix = bot_conf.BOT_PREFIX
@@ -60,5 +57,6 @@ class PluginConfiguration(object):
                     self.bot_creds = CredentialsFactory.instantiate(cred_type)(c)
                     break
         if self.bot_creds is None:
-            LOG.warning("Failed to find any valid st2 credentials for the bot, check the bots configuration.")
-
+            LOG.warning(
+                "Failed to find any valid st2 credentials for the bot,  check configuration file."
+            )

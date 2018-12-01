@@ -1,4 +1,3 @@
-
 # err-stackstorm
 A plugin to run StackStorm actions, bringing StackStorm's ChatOps to Errbot.
 
@@ -147,7 +146,7 @@ An empty dictionary in the *standalone* key is all that is required to maintain 
 original authentication method.
 ```
     'rbac_auth': {
-        'simple': {},
+        'standalone': {},
     },
 ```
 
@@ -199,7 +198,7 @@ present at the same time.  A *proxied* key with *url* and *keyring_password* are
 configure Out-of-bands authentication for ChatOps.
 ```
     'rbac_auth': {
-        'proxied': {
+        'clientside': {
             'url': 'https://<hostname>:<port>/',
             'keyring_password': "<password>"
         }
