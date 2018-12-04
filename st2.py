@@ -10,6 +10,7 @@ from lib.errors import SessionConsumedError, SessionExpiredError, SessionInvalid
 from lib.stackstorm_api import StackStormAPI
 from lib.authentication_controller import AuthenticationController, BotPluginIdentity
 from lib.authentication_handler import St2ApiKey, St2UserToken, St2UserCredentials
+from lib.authentication_handler import AuthHandlerFactory
 
 LOG = logging.getLogger(__name__)
 
@@ -48,23 +49,32 @@ class St2(BotPlugin):
         )
         LOG.debug("err-stackstorm requested session {}".format(self.bot_session))
 
-        bot_token = self.st2api.validate_bot_credentials(self.st2config.bot_creds)
+        simple_auth = AuthHandlerFactory.instantiate("standalone")(self)
+        bot_token = simple_auth.authenticate(self.cfg.bot_creds)
         LOG.debug("Validate response {}".format(bot_token))
         if bot_token:
             self.access_control.set_session_token(self.bot_session, bot_token)
         else:
             LOG.critical("Failed to authenticate bot credentials with StackStorm API.")
 
+    def reauthenticate_bot_credentials(self):
+        self.access_control.delete_session(self.bot_session.id())
+        self.access_control.authenticate_bot_credentials()
+
     def validate_bot_credentials(self):
         """
         Check the session and StackStorm credentials are still valid.
         """
-        if self.bot_session.expired():
+        try:
+            self.bot_session.is_expired()
+        except SessionExpiredError:
             LOG.debug("err-stackstorm session expired, attempting to renew")
-            self.authenticate_bot_credentials()
-        else:
-            # Fetch the stackstorm token and check it hasn't expired.  If it has, renew it.
-            raise NotImplementedError
+            self.reauthenticate_bot_credentials()
+
+        # Fetch the stackstorm token and check it's validity.  If it's invalid, renew it.
+        bot_token = self.access_control.get_session_token(self.bot_session.id())
+        if self.access_control.check_st2_token(bot_token) is False:
+            self.reauthenticate_bot_credentials()
 
     def st2listener(self):
         """

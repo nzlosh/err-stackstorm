@@ -23,12 +23,11 @@ class CredentialsFactory(AbstractCredentialsFactory):
 
     @staticmethod
     def instantiate(credential_type="user"):
-        if credential_type == "token":
-            return St2UserToken
-        elif credential_type == "api":
-            return St2ApiKey
-        else:
-            return St2UserCredentials
+        return {
+            "user": St2UserCredentials
+            "token": St2UserToken
+            "api": St2ApiKey
+        }.get(credential_type, St2UserCredentials)
 
 
 class AbstractCredentials(metaclass=abc.ABCMeta):
@@ -50,11 +49,15 @@ class St2UserCredentials(AbstractCredentials):
         self.username = username
         self.password = password
 
-    def requests(self):
-        # Nasty hack until I find a nice way for requests to produce the header.
-        return HTTPBasicAuth(self.username, self.password).__call__(
+    def requests(self, st2_x_auth=False):
+        # TODO: FIX: Find a cleaner way for requests to produce the header.
+        headers = HTTPBasicAuth(self.username, self.password).__call__(
             SimpleNamespace(**{"headers": {}})
         ).headers
+        if st2_x_auth:
+            add_headers["X-Authenticate"] = add_headers["Authorization"]
+            del add_headers["Authorization"]
+        return headers
 
     def st2client(self):
         raise NotImplementedError

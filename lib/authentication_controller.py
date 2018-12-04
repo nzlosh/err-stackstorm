@@ -68,6 +68,7 @@ class AuthenticationController(object):
             raise SessionInvalidError
         else:
             self.sessions.delete(session.user_id)
+        # TODO: Delete the associated st2 token if it exists.
 
     def get_session_user(self, session_id):
         session = self.sessions.get_by_uuid(session_id)
@@ -139,6 +140,9 @@ class AuthenticationController(object):
         """
         Verify credentials against stackstorm and if successful, store them using the user id.
         """
+        # get the configured authentication handler.
+        self.bot.st2config.auth_handler.
+        #pass credentials to authentication handler verify credentials
         st2_creds = self.st2api.validate_credentials(creds, bot_creds)
         if st2_creds:
             print("OK")

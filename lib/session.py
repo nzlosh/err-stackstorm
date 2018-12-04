@@ -76,7 +76,6 @@ class Session(object):
         """
         Return the UUID for the session.
         """
-        self.is_expired()
         return str(self.session_id)
 
     def ttl(self, ttl=None):
