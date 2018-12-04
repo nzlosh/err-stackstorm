@@ -1,6 +1,6 @@
 # coding:utf-8
 import logging
-from lib.credentials_adapaters import CredentialsFactory
+from lib.credentials_adapters import CredentialsFactory
 from lib.authentication_handler import AuthHandlerFactory
 
 LOG = logging.getLogger(__name__)

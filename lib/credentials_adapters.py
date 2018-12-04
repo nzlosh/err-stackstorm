@@ -24,8 +24,8 @@ class CredentialsFactory(AbstractCredentialsFactory):
     @staticmethod
     def instantiate(credential_type="user"):
         return {
-            "user": St2UserCredentials
-            "token": St2UserToken
+            "user": St2UserCredentials,
+            "token": St2UserToken,
             "api": St2ApiKey
         }.get(credential_type, St2UserCredentials)
 

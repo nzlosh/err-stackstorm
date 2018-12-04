@@ -3,7 +3,7 @@ import abc
 import requests
 import logging
 from urllib.parse import urlparse, urljoin
-from lib.credentials_adapaters import St2UserCredentials, St2UserToken, St2ApiKey
+from lib.credentials_adapters import St2UserCredentials, St2UserToken, St2ApiKey
 
 LOG = logging.getLogger(__name__)
 

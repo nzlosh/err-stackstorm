@@ -3,7 +3,7 @@ import logging
 from lib.session import Session
 from lib.store_adapters import SessionStore
 from lib.store_adapters import StoreAdapterFactory
-from lib.session import SessionExistsError
+from lib.errors import SessionExistsError
 
 LOG = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class SessionManager(object):
         the user and used as part of the UUID hashing process.
         """
         # Don't create a new session if one already exists.
-        if self.exist(user_id):
+        if self.exists(user_id):
             raise SessionExistsError
         session = Session(user_id, user_secret)
         # Store the session.
@@ -59,7 +59,7 @@ class SessionManager(object):
         raise NotImplementedError
 
     def exists(self, user_id):
-        return user_id in self.store.keys()
+        return self.store.get_by_userid(user_id) is not False
 
     def put_secret(self, session_id, secret):
         return self.secure_store.set(session_id, secret)

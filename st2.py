@@ -28,8 +28,8 @@ class St2(BotPlugin):
     def __init__(self, bot, name):
         super(St2, self).__init__(bot, name)
 
-        self.st2config = PluginConfiguration(self.bot_config, PLUGIN_PREFIX)
-        self.st2api = StackStormAPI(self.st2config)
+        self.cfg = PluginConfiguration(self.bot_config, PLUGIN_PREFIX)
+        self.st2api = StackStormAPI(self.cfg)
         # The chat backend adapter mediates data format and api calls between
         # stackstorm, errbot and the chat backend.
         self.chatbackend = ChatAdapterFactory.instance(self._bot.mode)(self)
@@ -94,7 +94,7 @@ class St2(BotPlugin):
         """
         super(St2, self).activate()
         LOG.info("Poller activated")
-        self.start_poller(self.st2config.timer_update, self.st2api.validate_bot_credentials)
+        self.start_poller(self.cfg.timer_update, self.st2api.validate_bot_credentials)
 
     @botcmd(admin_only=True)
     def st2sessionlist(self, msg, args):
@@ -143,7 +143,7 @@ class St2(BotPlugin):
             """
             Drop plugin prefix and any trailing white space from user supplied st2 command.
             """
-            return msg.replace(self.st2config.plugin_prefix, "", 1).strip()
+            return msg.replace(self.cfg.plugin_prefix, "", 1).strip()
 
         msg.body = remove_bot_prefix(match.group())
 
@@ -169,7 +169,7 @@ class St2(BotPlugin):
                 result = "st2 command '{}' is disabled.".format(msg.body)
         else:
             result = "st2 command '{}' not found.  View available commands with {}st2help."
-            result = result.format(msg.body, self.st2config.bot_prefix)
+            result = result.format(msg.body, self.cfg.bot_prefix)
         return result
 
     @arg_botcmd("--pack", dest="pack", type=str)
@@ -241,7 +241,7 @@ class St2(BotPlugin):
                 self.access_control.associate_credentials(
                     user,
                     St2UserCredentials(username, password),
-                    self.st2config.bot_creds
+                    self.cfg.bot_creds
                 )
                 r.authenticated = True
             elif "user_token" in request:
@@ -249,7 +249,7 @@ class St2(BotPlugin):
                 self.access_control.associate_credentials(
                     user,
                     St2UserToken(user_token),
-                    self.st2config.bot_creds
+                    self.cfg.bot_creds
                 )
                 r.authenticated = True
             elif "api_key" in request:
@@ -257,7 +257,7 @@ class St2(BotPlugin):
                 self.access_control.associate_credentials(
                     user,
                     St2ApiKey(api_key),
-                    self.st2config.bot_creds
+                    self.cfg.bot_creds
                 )
                 r.authenticated = True
 

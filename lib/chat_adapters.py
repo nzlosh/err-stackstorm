@@ -6,7 +6,6 @@ LOG = logging.getLogger(__name__)
 
 
 class AbstractChatAdapterFactory(metaclass=abc.ABCMeta):
-
     @abc.abstractmethod
     def slack_adapter(self, bot_plugin):
         pass

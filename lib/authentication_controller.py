@@ -6,7 +6,6 @@ from lib.stackstorm_api import StackStormAPI
 from lib.session_manager import SessionManager
 from lib.errors import SessionInvalidError
 
-
 LOG = logging.getLogger(__name__)
 
 
@@ -31,7 +30,7 @@ class AuthenticationController(object):
     def __init__(self, bot):
         self.bot = bot
         self.sessions = SessionManager()
-        self.st2api = StackStormAPI(self.bot.st2config)
+        self.st2api = StackStormAPI(self.bot.cfg)
 
     def consume_session(self, session_id):
         """
@@ -55,7 +54,7 @@ class AuthenticationController(object):
         Return a URL formatted with the UUID query string attached.
         """
         return "{}{}?uuid={}".format(
-            self.bot.st2config.rbac_auth_opts.get("url"), url_path, session_id
+            self.bot.cfg.rbac_auth_opts.get("url"), url_path, session_id
         )
 
     def delete_session(self, session_id):
@@ -68,6 +67,7 @@ class AuthenticationController(object):
             raise SessionInvalidError
         else:
             self.sessions.delete(session.user_id)
+            
         # TODO: Delete the associated st2 token if it exists.
 
     def get_session_user(self, session_id):
@@ -141,9 +141,9 @@ class AuthenticationController(object):
         Verify credentials against stackstorm and if successful, store them using the user id.
         """
         # get the configured authentication handler.
-        self.bot.st2config.auth_handler.
+        token = self.bot.cfg.auth_handler.authenticate(creds, bot_creds)
         #pass credentials to authentication handler verify credentials
-        st2_creds = self.st2api.validate_credentials(creds, bot_creds)
-        if st2_creds:
-            print("OK")
-        print("DONE")
+        if token:
+            self.set_session_token(user, token)
+        else:
+            LOG.warning("Failed to validate StackStorm credentials for {}.".format(user))
