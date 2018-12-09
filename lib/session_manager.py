@@ -9,10 +9,10 @@ LOG = logging.getLogger(__name__)
 
 
 class SessionManager(object):
-    def __init__(self):
+    def __init__(self, cfg):
+        self.cfg = cfg
         self.store = SessionStore()
-        # TODO: FIXME: Support definition of store backend in configuration file.
-        self.secure_store = StoreAdapterFactory.instantiate("developer")()
+        self.secure_store = StoreAdapterFactory.instantiate(cfg.secrets_store)()
         self.secure_store.setup()
 
     def get_by_userid(self, user_id):
@@ -47,6 +47,9 @@ class SessionManager(object):
         """
         Remove a session from the manager
         """
+        session = self.get_by_userid(user_id)
+        if session:
+            self.secure_store.delete(session.id())
         self.store.delete(user_id)
 
     def list_sessions(self):
@@ -62,7 +65,9 @@ class SessionManager(object):
         return self.store.get_by_userid(user_id) is not False
 
     def put_secret(self, session_id, secret):
-        return self.secure_store.set(session_id, secret)
+        LOG.debug("Set in secret store {} {}".format(session_id, secret))
+        self.secure_store.set(session_id, secret)
+        return True
 
     def get_secret(self, session_id):
-        self.secure_store.get(session_id)
+        return self.secure_store.get(session_id)

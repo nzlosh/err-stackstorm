@@ -26,10 +26,11 @@ class AbstractStoreAdapterFactory(metaclass=abc.ABCMeta):
 class StoreAdapterFactory(AbstractStoreAdapterFactory):
     @staticmethod
     def instantiate(store_type):
+        LOG.debug("Create secret store for '{}'".format(store_type))
         return {
             "cleartext": ClearTextStoreAdapater,
             "keyring": KeyringStoreAdapter,
-            "valut": VaultStoreAdapter
+            "vault": VaultStoreAdapter
         }.get(store_type, KeyringStoreAdapter)
 
     @staticmethod
@@ -75,11 +76,17 @@ class ClearTextStoreAdapater(AbstractStoreAdapter):
         pass
 
     def set(self, name, secret, namespace=""):
+        # TODO: disbale this log after debugging complete.
+        LOG.debug("Secret {} assigned to {}.".format(name, secret))
         self.associations[name] = secret
         return True
 
     def get(self, name, namespace=""):
         return self.associations.get(name)
+
+    def delete(self, name, namespace=""):
+        if name in self.associations:
+            del self.associations[name]
 
     def teardown(self):
         pass
@@ -104,6 +111,9 @@ class KeyringStoreAdapter(AbstractStoreAdapter):
     def get(self, name, namespace="errst2"):
         self.kr.get_password(namespace, name)
 
+    def delete(self, name, namespace="errst2"):
+        raise NotImplementedError
+
     def teardown(self):
         # TODO: fix calls to remove stored file when bot stops running.
         # Path.unlink(self.kr.file_path)
@@ -120,6 +130,9 @@ class VaultStoreAdapter(AbstractStoreAdapter):
         self.client = VaultStoreAdapter.hvac.Client()
 
     def set(self, name, secret, namespace="errst2"):
+        raise NotImplementedError
+
+    def delete(self, name, namespace="errst2"):
         raise NotImplementedError
 
     def get(self, name, namespace="errst2"):

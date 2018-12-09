@@ -77,6 +77,13 @@ STACKSTORM = {
     'stream_url': 'https://stackstorm.example.com/stream/v1',
 
     'verify_cert': True,
+    'secrets_store': {
+        'cleartext': {}
+        'keyring': {
+            'keyring_password': "<keyring_password>"
+        },
+        'vault': {}
+    },
     'api_auth': {
         'user': {
             'name': 'my_username',
@@ -90,7 +97,6 @@ STACKSTORM = {
         'serverside': {},
         'clientside': {
             'url': '<url_to_errbot_webserver>',
-            'keyring_password': "<keyring_password>"
         }
     },
     'timer_update': 900, #  Unit: second.  Interval for Errbot to refresh to list of available action aliases.
@@ -107,7 +113,15 @@ Option | Description
 `api_auth.user.password` | Errbot password to authenticate with StackStorm.
 `api_auth.token` | Errbot user token to authenticate with StackStorm.  Used instead of a username/password pair.
 `api_auth.key` | Errbot API key to authenticate with StackStorm.  Used instead of a username/password pair or user token.
-`timer_update` | Unit: seconds.  Default is *60*. Interval for Errbot to refresh to list of available action aliases.  (deprecated)
+`timer_update` | Unit: seconds.  Default is *60*. Interval for err-stackstorm to refresh to list of available action aliases.  (deprecated)
+`rbac_auth.standalone` | Standalone authentication.
+`rbac_auth.serverside` | Serverside authentication, err-stackstorm will request StackStorm credentials on behalf of a chat user from StackStorm.
+`rbac_auth.clientside` | Clientside authentication, a chat user will supply StackStorm credentials to err-stackstorm via an authentication page.
+`rbac_auth.clientside.url` | Url to the authentication web page.
+`secrets_store.cleartext` | Use the in memory store.
+`secrets_store.keyring` | Use the system's keyring store.
+`secrets_store.keyring.keyring_password` | Password to unlock the keyring.
+`secrets_store.vault` | Use Hashicorp Vault store.
 
 
 ### Authentication <a name="Authentication"></a>
@@ -131,12 +145,28 @@ This form of authentication is the least practical for production environments.
 #### API Key
 _API Key_ support has been included since StackStorm v2.0.  When an _API Key_ is provided, it is used in preference to a _User Token_ or _username/password_ pair.  It is considered a mistake to supply a token or username/password pair when using the API Key.
 
+### Secrets Store
+The secrets store is used by err-stackstorm to cache StackStorm API credentials.  The available backends are:
+
+ - `cleartext`
+ - `keyring`
+ - `vault`
+
+#### ClearText
+The `cleartext` store maintains the cache in memory and does not encrypt the contents to disk.  This is option doesn't protect the stored secrets.
+
+#### KeyRing
+The `keyring` store uses the systems keyring manager to create a namespace and write secrets to it.  Secrets are persisted to disk in an encrypted format.  The keyring must be unlocked when errbot is started.  [detail](http://man7.org/linux/man-pages/man7/keyrings.7.html)
+
+#### HashiCorp Vault
+The `vault` store uses Hashicorp's Vault to store secrets.  [details](https://www.vaultproject.io)
+
 ### Role Based Access Control Authentication
 
 #### Standalone RBAC
 
-This is the original authentication method where by err-stackstorm uses its own credentials for all 
-calls to the StackStorm API.  All action-alias' issued by chat service users execute the underlying 
+This is the original authentication method where by err-stackstorm uses its own credentials for all
+calls to the StackStorm API.  All action-alias' issued by chat service users execute the underlying
 workflows with err-stackstorm credentials.
 
 
@@ -178,7 +208,7 @@ username/password, user token or api token.
 This implementation is specific to err-stackstorm.  It is achieved by requesting a new authentication
 session with err-stackstorm.  A Universally Unique Identifier (UUID) is generated for the session
 and the chat user is invited to follow a URL to the authentication page hosted by errbot.  For
-security reasons, the UUID is a one time use and is consumed when the page is accessed. 
+security reasons, the UUID is a one time use and is consumed when the page is accessed.
 
 The login page must be protected by TLS encryption and ideally require an ssl client certificate.
 The login page should not be exposed directly to the internet, but have a reverse proxy such as

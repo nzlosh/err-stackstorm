@@ -20,10 +20,11 @@ class St2PluginAuth(object):
     """
     Helper to manage API key or user token authentication with the stackstorm API
     """
-    def __init__(self, st2config):
-        self.cfg = st2config
-        self.verify_cert = st2config.verify_cert
-        if self.verify_cert is False:
+    def __init__(self, cfg, accessctl):
+        self.cfg = cfg
+        self.accessctl = accessctl
+
+        if self.cfg.verify_cert is False:
             urllib3.disable_warnings()
 
     def validate_credentials(self, credentials):
@@ -69,7 +70,7 @@ class St2PluginAuth(object):
         get_kwargs = {
             'headers': headers,
             'timeout': 5,
-            'verify': self.verify_cert
+            'verify': self.cfg.verify_cert
         }
 
         if auth:
@@ -87,13 +88,14 @@ class StackStormAPI(object):
     stream_backoff = 10
     authenticate_backoff = 10
 
-    def __init__(self, st2config):
-        self.cfg = st2config
-        self.st2auth = St2PluginAuth(st2config)
+    def __init__(self, cfg, accessctl):
+        self.cfg = cfg
+        self.accessctl = accessctl
+        self.st2auth = St2PluginAuth(cfg, accessctl)
         if self.cfg.verify_cert is False:
             urllib3.disable_warnings()
 
-    def actionalias_help(self, pack=None, filter=None, limit=None, offset=None):
+    def actionalias_help(self, pack=None, filter=None, limit=None, offset=None, st2_creds=None):
         """
         Call StackStorm API for action alias help.
         """
@@ -101,7 +103,6 @@ class StackStormAPI(object):
         # -H 'Content-Type: application/json'
         # -XGET localhost:9101/v1/actionalias/help -d '{}'
 
-        # TODO: Replace this function once help is implemented in st2client library.
         url = "/".join([self.cfg.api_url, "actionalias/help"])
 
         params = {}
@@ -114,9 +115,7 @@ class StackStormAPI(object):
         if offset is not None:
             params["offset"] = offset
 
-        # TODO: Fetch bot credentials for action-alias call.
-        # (This may change if filtering by user is implemented on the st2 api side)
-        headers = self.cfg.bot_creds.requests()
+        headers = st2_creds.requests()
         response = requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
         if response.status_code == requests.codes.ok:
             return response.json().get("helpstrings", [])
@@ -217,15 +216,16 @@ class StackStormAPI(object):
             ret_msg = ""
         return ret_msg
 
-    def st2stream_listener(self, callback=None):
+    def st2stream_listener(self, callback=None, bot_identity=None):
         """
         Listen for events passing through the stackstorm bus
         """
         LOG.info("*** Starting stream listener ***")
 
-        def listener(callback=None):
-            headers = self.cfg.bot_creds.requests()
-            LOG.debug("authentication headers {}".format(headers))
+        def listener(callback=None, bot_identity=None):
+            token = self.accessctl.get_token_by_userid(bot_identity)
+            headers = token.requests()
+            LOG.debug("Authentication headers {}".format(headers))
 
             headers.update({'Accept': 'text/event-stream'})
             with requests.Session() as session:
@@ -257,27 +257,29 @@ class StackStormAPI(object):
         StackStormAPI.stream_backoff = 10
         while True:
             try:
-                listener(callback)
+                listener(callback, bot_identity)
             except TypeError as err:
                 LOG.critical(
-                    "St2 stream listener - Type Error: {}."
-                    "Backing off {} seconds.".format(err, StackStormAPI.backoff))
+                    "St2 stream listener - Type Error: {}.  "
+                    "Backing off {} seconds.".format(err, StackStormAPI.stream_backoff))
             except Exception as err:
                 LOG.critical(
-                    "St2 stream listener - An error occurred: {} {}."
-                    "Backing off {} seconds.".format(type(err), err, StackStormAPI.backoff)
+                    "St2 stream listener - An error occurred: {} {}.  "
+                    "Backing off {} seconds.".format(type(err), err, StackStormAPI.stream_backoff)
                 )
-            time.sleep(StackStormAPI.backoff)
+            time.sleep(StackStormAPI.stream_backoff)
 
-    def validate_bot_credentials(self, bot_creds):
-        headers = bot_creds.requests()
-        payload = {}
-        url = "".join([self.cfg.auth_url, "/tokens"])
+    def check_st2_token(self, token):
+        response = requests.post(
+            "".join([self.cfg.auth_url, "/tokens"]),
+            headers=token.requests(),
+            data={},
+            verify=self.cfg.verify_cert
+        )
 
-        response = requests.post(url, headers=headers, data=payload, verify=self.cfg.verify_cert)
         if response.status_code == requests.codes.ok:
             LOG.debug("Successfully validated bot credentials against StackStorm API")
-            return response.json().get("token", None)
+            return response.json().get("token", False)
         else:
             response.raise_for_status()
 
@@ -287,7 +289,7 @@ class StackStormAPI(object):
         """
         def backoff(wait_time):
             if wait_time > 0:
-                LOG.info("Backing off {} seconds.".format(backoff))
+                LOG.info("Backing off {} seconds.".format(wait_time))
                 time.sleep(wait_time)
 
         StackStormAPI.authenticate_backoff = 10

@@ -3,6 +3,7 @@ import uuid
 import string
 import hashlib
 import logging
+from lib.errors import SessionExpiredError, SessionConsumedError
 from datetime import datetime as dt
 from random import SystemRandom
 
@@ -14,7 +15,6 @@ def generate_password(length=8):
     if length > 255:
         length = 255
     return "".join([rnd.choice(string.hexdigits) for _ in range(length)])
-
 
 
 class Session(object):
@@ -36,7 +36,7 @@ class Session(object):
         now = int(dt.now().timestamp())
         modified_expiry = self.modified_date + self.ttl_in_seconds
         if modified_expiry < now:
-            raise SessionExpiredError()
+            raise SessionExpiredError
         return False
 
     def __repr__(self):

@@ -18,7 +18,7 @@ def generate_password(length=8):
 
 class BotPluginIdentity(object):
     """
-    For internal use only by err-stackstorm.  The object is used to call methods that will create a
+    For internal use only by err-stackstorm.  The object is used by methods that will create a
     session and authenticate err-stackstorm credentials with StackStorm.
     """
     def __init__(self, name="errbot%service", secret=generate_password(16)):
@@ -29,8 +29,7 @@ class BotPluginIdentity(object):
 class AuthenticationController(object):
     def __init__(self, bot):
         self.bot = bot
-        self.sessions = SessionManager()
-        self.st2api = StackStormAPI(self.bot.cfg)
+        self.sessions = SessionManager(bot.cfg)
 
     def consume_session(self, session_id):
         """
@@ -67,15 +66,13 @@ class AuthenticationController(object):
             raise SessionInvalidError
         else:
             self.sessions.delete(session.user_id)
-            
-        # TODO: Delete the associated st2 token if it exists.
 
-    def get_session_user(self, session_id):
+    def get_session_userid(self, session_id):
         session = self.sessions.get_by_uuid(session_id)
         session.is_expired()
         return session.user_id
 
-    def get_session_token(self, user):
+    def get_token_by_userid(self, user):
         """
         Get the associated StackStorm token/key given chat backend username.
         Return StackStorm token/key associated with the user or False if session isn't valid or
@@ -86,15 +83,32 @@ class AuthenticationController(object):
             user = user.name
         session = self.sessions.get_by_userid(user)
         if session:
-            LOG.debug("Get token for '{}' with session id {}".format(user, session.session_id))
-            secret = self.sessions.get_secret(session.session_id)
+            secret = self.get_token_by_session(session.id())
         return secret
 
-    def set_session_token(self, session, token):
+    def get_token_by_session(self, session_id):
+        """
+        Get the associated StackStorm token/key given session id.
+        """
+        LOG.debug("Get token for session id {}".format(session_id))
+        return self.sessions.get_secret(session_id)
+
+    def set_token_by_session(self, session_id, token):
         """
         Stores a StackStorm user token or api key in the secrets store using the session id.
         """
-        return self.sessions.put_secret(session.session_id, token)
+        return self.sessions.put_secret(session_id, token)
+
+    def set_token_by_userid(self, user_id, token):
+        """
+        Store StackStorm user token or api key in the secrets store.
+        """
+        session = self.sessions.get_by_userid(user_id)
+        if session:
+            ret = self.set_token_by_session(session.id(), token)
+        else:
+            LOG.debug("Failed to lookup session for user id '{}'".format(user_id))
+        return ret
 
     def create_session(self, user, user_secret):
         """
@@ -142,7 +156,7 @@ class AuthenticationController(object):
         """
         # get the configured authentication handler.
         token = self.bot.cfg.auth_handler.authenticate(creds, bot_creds)
-        #pass credentials to authentication handler verify credentials
+        # pass credentials to authentication handler verify credentials
         if token:
             self.set_session_token(user, token)
         else:

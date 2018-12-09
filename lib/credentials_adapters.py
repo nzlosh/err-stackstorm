@@ -49,14 +49,23 @@ class St2UserCredentials(AbstractCredentials):
         self.username = username
         self.password = password
 
+    def __repr__(self):
+        return "".join([
+            self.username,
+            " : ",
+            self.password[:1],
+            "*"*(len(self.password)-2),
+            self.password[-1:]
+        ])
+
     def requests(self, st2_x_auth=False):
         # TODO: FIX: Find a cleaner way for requests to produce the header.
         headers = HTTPBasicAuth(self.username, self.password).__call__(
             SimpleNamespace(**{"headers": {}})
         ).headers
         if st2_x_auth:
-            add_headers["X-Authenticate"] = add_headers["Authorization"]
-            del add_headers["Authorization"]
+            headers["X-Authenticate"] = headers["Authorization"]
+            del headers["Authorization"]
         return headers
 
     def st2client(self):
@@ -68,6 +77,9 @@ class St2UserToken(AbstractCredentials):
         self.token = None
         if token:
             self.token = token
+
+    def __repr__(self):
+        return self.token
 
     def requests(self):
         return {"X-Auth-Token": self.token}
@@ -81,6 +93,9 @@ class St2ApiKey(AbstractCredentials):
         self.apikey = None
         if apikey:
             self.apikey = apikey
+
+    def __repr__(self):
+        return self.apikey
 
     def requests(self):
         return {'St2-Api-Key': self.apikey}

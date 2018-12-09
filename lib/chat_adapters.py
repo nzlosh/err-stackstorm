@@ -77,8 +77,8 @@ class GenericChatAdapter(AbstractChatAdapter):
                 help_text += "[{}]\n".format(help_obj["pack"])
                 pack = help_obj["pack"]
             help_text += "\t{}{} {} - {}\n".format(
-                    self.botplugin.st2config.bot_prefix,
-                    self.botplugin.st2config.plugin_prefix,
+                    self.botplugin.cfg.bot_prefix,
+                    self.botplugin.cfg.plugin_prefix,
                     help_obj["display"],
                     help_obj["description"],
                 )
@@ -254,8 +254,8 @@ class SlackChatAdapter(AbstractChatAdapter):
                 help_text += "\n**{}**\n".format(help_obj["pack"])
                 pack = help_obj["pack"]
             help_text += "\t{}{} {} - _{}_\n".format(
-                    self.botplugin.st2config.bot_prefix,
-                    self.botplugin.st2config.plugin_prefix,
+                    self.botplugin.cfg.bot_prefix,
+                    self.botplugin.cfg.plugin_prefix,
                     help_obj["display"],
                     help_obj["description"],
                 )

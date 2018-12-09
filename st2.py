@@ -10,7 +10,7 @@ from lib.errors import SessionConsumedError, SessionExpiredError, SessionInvalid
 from lib.stackstorm_api import StackStormAPI
 from lib.authentication_controller import AuthenticationController, BotPluginIdentity
 from lib.authentication_handler import St2ApiKey, St2UserToken, St2UserCredentials
-from lib.authentication_handler import AuthHandlerFactory
+from lib.authentication_handler import AuthHandlerFactory, ClientSideAuthHandler
 
 LOG = logging.getLogger(__name__)
 
@@ -28,52 +28,58 @@ class St2(BotPlugin):
     def __init__(self, bot, name):
         super(St2, self).__init__(bot, name)
 
-        self.cfg = PluginConfiguration(self.bot_config, PLUGIN_PREFIX)
-        self.st2api = StackStormAPI(self.cfg)
+        # Initialised shared configuraiton with the bot's stackstorm settings.
+        self.cfg = PluginConfiguration()
+        self.cfg.setup(self.bot_config, PLUGIN_PREFIX)
+
         # The chat backend adapter mediates data format and api calls between
         # stackstorm, errbot and the chat backend.
         self.chatbackend = ChatAdapterFactory.instance(self._bot.mode)(self)
-        self.access_control = AuthenticationController(self)
+        self.accessctl = AuthenticationController(self)
+        self.st2api = StackStormAPI(self.cfg, self.accessctl)
 
-        # Wrap err-stackstorm credentials to distinguish it from chat backend credentials.
-        self.internal_identity = BotPluginIdentity()
         self.authenticate_bot_credentials()
 
     def authenticate_bot_credentials(self):
         """
         Create a session and associate valid StackStorm credentials with it for the bot to use.
         """
-        self.bot_session = self.access_control.create_session(
+        # Wrap err-stackstorm credentials to distinguish it from chat backend credentials.
+        self.internal_identity = BotPluginIdentity()
+
+        # Create a session for internal use by err-stackstorm
+        bot_session = self.accessctl.create_session(
             self.internal_identity,
             self.internal_identity.secret
         )
-        LOG.debug("err-stackstorm requested session {}".format(self.bot_session))
+        LOG.debug("err-stackstorm requested session {}".format(bot_session))
 
-        simple_auth = AuthHandlerFactory.instantiate("standalone")(self)
-        bot_token = simple_auth.authenticate(self.cfg.bot_creds)
-        LOG.debug("Validate response {}".format(bot_token))
+        standalone_auth = AuthHandlerFactory.instantiate("standalone")(self.cfg)
+        bot_token = standalone_auth.authenticate(st2_creds=self.cfg.bot_creds)
+        LOG.debug("StackStorm authentication response {}".format(bot_token.requests()))
         if bot_token:
-            self.access_control.set_session_token(self.bot_session, bot_token)
+            self.accessctl.set_token_by_session(bot_session.id(), bot_token)
         else:
             LOG.critical("Failed to authenticate bot credentials with StackStorm API.")
 
-    def reauthenticate_bot_credentials(self):
-        self.access_control.delete_session(self.bot_session.id())
-        self.access_control.authenticate_bot_credentials()
+    def reauthenticate_bot_credentials(self, bot_session):
+        self.accessctl.delete_session(bot_session.id())
+        self.accessctl.authenticate_bot_credentials()
 
     def validate_bot_credentials(self):
         """
         Check the session and StackStorm credentials are still valid.
         """
         try:
-            self.bot_session.is_expired()
+            bot_session = self.accessctl.get_session(self.internal_identity)
+            bot_session.is_expired()
         except SessionExpiredError:
             LOG.debug("err-stackstorm session expired, attempting to renew")
-            self.reauthenticate_bot_credentials()
+            self.reauthenticate_bot_credentials(bot_session)
 
         # Fetch the stackstorm token and check it's validity.  If it's invalid, renew it.
-        bot_token = self.access_control.get_session_token(self.bot_session.id())
-        if self.access_control.check_st2_token(bot_token) is False:
+        bot_token = self.accessctl.get_token_by_session(bot_session.id())
+        if self.st2api.check_st2_token(bot_token) is False:
             self.reauthenticate_bot_credentials()
 
     def st2listener(self):
@@ -83,25 +89,26 @@ class St2(BotPlugin):
         # Run the stream listener loop in a separate thread.
         st2events_listener = threading.Thread(
             target=self.st2api.st2stream_listener,
-            args=[self.chatbackend.post_message]
+            args=[self.chatbackend.post_message, self.internal_identity]
         )
         st2events_listener.setDaemon(True)
         st2events_listener.start()
 
     def activate(self):
         """
-        Activate Errbot's poller to validate credentials periodically.  For user/password auth.
+        Activate Errbot's poller to periodically validate st2 credentials.
         """
         super(St2, self).activate()
         LOG.info("Poller activated")
-        self.start_poller(self.cfg.timer_update, self.st2api.validate_bot_credentials)
+        self.start_poller(self.cfg.timer_update, self.validate_bot_credentials)
+        self.st2listener()
 
     @botcmd(admin_only=True)
     def st2sessionlist(self, msg, args):
         """
         List any established sessions between the chat service and StackStorm API.
         """
-        return "Sessions: " + "\n".join(self.access_control.list_sessions())
+        return "Sessions: " + "\n".join(self.accessctl.list_sessions())
 
     @botcmd(admin_only=True)
     def st2sessiondelete(self, msg, args):
@@ -109,7 +116,7 @@ class St2(BotPlugin):
         Delete an established session.
         """
         if len(args) > 0:
-            self.access_control.delete_session(args)
+            self.accessctl.delete_session(args)
 
     @botcmd
     def st2authenticate(self, msg, args):
@@ -119,18 +126,20 @@ class St2(BotPlugin):
         bands communication channel.
         """
         ret = ""
-
-        if msg.is_direct:
-            if len(args) > 0:
-                session = self.access_control.create_session(msg.frm, args)
-                ret = "Your challenge response is {}".format(
-                    self.access_control.session_url(session.id(), "/index.html")
-                )
+        if isinstance(self.cfg.auth_handler, ClientSideAuthHandler):
+            if msg.is_direct:
+                if len(args) > 0:
+                    session = self.accessctl.create_session(msg.frm, args)
+                    ret = "Your challenge response is {}".format(
+                        self.accessctl.session_url(session.id(), "/index.html")
+                    )
+                else:
+                    ret = "Please provide a shared word to use during the authenication process."
             else:
-                ret = "Please provide a shared word to use during the authenication process."
+                ret = "Requests for authentication in a public channel isn't possible." \
+                      "  Request authentication in a private one-to-one message."
         else:
-            ret = "Requests for authentication in a public channel isn't possible." \
-                  "  Request authentication in a private one-to-one message."
+            ret = "Authentication is only available when Client side authentication is configured."
         return ret
 
     @re_botcmd(pattern='^{} .*'.format(PLUGIN_PREFIX))
@@ -180,7 +189,9 @@ class St2(BotPlugin):
         """
         Provide help for StackStorm action aliases.
         """
-        help_result = self.st2api.actionalias_help(pack, filter, limit, offset)
+        bot_session = self.accessctl.get_session(self.internal_identity)
+        st2_creds = self.accessctl.get_token_by_session(bot_session.id())
+        help_result = self.st2api.actionalias_help(pack, filter, limit, offset, st2_creds)
         if isinstance(help_result, list) and len(help_result) == 0:
             return "No help found for the search."
         else:
@@ -214,7 +225,7 @@ class St2(BotPlugin):
         })
 
         try:
-            self.access_control.consume_session(uuid)
+            self.accessctl.consume_session(uuid)
         except (SessionConsumedError, SessionExpiredError, SessionInvalidError) as e:
             r.return_code = 2
             r.message = "Session '{}' {}.".format(uuid, e)
@@ -225,20 +236,20 @@ class St2(BotPlugin):
         if r.return_code == 0:
             try:
                 shared_word = request.get("shared_word", None)
-                if self.access_control.match_secret(uuid, shared_word) is False:
+                if self.accessctl.match_secret(uuid, shared_word) is False:
                     r.return_code = 5
                     r.message = "Invalid credentials"
             except Exception as e:
                 r.return_code = 91
-            r.message = "An unexpected error has occurred."
+            r.message = "An unexpected error has occurred. {}".format(e)
 
         if r.return_code == 0:
             # Get the user associated with the session id.
-            user = self.access_control.get_session_user(uuid)
+            user = self.accessctl.get_session_user(uuid)
             if "username" in request:
                 username = request.get("username", "")
                 password = request.get("password", "")
-                self.access_control.associate_credentials(
+                self.accessctl.associate_credentials(
                     user,
                     St2UserCredentials(username, password),
                     self.cfg.bot_creds
@@ -246,7 +257,7 @@ class St2(BotPlugin):
                 r.authenticated = True
             elif "user_token" in request:
                 user_token = request.get("user_token", None)
-                self.access_control.associate_credentials(
+                self.accessctl.associate_credentials(
                     user,
                     St2UserToken(user_token),
                     self.cfg.bot_creds
@@ -254,7 +265,7 @@ class St2(BotPlugin):
                 r.authenticated = True
             elif "api_key" in request:
                 api_key = request.get("api_key", None)
-                self.access_control.associate_credentials(
+                self.accessctl.associate_credentials(
                     user,
                     St2ApiKey(api_key),
                     self.cfg.bot_creds

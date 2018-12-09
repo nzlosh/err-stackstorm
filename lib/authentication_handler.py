@@ -36,28 +36,40 @@ class AbstractAuthHandler(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def authenticate(self, creds, bot_creds):
+    def authenticate(self, user_creds, bot_creds):
         raise NotImplementedError
 
 
 class BaseAuthHandler(AbstractAuthHandler):
-    def __init__(self, cfg, creds, bot_creds=None):
-        self.cfg = cfg
-        self.creds = creds
+    def __init__(self, chat_user=None, user_creds=None, bot_creds=None):
+        self.chat_user = chat_user
+        self.user_creds = user_creds
         self.bot_creds = bot_creds
 
-    def _http_request(self, verb="GET", base="", path="/", headers={}, auth=None, timeout=5):
+    def _http_request(
+        self,
+        verb="GET",
+        base="",
+        path="/",
+        headers={},
+        payload=None,
+        auth=None,
+        timeout=5
+    ):
         """
         Generic HTTP call.
         """
         get_kwargs = {
             'headers': headers,
             'timeout': timeout,
-            'verify': self.verify_cert
+            'verify': self.cfg.verify_cert
         }
 
         if auth:
             get_kwargs['auth'] = auth
+
+        if payload is not None:
+            get_kwargs["json"] = payload
 
         o = urlparse(base)
         new_path = "{}{}".format(o.path, path)
@@ -72,55 +84,84 @@ class StandaloneAuthHandler(BaseAuthHandler):
     Standalone authentication handler will only use the stackstorm authentication credentials
     provided in the errbot configuration for all stackstorm api calls.
     """
-    def __init__(self, cfg=None):
+    def __init__(self, cfg):
         self.cfg = cfg
 
-    def authenticate_user(self, creds):
-        st2_endpoint = "/api/v1/auth"
-        add_headers = creds.requests(st2_x_auth=True)
+    def authenticate_user(self, st2_creds):
+        add_headers = st2_creds.requests()
         response = self._http_request(
-            'GET',
-            self.cfg.api_url,
-            path=st2_endpoint,
-            headers=add_headers
+            'POST',
+            self.cfg.auth_url,
+            path="/tokens",
+            headers=add_headers,
+            payload={"ttl": 86400}
         )
-        if response.status_code in [200]:
-            return response.token
+        if response.status_code in [requests.codes.created]:
+            return St2UserToken(response.json().get("token"))
         else:
             LOG.info('API response to token = {} {}'.format(response.status_code, response.reason))
         return False
 
-    def authenticate_token(self, creds):
-        st2_endpoint = "/api/v1/token/validate"
-        add_headers = creds.requests()
-        response = self._http_request("GET", path=st2_endpoint, headers=add_headers)
-        if response.status_code == 200:
-            return response.token
-        else:
-            return False
-
-    def authenticate_key(self, creds):
-        st2_endpoint = "/api/v1/key/check"
-        add_headers = creds.request()
-        response = self._http_request("GET", path=st2_endpoint, headers=add_headers)
-        if response.status_code == 200:
-            return response.token
-        else:
-            return False
-
-    def authenticate(self, creds, bot_creds=None):
+    def authenticate_token(self, st2_creds):
         """
+
+        """
+        token = False
+
+        response = self._http_request(
+            "GET",
+            path="/api/v1/token/validate",
+            headers=st2_creds.requests()
+        )
+
+        if response.status_code in [requests.codes.created]:
+            token = response.json().get("token", False)
+            if token:
+                token = St2UserToken(token)
+            else:
+                LOG.warning("Token not found in reponse {}".foramt(resposne))
+        else:
+            LOG.info('API response to token = {} {}'.format(response.status_code, response.reason))
+
+        return token
+
+    def authenticate_key(self, st2_creds):
+        """
+        Authenicate against StackStorm API using API Key.
+        """
+        api_key = False
+
+        response = self._http_request(
+            "GET",
+            path="/api/v1/key/check",
+            headers=st2_creds.request()
+        )
+
+        if response.status_code in [requests.codes.created]:
+            api_key = response.token
+
+        return api_key
+
+    def authenticate(self, chat_user=None, st2_creds=None, bot_creds=None):
+        """
+        param: chat_user -
+        param: st2_creds -
         param: bot_creds - not used, but present to have the same signature as other AuthHandlers.
         """
         token = False
-        if isinstance(creds, St2UserCredentials):
-            token = self.authenticate_user(creds)
-        if isinstance(creds, St2UserToken):
-            token = self.authenticate_token(creds)
-        if isinstance(creds, St2ApiKey):
-            token = self.authenticate_key(creds)
+        if isinstance(st2_creds, St2UserCredentials):
+            token = self.authenticate_user(st2_creds)
+        if isinstance(st2_creds, St2UserToken):
+            token = self.authenticate_token(st2_creds)
+        if isinstance(st2_creds, St2ApiKey):
+            token = self.authenticate_key(st2_creds)
         if token is False:
-            LOG.warning("Unsupported st2 authentication object [{}] {}.".format(type(creds), creds))
+            LOG.warning(
+                "Unsupported st2 authentication object [{}] {}.".format(
+                    type(st2_creds),
+                    st2_creds
+                )
+            )
         return token
 
 
@@ -135,7 +176,7 @@ class ServerSideAuthHandler(BaseAuthHandler):
     StackStorm will return a user token for a valid user and err-stackstorm will cache this token
     for subsequence action-alias executions by the corresponding chat user account.
     """
-    def __init__(self, cfg=None):
+    def __init__(self, cfg):
         self.cfg = cfg
 
     def authenticate_user(self, creds, bot_creds):
@@ -165,18 +206,17 @@ class ServerSideAuthHandler(BaseAuthHandler):
     def authenticate_key(self, creds, bot_creds):
         raise NotImplementedError
 
-    def authenticate(self, creds, bot_creds):
+    def authenticate(self, chat_user=None, st2_creds=None, bot_creds=None):
         token = False
-        if isinstance(creds, St2UserCredentials):
-            token = self.authenticate_user(creds, bot_creds)
-        if isinstance(creds, St2UserToken):
-            token = self.authenticate_token(creds, bot_creds)
-        if isinstance(creds, St2ApiKey):
-            token = self.authenticate_key(creds, bot_creds)
+        if isinstance(st2_creds, St2UserCredentials):
+            token = self.authenticate_user(st2_creds, bot_creds)
+        if isinstance(st2_creds, St2UserToken):
+            token = self.authenticate_token(st2_creds, bot_creds)
+        if isinstance(st2_creds, St2ApiKey):
+            token = self.authenticate_key(st2_creds, bot_creds)
         if token is False:
-            LOG.warning("Unsupported st2 authentication object {} - '{}'".format(
-                type(creds),
-                creds)
+            LOG.warning(
+                "Unsupported st2 authentication object {} - '{}'".format(type(st2_creds), st2_creds)
             )
         return False
 
@@ -189,7 +229,7 @@ class ClientSideAuthHandler(BaseAuthHandler):
     be looked up in the session manager to fetch their StackStorm token with each call to the
     StackStorm API.
     """
-    def __init__(self, cfg=None):
+    def __init__(self, cfg):
         self.cfg = cfg
 
     def authenticate_user(self, creds, bot_creds):
@@ -229,14 +269,16 @@ class ClientSideAuthHandler(BaseAuthHandler):
         else:
             return False
 
-    def authenticate(self, creds, bot_creds):
+    def authenticate(self, chat_user=None, st2_creds=None, bot_creds=None):
         token = False
-        if isinstance(creds, St2UserCredentials):
-            token = self.authenticate_user(creds, bot_creds)
-        if isinstance(creds,  St2UserToken):
-            token = self.authenticate_token(creds, bot_creds)
-        if isinstance(creds, St2ApiKey):
-            token = self.authenticate_key(creds, bot_creds)
+        if isinstance(st2_creds, St2UserCredentials):
+            token = self.authenticate_user(st2_creds, bot_creds)
+        if isinstance(st2_creds,  St2UserToken):
+            token = self.authenticate_token(st2_creds, bot_creds)
+        if isinstance(st2_creds, St2ApiKey):
+            token = self.authenticate_key(st2_creds, bot_creds)
         if token is False:
-            LOG.warning("Unsupported st2 authentication object [{}] {}.".format(type(creds), creds))
+            LOG.warning(
+                "Unsupported st2 authentication object [{}] {}.".format(type(st2_creds), st2_creds)
+            )
         return token

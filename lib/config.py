@@ -6,24 +6,41 @@ from lib.authentication_handler import AuthHandlerFactory
 LOG = logging.getLogger(__name__)
 
 
-class PluginConfiguration(object):
-    def __init__(self, bot_conf, plugin_prefix):
+class BorgSingleton:
+    """
+    Borg Singleton pattern as described in Python Patterns, Idioms and Tests.
+    """
+    _shared_state = None
+
+    def __init__(self):
+        self.__dict__ = BorgSingleton._shared_state
+
+
+class PluginConfiguration(BorgSingleton):
+    """
+    err-stackstorm shared configuration.
+    """
+    def __init__(self):
+        super(BorgSingleton, self).__init__()
+
+    def setup(self, bot_conf, plugin_prefix):
         self.plugin_prefix = plugin_prefix
         self._configure_prefixes(bot_conf)
         self._configure_credentials(bot_conf)
         self._configure_rbac_auth(bot_conf)
         self._configure_stackstorm(bot_conf)
-        self.oob_auth_url = bot_conf.STACKSTORM.get('oob_auth_url', "https://localhost:8888/")
-        self.timer_update = bot_conf.STACKSTORM.get('timer_update', 60)
-        self.verify_cert = bot_conf.STACKSTORM.get('verify_cert', True)
+        self.oob_auth_url = bot_conf.STACKSTORM.get("oob_auth_url", "https://localhost:8888/")
+        self.timer_update = bot_conf.STACKSTORM.get("timer_update", 60)
+        self.verify_cert = bot_conf.STACKSTORM.get("verify_cert", True)
+        self.secrets_store = bot_conf.STACKSTORM.get("secrets_store", "keyring")
 
-        self.client_cert = bot_conf.STACKSTORM.get('client_cert', None)
+        self.client_cert = bot_conf.STACKSTORM.get("client_cert", None)
         self.client_key = bot_conf.STACKSTORM.get("client_key", None)
         self.ca_cert = bot_conf.STACKSTORM.get("ca_cert", None)
 
     def _configure_rbac_auth(self, bot_conf):
         self.auth_handler = None
-        rbac_auth = bot_conf.STACKSTORM.get('rbac_auth', {"standalone": {}})
+        rbac_auth = bot_conf.STACKSTORM.get("rbac_auth", {"standalone": {}})
         for rbac_type in list(rbac_auth.keys()):
             self.auth_handler = AuthHandlerFactory.instantiate(rbac_type)(self)
         if self.auth_handler is None:
@@ -37,20 +54,20 @@ class PluginConfiguration(object):
         self.full_prefix = "{}{} ".format(bot_conf.BOT_PREFIX, self.plugin_prefix)
 
     def _configure_stackstorm(self, bot_conf):
-        self.api_url = bot_conf.STACKSTORM.get('api_url', 'http://localhost:9101/v1')
-        self.auth_url = bot_conf.STACKSTORM.get('auth_url', 'http://localhost:9100/v1')
-        self.stream_url = bot_conf.STACKSTORM.get('stream_url', 'http://localhost:9102/v1')
+        self.api_url = bot_conf.STACKSTORM.get("api_url", "http://localhost:9101/v1")
+        self.auth_url = bot_conf.STACKSTORM.get("auth_url", "http://localhost:9100/v1")
+        self.stream_url = bot_conf.STACKSTORM.get("stream_url", "http://localhost:9102/v1")
 
     def _configure_credentials(self, bot_conf):
-        self.api_auth = bot_conf.STACKSTORM.get('api_auth', {})
+        self.api_auth = bot_conf.STACKSTORM.get("api_auth", {})
         self.bot_creds = None
         for cred_type in ["key", "user", "token"]:
             c = self.api_auth.get(cred_type)
             if c:
                 if cred_type == "user":
                     self.bot_creds = CredentialsFactory.instantiate(cred_type)(
-                        c.get('name'),
-                        c.get('password')
+                        c.get("name"),
+                        c.get("password")
                     )
                     break
                 else:
