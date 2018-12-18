@@ -106,6 +106,7 @@ class GenericChatAdapter(AbstractChatAdapter):
 
         if channel is not None:
             try:
+                LOG.debug("Channel {}".format(channel))
                 channel_id = self.botplugin.build_identifier(channel)
             except ValueError as err:
                 LOG.warning("Invalid channel identifier '{}'.  {}".format(channel, err))

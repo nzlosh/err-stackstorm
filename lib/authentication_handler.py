@@ -75,7 +75,7 @@ class BaseAuthHandler(AbstractAuthHandler):
         new_path = "{}{}".format(o.path, path)
 
         url = urljoin(base, new_path)
-        LOG.debug("HTTP Request: {} {} {}".format(verb, url, get_kwargs))
+        LOG.debug("HTTP Request: {} {}".format(verb, url))
         return requests.request(verb, url, **get_kwargs)
 
 
@@ -84,8 +84,12 @@ class StandaloneAuthHandler(BaseAuthHandler):
     Standalone authentication handler will only use the stackstorm authentication credentials
     provided in the errbot configuration for all stackstorm api calls.
     """
-    def __init__(self, cfg):
+    def __init__(self, cfg, opts=""):
         self.cfg = cfg
+
+    def pre_execution_authentication(self, accessctl, chat_user):
+        # TODO: FIXME: passing by reference to call itself isn't ideal, refactor!
+        return accessctl.get_token_by_userid(accessctl.bot.internal_identity)
 
     def authenticate_user(self, st2_creds):
         add_headers = st2_creds.requests()
@@ -110,6 +114,7 @@ class StandaloneAuthHandler(BaseAuthHandler):
 
         response = self._http_request(
             "GET",
+            self.cfg.auth_url,
             path="/api/v1/token/validate",
             headers=st2_creds.requests()
         )
@@ -133,6 +138,7 @@ class StandaloneAuthHandler(BaseAuthHandler):
 
         response = self._http_request(
             "GET",
+            self.cfg.auth_url,
             path="/api/v1/key/check",
             headers=st2_creds.request()
         )
@@ -148,7 +154,7 @@ class StandaloneAuthHandler(BaseAuthHandler):
         param: st2_creds -
         param: bot_creds - not used, but present to have the same signature as other AuthHandlers.
         """
-        token = False
+        token = None
         if isinstance(st2_creds, St2UserCredentials):
             token = self.authenticate_user(st2_creds)
         if isinstance(st2_creds, St2UserToken):
@@ -156,6 +162,9 @@ class StandaloneAuthHandler(BaseAuthHandler):
         if isinstance(st2_creds, St2ApiKey):
             token = self.authenticate_key(st2_creds)
         if token is False:
+            LOG.warning("Failed to authenticate bot credentials against StackStorm API.")
+        if token is None:
+            token = False
             LOG.warning(
                 "Unsupported st2 authentication object [{}] {}.".format(
                     type(st2_creds),
@@ -176,49 +185,88 @@ class ServerSideAuthHandler(BaseAuthHandler):
     StackStorm will return a user token for a valid user and err-stackstorm will cache this token
     for subsequence action-alias executions by the corresponding chat user account.
     """
-    def __init__(self, cfg):
+    def __init__(self, cfg, opts=""):
         self.cfg = cfg
 
+    def pre_execution_authentication(self, accessctl, chat_user):
+        # TODO: FIXME: refactor to correct circular dependencies.
+        bot_token = accessctl.get_token_by_userid(accessctl.bot.internal_identity)
+        user_token = self.authenticate(chat_user, bot_creds=bot_token)
+        if user_token:
+            session = accessctl.create_session(chat_user, "")
+            accessctl.set_token_by_session(session.id(), user_token)
+        return user_token
+
+    def fetch_user_token(self, accessctl, user):
+        """
+        Returns the session associated with the user.
+        """
+        if isinstance(user, BotPluginIdentity):
+            user_id = user.name
+        else:
+            bot_session = self.sessions.get_by_userid(self.bot.internal_identity.name)
+            bot_token = self.sessions.get_token_by_session(bot_session)
+            user_id = self.bot.chatbackend.normalise_user_id(user)
+
+        session = self.sessions.get_by_userid(user_id)
+        if session is False:
+            self.bot.cfg.auth_handler.authenticate(user_id, bot_token)
+            raise SessionInvalidError
+        return session
+
     def authenticate_user(self, creds, bot_creds):
-        add_headers = bot_creds.requests()
-        add_headers["X-Authenticate"] = add_headers["Authorization"]
-        del add_headers["Authorization"]
+        """
+        This method is not available for Server Side authentication.
+        """
         raise NotImplementedError
 
     def authenticate_token(self, creds, bot_creds):
-        st2_endpoint = "/auth/v1/tokens/validate"
-        # use bot_token to communicate with StackStorm API
-        add_headers = bot_creds.requests()
-        # Pass the supplied user token as the request payload
-        payload = creds.st2client()
-
-        response = self._http_request(
-            "GET",
-            path=st2_endpoint,
-            headers=add_headers,
-            payload=payload
-        )
-        if response == 200:
-            return creds
-        else:
-            return False
+        """
+        Request StackStorm user token on behalf of chat user using bot's user token
+        """
+        return self._request_user_token(creds, bot_creds)
 
     def authenticate_key(self, creds, bot_creds):
-        raise NotImplementedError
+        """
+        Request StackStorm user token on behalf of chat user using bot's api key
+        """
+        return self._request_user_token(creds, bot_creds)
+
+    def _request_user_token(self, chat_user, bot_creds):
+        token = False
+        response = self._http_request(
+            "GET",
+            self.cfg.auth_url,
+            path="/auth/v1/tokens/validate",
+            headers=bot_creds.requests(),
+            payload={"user": chat_user}
+        )
+        if response == requests.codes.ok:
+            token = response.json().get("token", False)
+            if token is not False:
+                token = St2UserToken(token)
+        return token
 
     def authenticate(self, chat_user=None, st2_creds=None, bot_creds=None):
-        token = False
-        if isinstance(st2_creds, St2UserCredentials):
-            token = self.authenticate_user(st2_creds, bot_creds)
-        if isinstance(st2_creds, St2UserToken):
-            token = self.authenticate_token(st2_creds, bot_creds)
-        if isinstance(st2_creds, St2ApiKey):
-            token = self.authenticate_key(st2_creds, bot_creds)
+        """
+        bot_creds must be valid to fetch a token on behalf of the chat_user.
+        st2_creds is never used.
+        """
+        token = None
+        if isinstance(bot_creds, St2UserCredentials):
+            token = self.authenticate_user(chat_user, bot_creds)
+        if isinstance(bot_creds, St2UserToken):
+            token = self.authenticate_token(chat_user, bot_creds)
+        if isinstance(bot_creds, St2ApiKey):
+            token = self.authenticate_key(chat_user, bot_creds)
         if token is False:
+            LOG.warning("Failed to authenticate bot credentials against StackStorm API")
+        if token is None:
+            token = False
             LOG.warning(
                 "Unsupported st2 authentication object {} - '{}'".format(type(st2_creds), st2_creds)
             )
-        return False
+        return token
 
 
 class ClientSideAuthHandler(BaseAuthHandler):
@@ -229,48 +277,62 @@ class ClientSideAuthHandler(BaseAuthHandler):
     be looked up in the session manager to fetch their StackStorm token with each call to the
     StackStorm API.
     """
-    def __init__(self, cfg):
+    def __init__(self, cfg, opts):
         self.cfg = cfg
+        self.url = opts.get("url", "")
+
+    def pre_execution_authentication(self, accessctl, chat_user):
+        # TODO: FIXME: passing by reference to call itself isn't ideal, refactor!
+        return accessctl.get_token_by_userid(chat_user)
 
     def authenticate_user(self, creds, bot_creds):
-        st2_endpoint = "/auth/v1/token"
-        add_headers = creds.requests(st2_x_auth=True)
-        response = self._http_request("GET", path=st2_endpoint, headers=add_headers)
-        if response == 200:
-            return response.token
-        else:
-            return False
-
-    def authenticate_token(self, creds, bot_creds):
-        st2_endpoint = "/auth/v1/tokens/validate"
-        # use bot_token to communicate with StackStorm API
-        add_headers = bot_creds.requests()
-        # Pass the supplied user token as the request payload
-        payload = creds.st2client()
-
+        """
+        Validate supplied credetials with StackStorm
+        """
+        token = False
         response = self._http_request(
             "GET",
-            path=st2_endpoint,
-            headers=add_headers,
-            payload=payload
+            self.cfg.auth_url,
+            path="/auth/v1/token",
+            headers=creds.requests(st2_x_auth=True)
         )
-        if response == 200:
-            return creds
-        else:
-            return False
+        if response == requests.codes.ok:
+            token = response.json().get("token", False)
+            if token is not False:
+                token = St2UserToken(token)
+        return token
+
+    def authenticate_token(self, creds, bot_creds):
+        token = False
+        response = self._http_request(
+            "GET",
+            self.cfg.auth_url,
+            path="/auth/v1/tokens/validate",
+            headers=bot_creds.requests(),
+            payload=creds.st2client()
+        )
+        if response == requests.codes.ok:
+            token = response.json().get("token", False)
+            if token is not False:
+                token = St2UserToken(token)
+        return token
 
     def authenticate_key(self, creds, bot_creds):
-        st2_endpoint = "/auth/v1/key"
-        add_headers = creds.requests()
-        response = self._http_request("GET", path=st2_endpoint, header=add_headers)
-
-        if response == 200:
-            return creds
-        else:
-            return False
+        token = False
+        response = self._http_request(
+            "GET",
+            self.cfg.auth_url,
+            path="/auth/v1/key",
+            header=creds.requests()
+        )
+        if response == requests.codes.ok:
+            token = response.json().get("token", False)
+            if token is not False:
+                token = St2UserToken(token)
+        return token
 
     def authenticate(self, chat_user=None, st2_creds=None, bot_creds=None):
-        token = False
+        token = None
         if isinstance(st2_creds, St2UserCredentials):
             token = self.authenticate_user(st2_creds, bot_creds)
         if isinstance(st2_creds,  St2UserToken):
@@ -278,6 +340,9 @@ class ClientSideAuthHandler(BaseAuthHandler):
         if isinstance(st2_creds, St2ApiKey):
             token = self.authenticate_key(st2_creds, bot_creds)
         if token is False:
+            LOG.warning("Failed to authenticate user credentials against StackStorm API")
+        if token is None:
+            token = False
             LOG.warning(
                 "Unsupported st2 authentication object [{}] {}.".format(type(st2_creds), st2_creds)
             )

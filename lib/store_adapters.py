@@ -72,6 +72,9 @@ class ClearTextStoreAdapater(AbstractStoreAdapter):
     def __init__(self):
         self.associations = {}
 
+    def __str__(self):
+        return str(self.associations)
+
     def setup(self):
         pass
 
@@ -165,6 +168,7 @@ class SessionStore(object):
         Put a new session in the store using the user_id as the key
         and create a reverse mapping between the user_id and the session_id.
         """
+        LOG.debug("Store session {}".format(session.id()))
         self.memory[session.user_id] = session
         self.id_to_user_map[session.id()] = session.user_id
 
@@ -178,6 +182,8 @@ class SessionStore(object):
             if session.id() in self.id_to_user_map:
                 del self.id_to_user_map[session.id()]
             del self.memory[user_id]
+        else:
+            LOG.warning("delete user_id {} session".format(user_id))
 
     def put_by_id(self, session_id, session):
         """
@@ -185,9 +191,6 @@ class SessionStore(object):
         """
         if session.user_id in self.memory:
             self.id_to_user_map[session_id] = session.user_id
-
-    def pop_by_id(self, session_id):
-        return self.memory.pop(self.id_to_user_map.pop(session_id, ""), False)
 
     def get_by_uuid(self, session_id):
         user_id = self.id_to_user_map.get(session_id, False)

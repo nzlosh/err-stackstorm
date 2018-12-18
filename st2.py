@@ -35,9 +35,10 @@ class St2(BotPlugin):
         # The chat backend adapter mediates data format and api calls between
         # stackstorm, errbot and the chat backend.
         self.chatbackend = ChatAdapterFactory.instance(self._bot.mode)(self)
+        
         self.accessctl = AuthenticationController(self)
-        self.st2api = StackStormAPI(self.cfg, self.accessctl)
 
+        self.st2api = StackStormAPI(self.cfg, self.accessctl)
         self.authenticate_bot_credentials()
 
     def authenticate_bot_credentials(self):
@@ -64,7 +65,7 @@ class St2(BotPlugin):
 
     def reauthenticate_bot_credentials(self, bot_session):
         self.accessctl.delete_session(bot_session.id())
-        self.accessctl.authenticate_bot_credentials()
+        self.authenticate_bot_credentials()
 
     def validate_bot_credentials(self):
         """
@@ -73,14 +74,12 @@ class St2(BotPlugin):
         try:
             bot_session = self.accessctl.get_session(self.internal_identity)
             bot_session.is_expired()
-        except SessionExpiredError:
-            LOG.debug("err-stackstorm session expired, attempting to renew")
+        except SessionExpiredError as e:
+            LOG.debug("{}".format(e))
             self.reauthenticate_bot_credentials(bot_session)
-
-        # Fetch the stackstorm token and check it's validity.  If it's invalid, renew it.
-        bot_token = self.accessctl.get_token_by_session(bot_session.id())
-        if self.st2api.check_st2_token(bot_token) is False:
-            self.reauthenticate_bot_credentials()
+        except SessionInvalidError as e:
+            LOG.debug("{}".format(e))
+            self.authenticate_bot_credentials()
 
     def st2listener(self):
         """
@@ -108,7 +107,7 @@ class St2(BotPlugin):
         """
         List any established sessions between the chat service and StackStorm API.
         """
-        return "Sessions: " + "\n".join(self.accessctl.list_sessions())
+        return "Sessions: " + "\n\n".join(self.accessctl.list_sessions())
 
     @botcmd(admin_only=True)
     def st2sessiondelete(self, msg, args):
@@ -154,6 +153,12 @@ class St2(BotPlugin):
             """
             return msg.replace(self.cfg.plugin_prefix, "", 1).strip()
 
+        user_id = self.chatbackend.normalise_user_id(msg.frm)
+        st2token = self.accessctl.pre_execution_authentication(user_id)
+        if st2token is False:
+            LOG.warning("{} is not authenticated against the StackStorm API.".format(user_id))
+            return "Unauthorised access to StackStorm API as chat user {}.".format(user_id)
+
         msg.body = remove_bot_prefix(match.group())
 
         msg_debug = ""
@@ -161,7 +166,7 @@ class St2(BotPlugin):
             msg_debug += "\t\t{} [{}] {}\n".format(attr, type(value), value)
         LOG.debug("Message received from chat backend.\n{}\n".format(msg_debug))
 
-        matched_result = self.st2api.match(msg.body)
+        matched_result = self.st2api.match(msg.body, user_id)
         if matched_result is not None:
             action_alias, representation = matched_result
             del matched_result
@@ -170,7 +175,7 @@ class St2(BotPlugin):
                     action_alias,
                     representation,
                     msg,
-                    self.chatbackend
+                    user_id
                 )
                 LOG.debug("action alias execution result: type={} {}".format(type(res), res))
                 result = r"{}".format(res)
@@ -217,21 +222,22 @@ class St2(BotPlugin):
 
     @webhook('/login/authenticate/<uuid>')
     def login_auth(self, request, uuid):
-        LOG.debug("Request: {}".format(request))
+        # WARNING: Sensitive security information will be loggged, uncomment only when necessary.
+        # LOG.debug("Request: {}".format(request))
         r = SimpleNamespace(**{
             "authenticated": False,
             "return_code": 0,
-            "message": "Session has already been used or has expired."
+            "message": "Successfully associated StackStorm credentials"
         })
 
         try:
             self.accessctl.consume_session(uuid)
         except (SessionConsumedError, SessionExpiredError, SessionInvalidError) as e:
             r.return_code = 2
-            r.message = "Session '{}' {}.".format(uuid, e)
+            r.message = "Session '{}' {}".format(uuid, str(e))
         except Exception as e:
             r.return_code = 90
-            r.message = "An unexpected error has occurred."
+            r.message = "Session unexpected error: {}".format(str(e))
 
         if r.return_code == 0:
             try:
@@ -241,11 +247,12 @@ class St2(BotPlugin):
                     r.message = "Invalid credentials"
             except Exception as e:
                 r.return_code = 91
-            r.message = "An unexpected error has occurred. {}".format(e)
+                r.message = "Credentials unexpected error: {}".format(str(e))
 
         if r.return_code == 0:
             # Get the user associated with the session id.
-            user = self.accessctl.get_session_user(uuid)
+            user = self.accessctl.get_session_userid(uuid)
+            LOG.debug("Matched chat user {} for credential association".format(user))
             if "username" in request:
                 username = request.get("username", "")
                 password = request.get("password", "")
@@ -272,9 +279,11 @@ class St2(BotPlugin):
                 )
                 r.authenticated = True
 
-            if r.authenticate is False or shared_word is None:
+            if r.authenticated is False or shared_word is None:
                 r.return_code = 3
-                r.message = "Invalid authentication payload."
-                LOG.warning(r.message)
+                r.message = "Invalid authentication payload"
+
+        if r.authenticated is False:
+            LOG.warning(r.message)
 
         return json.dumps(vars(r))

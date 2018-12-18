@@ -31,9 +31,15 @@ class AuthenticationController(object):
         self.bot = bot
         self.sessions = SessionManager(bot.cfg)
 
+    def pre_execution_authentication(self, chat_user):
+        """
+        Look up the chat_user to confirm they are authenticated.
+        """
+        return self.bot.cfg.auth_handler.pre_execution_authentication(self, chat_user)
+
     def consume_session(self, session_id):
         """
-        Fetch the session and unseal it to make it as consumed.
+        Fetch the session and unseal it to mark it as consumed.
         """
         session = self.sessions.get_by_uuid(session_id)
         if session is False:
@@ -53,7 +59,7 @@ class AuthenticationController(object):
         Return a URL formatted with the UUID query string attached.
         """
         return "{}{}?uuid={}".format(
-            self.bot.cfg.rbac_auth_opts.get("url"), url_path, session_id
+            self.bot.cfg.auth_handler.url, url_path, session_id
         )
 
     def delete_session(self, session_id):
@@ -153,11 +159,15 @@ class AuthenticationController(object):
     def associate_credentials(self, user, creds, bot_creds):
         """
         Verify credentials against stackstorm and if successful, store them using the user id.
+        param: user: the normalised chat_user account.
+        param: creds: the stackstorm user credentials to validate against StackStorm API.
+        param: bot_creds: the bot credentials to use when authenticating user credentials.
         """
         # get the configured authentication handler.
         token = self.bot.cfg.auth_handler.authenticate(creds, bot_creds)
+        LOG.debug("Token for {} was {}".format(user, token))
         # pass credentials to authentication handler verify credentials
         if token:
-            self.set_session_token(user, token)
+            self.set_token_by_userid(user, token)
         else:
             LOG.warning("Failed to validate StackStorm credentials for {}.".format(user))
