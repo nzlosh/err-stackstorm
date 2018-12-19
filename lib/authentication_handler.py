@@ -4,6 +4,8 @@ import requests
 import logging
 from urllib.parse import urlparse, urljoin
 from lib.credentials_adapters import St2UserCredentials, St2UserToken, St2ApiKey
+from lib.authentication_controller import BotPluginIdentity
+from lib.errors import SessionInvalidError
 
 LOG = logging.getLogger(__name__)
 
@@ -75,7 +77,7 @@ class BaseAuthHandler(AbstractAuthHandler):
         new_path = "{}{}".format(o.path, path)
 
         url = urljoin(base, new_path)
-        LOG.debug("HTTP Request: {} {}".format(verb, url))
+        LOG.debug("HTTP Request: {} {} {}".format(verb, url, get_kwargs))
         return requests.request(verb, url, **get_kwargs)
 
 
@@ -88,16 +90,23 @@ class StandaloneAuthHandler(BaseAuthHandler):
         self.cfg = cfg
 
     def pre_execution_authentication(self, accessctl, chat_user):
+        """
+        Fetch the bot token.
+        :param: accessctl - Authentication Controller
+        :param: chat_user - Not used in the context of Standalone authentication.
+        """
         # TODO: FIXME: passing by reference to call itself isn't ideal, refactor!
         return accessctl.get_token_by_userid(accessctl.bot.internal_identity)
 
     def authenticate_user(self, st2_creds):
-        add_headers = st2_creds.requests()
+        """
+        TODO: Docstring
+        """
         response = self._http_request(
             'POST',
             self.cfg.auth_url,
             path="/tokens",
-            headers=add_headers,
+            headers=st2_creds.requests(),
             payload={"ttl": 86400}
         )
         if response.status_code in [requests.codes.created]:
@@ -108,7 +117,7 @@ class StandaloneAuthHandler(BaseAuthHandler):
 
     def authenticate_token(self, st2_creds):
         """
-
+        TODO: Docstring
         """
         token = False
 
@@ -124,7 +133,7 @@ class StandaloneAuthHandler(BaseAuthHandler):
             if token:
                 token = St2UserToken(token)
             else:
-                LOG.warning("Token not found in reponse {}".foramt(resposne))
+                LOG.warning("Token not found in reponse {}".format(response))
         else:
             LOG.info('API response to token = {} {}'.format(response.status_code, response.reason))
 
@@ -189,6 +198,9 @@ class ServerSideAuthHandler(BaseAuthHandler):
         self.cfg = cfg
 
     def pre_execution_authentication(self, accessctl, chat_user):
+        """
+        TODO: Docstring
+        """
         # TODO: FIXME: refactor to correct circular dependencies.
         bot_token = accessctl.get_token_by_userid(accessctl.bot.internal_identity)
         user_token = self.authenticate(chat_user, bot_creds=bot_token)
@@ -233,6 +245,9 @@ class ServerSideAuthHandler(BaseAuthHandler):
         return self._request_user_token(creds, bot_creds)
 
     def _request_user_token(self, chat_user, bot_creds):
+        """
+        TODO: Docstring
+        """
         token = False
         response = self._http_request(
             "GET",
@@ -250,7 +265,7 @@ class ServerSideAuthHandler(BaseAuthHandler):
     def authenticate(self, chat_user=None, st2_creds=None, bot_creds=None):
         """
         bot_creds must be valid to fetch a token on behalf of the chat_user.
-        st2_creds is never used.
+        st2_creds are not used.
         """
         token = None
         if isinstance(bot_creds, St2UserCredentials):
@@ -264,7 +279,7 @@ class ServerSideAuthHandler(BaseAuthHandler):
         if token is None:
             token = False
             LOG.warning(
-                "Unsupported st2 authentication object {} - '{}'".format(type(st2_creds), st2_creds)
+                "Unsupported st2 authentication object {} - '{}'".format(type(bot_creds), bot_creds)
             )
         return token
 
@@ -282,6 +297,9 @@ class ClientSideAuthHandler(BaseAuthHandler):
         self.url = opts.get("url", "")
 
     def pre_execution_authentication(self, accessctl, chat_user):
+        """
+        TODO: Docstring
+        """
         # TODO: FIXME: passing by reference to call itself isn't ideal, refactor!
         return accessctl.get_token_by_userid(chat_user)
 
@@ -289,20 +307,23 @@ class ClientSideAuthHandler(BaseAuthHandler):
         """
         Validate supplied credetials with StackStorm
         """
-        token = False
         response = self._http_request(
-            "GET",
+            'POST',
             self.cfg.auth_url,
-            path="/auth/v1/token",
-            headers=creds.requests(st2_x_auth=True)
+            path="/tokens",
+            headers=creds.requests(),
+            payload={"ttl": 86400}
         )
-        if response == requests.codes.ok:
-            token = response.json().get("token", False)
-            if token is not False:
-                token = St2UserToken(token)
-        return token
+        if response.status_code in [requests.codes.created]:
+            return St2UserToken(response.json().get("token"))
+        else:
+            LOG.info('API response to token = {} {}'.format(response.status_code, response.reason))
+        return False
 
     def authenticate_token(self, creds, bot_creds):
+        """
+        TODO: Docstring
+        """
         token = False
         response = self._http_request(
             "GET",
@@ -318,6 +339,9 @@ class ClientSideAuthHandler(BaseAuthHandler):
         return token
 
     def authenticate_key(self, creds, bot_creds):
+        """
+        TODO: Docstring
+        """
         token = False
         response = self._http_request(
             "GET",

@@ -65,9 +65,7 @@ class SessionManager(object):
         return self.store.get_by_userid(user_id) is not False
 
     def put_secret(self, session_id, secret):
-        LOG.debug("Set in secret store {} {}".format(session_id, secret))
         self.secure_store.set(session_id, secret)
-        LOG.debug("SECURE: {}".format(self.secure_store))
         return True
 
     def get_secret(self, session_id):

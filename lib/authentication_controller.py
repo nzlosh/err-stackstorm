@@ -2,7 +2,7 @@
 import string
 import logging
 from random import SystemRandom
-from lib.stackstorm_api import StackStormAPI
+
 from lib.session_manager import SessionManager
 from lib.errors import SessionInvalidError
 
@@ -164,7 +164,7 @@ class AuthenticationController(object):
         param: bot_creds: the bot credentials to use when authenticating user credentials.
         """
         # get the configured authentication handler.
-        token = self.bot.cfg.auth_handler.authenticate(creds, bot_creds)
+        token = self.bot.cfg.auth_handler.authenticate(user, creds, bot_creds)
         LOG.debug("Token for {} was {}".format(user, token))
         # pass credentials to authentication handler verify credentials
         if token:

@@ -1,0 +1,13 @@
+[Unit]
+Description=Errbot
+After=network.target
+
+[Service]
+User=errbot
+Environment="CONFIGFILE=/data/errbot/etc/config.py"
+ExecStart=/opt/errbot/bin/python /opt/errbot/bin/errbot --config $CONFIGFILE
+ExecStop=/bin/kill -SIGINT $MAINPID
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -35,7 +35,7 @@ class St2(BotPlugin):
         # The chat backend adapter mediates data format and api calls between
         # stackstorm, errbot and the chat backend.
         self.chatbackend = ChatAdapterFactory.instance(self._bot.mode)(self)
-        
+
         self.accessctl = AuthenticationController(self)
 
         self.st2api = StackStormAPI(self.cfg, self.accessctl)
@@ -118,6 +118,14 @@ class St2(BotPlugin):
             self.accessctl.delete_session(args)
 
     @botcmd
+    def st2disconnect(self, msg):
+        """
+        Usage: st2disconnect
+        Closes the session.  StackStorm credentials are purged when the session is closed.
+        """
+        return "Not implemented yet."
+
+    @botcmd
     def st2authenticate(self, msg, args):
         """
         Usage: st2authenticate <secret>
@@ -155,9 +163,13 @@ class St2(BotPlugin):
 
         user_id = self.chatbackend.normalise_user_id(msg.frm)
         st2token = self.accessctl.pre_execution_authentication(user_id)
+
         if st2token is False:
-            LOG.warning("{} is not authenticated against the StackStorm API.".format(user_id))
-            return "Unauthorised access to StackStorm API as chat user {}.".format(user_id)
+            rejection = "Action-Alias execution is not allowed for chat user '{}'." \
+                "  Please authenticate or see your StackStorm administrator to grant access" \
+                ".".format(user_id)
+            LOG.warning(rejection)
+            return rejection
 
         msg.body = remove_bot_prefix(match.group())
 
@@ -166,7 +178,7 @@ class St2(BotPlugin):
             msg_debug += "\t\t{} [{}] {}\n".format(attr, type(value), value)
         LOG.debug("Message received from chat backend.\n{}\n".format(msg_debug))
 
-        matched_result = self.st2api.match(msg.body, user_id)
+        matched_result = self.st2api.match(msg.body, st2token)
         if matched_result is not None:
             action_alias, representation = matched_result
             del matched_result
@@ -175,7 +187,8 @@ class St2(BotPlugin):
                     action_alias,
                     representation,
                     msg,
-                    user_id
+                    self.chatbackend.get_username(msg),
+                    st2token
                 )
                 LOG.debug("action alias execution result: type={} {}".format(type(res), res))
                 result = r"{}".format(res)

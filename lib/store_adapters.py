@@ -79,15 +79,17 @@ class ClearTextStoreAdapater(AbstractStoreAdapter):
         pass
 
     def set(self, name, secret, namespace=""):
-        # TODO: disbale this log after debugging complete.
-        LOG.debug("Secret {} assigned to {}.".format(name, secret))
+        # TODO: disable this log after debugging complete.
+        LOG.debug("__ClearTextStoreAdapater.set({}, {}).".format(name, secret))
         self.associations[name] = secret
         return True
 
     def get(self, name, namespace=""):
+        LOG.debug("__ClearTextStoreAdapater.get({}).".format(name))
         return self.associations.get(name)
 
     def delete(self, name, namespace=""):
+        LOG.debug("__ClearTextStoreAdapater.delete({}).".format(name))
         if name in self.associations:
             del self.associations[name]
 
@@ -160,7 +162,7 @@ class SessionStore(object):
         """
         Get information by user_id.
         """
-        LOG.debug("Fetch user_id '{}' in store.".format(user_id))
+        LOG.debug("__SessionStore.get_by_userid(user_id={})".format(user_id))
         return self.memory.get(user_id, False)
 
     def put(self, session):
@@ -168,7 +170,7 @@ class SessionStore(object):
         Put a new session in the store using the user_id as the key
         and create a reverse mapping between the user_id and the session_id.
         """
-        LOG.debug("Store session {}".format(session.id()))
+        LOG.debug("__SessionStore.put(session={})".format(session))
         self.memory[session.user_id] = session
         self.id_to_user_map[session.id()] = session.user_id
 
@@ -177,6 +179,7 @@ class SessionStore(object):
         Delete a session by user_id.  Delete the reverse mapping
         if it exists.
         """
+        LOG.debug("__SessionStore.delete(user_id={})".format(user_id))
         session = self.memory.get(user_id, False)
         if session:
             if session.id() in self.id_to_user_map:
@@ -189,12 +192,13 @@ class SessionStore(object):
         """
         Put a session in the store using the session id.
         """
+        LOG.debug("__SessionStore.put_by_id(session_id={}, session={})".format(session_id, session))
         if session.user_id in self.memory:
             self.id_to_user_map[session_id] = session.user_id
 
     def get_by_uuid(self, session_id):
+        LOG.debug("__SessionStore.get_by_uuid(session_id={})".format(session_id))
         user_id = self.id_to_user_map.get(session_id, False)
-        LOG.debug("Session id '{}' is associated with user_id {}".format(session_id, user_id))
         session = self.memory.get(user_id, False)
         if session is False:
             LOG.debug("Error: Session id '{}' points to a missing session.".format(""))

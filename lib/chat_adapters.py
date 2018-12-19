@@ -140,7 +140,7 @@ class XMPPChatAdapter(GenericChatAdapter):
         self.botplugin = bot_plugin
 
     def normalise_user_id(self, user):
-        return " ".join([user.nick, user.domain, user.resource])
+        return "{}@{}/{}".format(user.nick, user.domain, user.resource)
 
 
 # Inheriting from Generic Chat Adapter until IRC backend specific methods are required.

@@ -17,74 +17,6 @@ from urllib.parse import urlparse, urlunparse, urljoin
 LOG = logging.getLogger(__name__)
 
 
-# ~ class St2PluginAuth(object):
-    # ~ """
-    # ~ Helper to manage API key or user token authentication with the stackstorm API
-    # ~ """
-    # ~ def __init__(self, cfg, accessctl):
-        # ~ self.cfg = cfg
-        # ~ self.accessctl = accessctl
-
-        # ~ if self.cfg.verify_cert is False:
-            # ~ urllib3.disable_warnings()
-
-    # ~ def validate_credentials(self, credentials):
-        # ~ """
-        # ~ Attempt to access API endpoint.
-
-        # ~ Check if the credentials are valid to access stackstorm API
-        # ~ Returns: True if access is permitted and false if access fails.
-        # ~ """
-        # ~ add_headers = credentials.requests()
-        # ~ response = self._http_request('GET', self.cfg.api_url, '/', headers=add_headers)
-        # ~ if response.status_code in [200]:
-            # ~ return True
-        # ~ LOG.info('API response to token = {} {}'.format(response.status_code, response.reason))
-        # ~ return False
-
-    # ~ def renew_token(self):
-        # ~ """
-        # ~ Token renew:
-            # ~ POST with Content type JSON and Basic Authorisation to AUTH /tokens endpoint
-        # ~ Renew user token used to query Stackstorm's API end point.
-        # ~ """
-        # ~ if self.username and self.password:
-            # ~ auth = HTTPBasicAuth(self.username, self.password)
-
-            # ~ response = self._http_request('POST', self.cfg.auth_url, "/tokens", auth=auth)
-            # ~ if response.status_code == 201:  # created.
-                # ~ auth_info = response.json()
-                # ~ self.token = auth_info["token"]
-                # ~ LOG.info("Received new token {}".format(self.token))
-            # ~ else:
-                # ~ LOG.warning('Failed to get new user token. {} {}'.format(
-                    # ~ response.status_code,
-                    # ~ response.reason
-                # ~ ))
-        # ~ else:
-            # ~ LOG.warning("Unable to renew user token because user credentials are missing.")
-
-    # ~ def _http_request(self, verb="GET", base="", path="/", headers={}, auth=None):
-        # ~ """
-        # ~ Generic HTTP call.
-        # ~ """
-        # ~ get_kwargs = {
-            # ~ 'headers': headers,
-            # ~ 'timeout': 5,
-            # ~ 'verify': self.cfg.verify_cert
-        # ~ }
-
-        # ~ if auth:
-            # ~ get_kwargs['auth'] = auth
-
-        # ~ o = urlparse(base)
-        # ~ new_path = "{}{}".format(o.path, path)
-
-        # ~ url = urljoin(base, new_path)
-        # ~ LOG.debug("HTTP Request: {} {} {}".format(verb, url, get_kwargs))
-        # ~ return requests.request(verb, url, **get_kwargs)
-
-
 class StackStormAPI(object):
     stream_backoff = 10
     authenticate_backoff = 10
@@ -92,7 +24,7 @@ class StackStormAPI(object):
     def __init__(self, cfg, accessctl):
         self.cfg = cfg
         self.accessctl = accessctl
-        # ~ self.st2auth = St2PluginAuth(cfg, accessctl)
+
         if self.cfg.verify_cert is False:
             urllib3.disable_warnings()
 
@@ -127,12 +59,12 @@ class StackStormAPI(object):
         tmp = urlparse(url)
         return urlunparse((tmp.scheme, tmp.netloc, "", None, None, None))
 
-    def match(self, text, chat_user):
-        st2token = self.accessctl.get_token_by_userid(chat_user)
-        LOG.debug("Got token:{} for chat user {}".format(st2token, chat_user))
+    def match(self, text, st2token):
+
         auth_kwargs = st2token.st2client()
-        # TODO: add support for enable/disable debug in config.py
-#        auth_kwargs['debug'] = False
+
+        if LOG.level <= logging.DEBUG:
+            auth_kwargs['debug'] = True
 
         base_url = self._baseurl(self.cfg.api_url)
 
@@ -162,13 +94,12 @@ class StackStormAPI(object):
                 LOG.error("Unexpected error {}".format(e))
         return None
 
-    def execute_actionalias(self, action_alias, representation, msg, chat_user):
+    def execute_actionalias(self, action_alias, representation, msg, chat_user, st2token):
         """
         @action_alias: the st2client action_alias object.
         @representation: the st2client representation for the action_alias.
         @msg: errbot message.
         """
-        st2token = self.accessctl.pre_execution_authentication(chat_user)
         auth_kwargs = st2token.st2client()
 
         base_url = self._baseurl(self.cfg.api_url)
@@ -196,7 +127,7 @@ class StackStormAPI(object):
             execution.source_channel = str(msg.frm)
 
         execution.notification_route = 'errbot'
-        execution.user = backend.get_username(msg)
+        execution.user = chat_user
 
         LOG.debug("Execution: {}".format([
             execution.command,
@@ -275,37 +206,3 @@ class StackStormAPI(object):
                 LOG.critical(traceback.print_exc())
 
             time.sleep(StackStormAPI.stream_backoff)
-
-    # ~ def check_st2_token(self, token):
-        # ~ response = requests.post(
-            # ~ "".join([self.cfg.auth_url, "/tokens"]),
-            # ~ headers=token.requests(),
-            # ~ data={},
-            # ~ verify=self.cfg.verify_cert
-        # ~ )
-
-        # ~ if response.status_code == requests.codes.ok:
-            # ~ LOG.debug("Successfully validated bot credentials against StackStorm API")
-            # ~ return response.json().get("token", False)
-        # ~ else:
-            # ~ response.raise_for_status()
-
-    # ~ def validate_credentials(self, credentials):
-        # ~ """
-        # ~ A wrapper method to check for API access authorisation and refresh expired user token.
-        # ~ """
-        # ~ def backoff(wait_time):
-            # ~ if wait_time > 0:
-                # ~ LOG.info("Backing off {} seconds.".format(wait_time))
-                # ~ time.sleep(wait_time)
-
-        # ~ StackStormAPI.authenticate_backoff = 10
-        # ~ try:
-            # ~ if not self.st2auth.validate_credentials(credentials):
-                # ~ self.st2auth.renew_token()
-                # ~ StackStormAPI.authenticate_backoff = 0
-        # ~ except requests.exceptions.HTTPError as e:
-            # ~ LOG.error("Error while validating credentials {} ({}).".format(e.reason, e.code))
-        # ~ except Exception as e:
-            # ~ LOG.exception("An unexpected error has occurred.")
-            # ~ backoff(StackStormAPI.authenticate_backoff)
