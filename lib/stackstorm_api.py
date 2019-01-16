@@ -5,16 +5,29 @@ import urllib3
 import logging
 import requests
 import sseclient
-import sys, traceback
+import traceback
 
-from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
 from st2client.client import Client
 from st2client.models.action_alias import ActionAliasMatch
 from st2client.models.aliasexecution import ActionAliasExecution
-from urllib.parse import urlparse, urlunparse, urljoin
+from urllib.parse import urlparse, urlunparse
 
 LOG = logging.getLogger(__name__)
+
+
+class ResultSet(object):
+    def __init__(self, error_code=None, result=None):
+        self.error_code = error_code
+        self.result = result
+
+    def OK(self, result):
+        self.error_code = 0
+        self.result = result
+
+    def error(self, error_code, result):
+        self.error_code = error_code
+        self.result = result
 
 
 class StackStormAPI(object):
@@ -83,16 +96,25 @@ class StackStormAPI(object):
         alias_match = ActionAliasMatch()
         alias_match.command = text
 
+        resp = ResultSet()
         try:
-            return st2_client.managers['ActionAlias'].match(alias_match)
+            resp.OK(st2_client.managers['ActionAlias'].match(alias_match))
         except HTTPError as e:
             if e.response is not None and e.response.status_code == 400:
-                LOG.info("No match found - {}".format(str(e)))
+                resp.error(
+                    1,
+                    "st2 command '{}' not found.  View available commands with {}st2help.".format(
+                        text, self.cfg.bot_prefix
+                    )
+                )
+                LOG.info(resp.result)
             else:
-                LOG.error("HTTPError {}".format(str(e)))
+                resp.error(2, "HTTPError {}".format(str(e)))
+                LOG.error(resp.result)
         except Exception as e:
-                LOG.error("Unexpected error {}".format(e))
-        return None
+                resp.error(3, "Unexpected error {}".format(e))
+                LOG.error(resp.result)
+        return resp
 
     def execute_actionalias(self, action_alias, representation, msg, chat_user, st2token):
         """

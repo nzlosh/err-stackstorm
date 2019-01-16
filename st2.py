@@ -6,7 +6,8 @@ from types import SimpleNamespace
 from errbot import BotPlugin, re_botcmd, botcmd, arg_botcmd, webhook
 from lib.config import PluginConfiguration
 from lib.chat_adapters import ChatAdapterFactory
-from lib.errors import SessionConsumedError, SessionExpiredError, SessionInvalidError
+from lib.errors import SessionConsumedError, SessionExpiredError, \
+    SessionInvalidError, SessionExistsError
 from lib.stackstorm_api import StackStormAPI
 from lib.authentication_controller import AuthenticationController, BotPluginIdentity
 from lib.authentication_handler import St2ApiKey, St2UserToken, St2UserCredentials
@@ -49,12 +50,18 @@ class St2(BotPlugin):
         self.internal_identity = BotPluginIdentity()
 
         # Create a session for internal use by err-stackstorm
-        bot_session = self.accessctl.create_session(
-            self.internal_identity,
-            self.internal_identity.secret
-        )
-        LOG.debug("err-stackstorm requested session {}".format(bot_session))
+        try:
+            bot_session = self.accessctl.create_session(
+                self.internal_identity,
+                self.internal_identity.secret
+            )
+            self.accessctl.consume_session(bot_session.id())
+        except SessionExistsError as e:
+            LOG.warning("Internal logic error, bot session already exists.")
+            bot_session = self.accessctl.get_session(self.internal_identity)
+        LOG.debug("Bot session {}".format(bot_session))
 
+        # Bot authentication is a corner case, it always requires the standalone model.
         standalone_auth = AuthHandlerFactory.instantiate("standalone")(self.cfg)
         bot_token = standalone_auth.authenticate(st2_creds=self.cfg.bot_creds)
         LOG.debug("StackStorm authentication response {}".format(bot_token.requests()))
@@ -179,8 +186,8 @@ class St2(BotPlugin):
         LOG.debug("Message received from chat backend.\n{}\n".format(msg_debug))
 
         matched_result = self.st2api.match(msg.body, st2token)
-        if matched_result is not None:
-            action_alias, representation = matched_result
+        if matched_result.error_code == 0:
+            action_alias, representation = matched_result.result
             del matched_result
             if action_alias.enabled is True:
                 res = self.st2api.execute_actionalias(
@@ -195,8 +202,8 @@ class St2(BotPlugin):
             else:
                 result = "st2 command '{}' is disabled.".format(msg.body)
         else:
-            result = "st2 command '{}' not found.  View available commands with {}st2help."
-            result = result.format(msg.body, self.cfg.bot_prefix)
+            result = matched_result.result #"st2 command '{}' not found.  View available commands with {}st2help."
+            #result = result.format(msg.body, self.cfg.bot_prefix)
         return result
 
     @arg_botcmd("--pack", dest="pack", type=str)
@@ -269,30 +276,39 @@ class St2(BotPlugin):
             if "username" in request:
                 username = request.get("username", "")
                 password = request.get("password", "")
-                self.accessctl.associate_credentials(
+                if self.accessctl.associate_credentials(
                     user,
                     St2UserCredentials(username, password),
                     self.cfg.bot_creds
-                )
-                r.authenticated = True
+                ):
+                    r.authenticated = True
+                else:
+                    r.message = "Invalid credentials"
+                    r.return_code = 6
             elif "user_token" in request:
                 user_token = request.get("user_token", None)
-                self.accessctl.associate_credentials(
+                if self.accessctl.associate_credentials(
                     user,
                     St2UserToken(user_token),
                     self.cfg.bot_creds
-                )
-                r.authenticated = True
+                ):
+                    r.authenticated = True
+                else:
+                    r.message = "Invalid token"
+                    r.return_code = 6
             elif "api_key" in request:
                 api_key = request.get("api_key", None)
-                self.accessctl.associate_credentials(
+                if self.accessctl.associate_credentials(
                     user,
                     St2ApiKey(api_key),
                     self.cfg.bot_creds
-                )
-                r.authenticated = True
+                ):
+                    r.authenticated = True
+                else:
+                    r.message = "Invalid api key"
+                    r.return_code = 6
 
-            if r.authenticated is False or shared_word is None:
+            if (r.authenticated is False or shared_word is None) and r.return_code == 0:
                 r.return_code = 3
                 r.message = "Invalid authentication payload"
 

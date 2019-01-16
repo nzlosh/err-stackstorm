@@ -27,7 +27,10 @@ class SessionManager(object):
         Fetch information related to a session by its UUID.
         If a session doesn't exist, False is returned.
         """
-        return self.store.get_by_uuid(_uuid)
+        session = self.store.get_by_uuid(_uuid)
+        if session is False:
+            raise SessionInvalidError
+        return session
 
     def create(self, user_id, user_secret):
         """

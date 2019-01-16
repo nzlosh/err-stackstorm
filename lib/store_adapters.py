@@ -28,7 +28,7 @@ class StoreAdapterFactory(AbstractStoreAdapterFactory):
     def instantiate(store_type):
         LOG.debug("Create secret store for '{}'".format(store_type))
         return {
-            "cleartext": ClearTextStoreAdapater,
+            "cleartext": ClearTextStoreAdapter,
             "keyring": KeyringStoreAdapter,
             "vault": VaultStoreAdapter
         }.get(store_type, KeyringStoreAdapter)
@@ -43,7 +43,7 @@ class StoreAdapterFactory(AbstractStoreAdapterFactory):
 
     @staticmethod
     def developer_adapter():
-        return ClearTextStoreAdapater()
+        return ClearTextStoreAdapter()
 
 
 class AbstractStoreAdapter(metaclass=abc.ABCMeta):
@@ -64,7 +64,7 @@ class AbstractStoreAdapter(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
 
-class ClearTextStoreAdapater(AbstractStoreAdapter):
+class ClearTextStoreAdapter(AbstractStoreAdapter):
     """
     This is only intended for use in development environments.
     Never use this in production, it offers no security.
@@ -80,16 +80,16 @@ class ClearTextStoreAdapater(AbstractStoreAdapter):
 
     def set(self, name, secret, namespace=""):
         # TODO: disable this log after debugging complete.
-        LOG.debug("__ClearTextStoreAdapater.set({}, {}).".format(name, secret))
+        LOG.debug("__ClearTextStoreAdapter.set({}, {}).".format(name, secret))
         self.associations[name] = secret
         return True
 
     def get(self, name, namespace=""):
-        LOG.debug("__ClearTextStoreAdapater.get({}).".format(name))
+        LOG.debug("__ClearTextStoreAdapter.get({}).".format(name))
         return self.associations.get(name)
 
     def delete(self, name, namespace=""):
-        LOG.debug("__ClearTextStoreAdapater.delete({}).".format(name))
+        LOG.debug("__ClearTextStoreAdapter.delete({}).".format(name))
         if name in self.associations:
             del self.associations[name]
 
@@ -186,7 +186,7 @@ class SessionStore(object):
                 del self.id_to_user_map[session.id()]
             del self.memory[user_id]
         else:
-            LOG.warning("delete user_id {} session".format(user_id))
+            LOG.warning("Failed to delete user_id {} session - Not found.".format(user_id))
 
     def put_by_id(self, session_id, session):
         """

@@ -162,6 +162,7 @@ class AuthenticationController(object):
         param: user: the normalised chat_user account.
         param: creds: the stackstorm user credentials to validate against StackStorm API.
         param: bot_creds: the bot credentials to use when authenticating user credentials.
+        Return true if credentials were valid or False if they were not.
         """
         # get the configured authentication handler.
         token = self.bot.cfg.auth_handler.authenticate(user, creds, bot_creds)
@@ -171,3 +172,5 @@ class AuthenticationController(object):
             self.set_token_by_userid(user, token)
         else:
             LOG.warning("Failed to validate StackStorm credentials for {}.".format(user))
+        # Explicitly test not false to not return the value of token, just true/false if valid.
+        return token is not False
