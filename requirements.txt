@@ -1,5 +1,6 @@
 st2client>=2.9.1
+requests[security]<2.15,>=2.14.1
 sseclient-py
-sseclient
+sseclient==0.0.19
 keyring
 hvac
