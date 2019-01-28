@@ -1,5 +1,5 @@
 # err-stackstorm
-A plugin to run StackStorm actions, bringing StackStorm's chatops to Errbot.
+A plugin to run StackStorm actions, bringing StackStorm's ChatOps to Errbot.
 
 ## Table of Contents
 1. [Installation](#Installation)
@@ -9,7 +9,7 @@ A plugin to run StackStorm actions, bringing StackStorm's chatops to Errbot.
 1. [Setup Action-Aliases](#ActionAliases)
 1. [Webhook](#Webhook)
 1. [Server-Side Events](#ServerSideEvents)
-1. [Chatops Pack](#ChatopsPack)
+1. [ChatOps Pack](#ChatOpsPack)
 1. [Troubleshooting](#Troubleshooting)
 
 ## Installation <a name="Installation"></a>
@@ -18,7 +18,7 @@ Installation of the err-stackstorm plugin is performed from within a running Err
  1. Install Errbot on the target system using standard package manager or Errbot installation method.
  1. Configure Errbot, see the [Configuration](#Configuration) section for help.
  1. Enable Errbot's internal web server, see the [Webhook](#Webhook) section for help.
- 1. Install Chatops pack on StackStorm, see the [Chatops Pack](#ChatopsPack) section for help.
+ 1. Install ChatOps pack on StackStorm, see the [ChatOps Pack](#ChatOpsPack) section for help.
  1. Connect to your chat back-end and starting interacting with your StackStorm/Errbot instance.
 
 The below command will install the plugin.
@@ -31,6 +31,7 @@ The plugin has been developed and tested against the below software.  For optima
 
 plugin tag (version) | Python | Errbot | StackStorm client
 --- | --- | --- | ---
+2.0 | 3.4 | 6? | 2.10
 1.4 | 3.4 | 5.1.2 | 2.5
 1.3 | 3.4 | 5.1.2 | 2.5
 1.2 | 3.4 | 5.0   | 2.2
@@ -76,6 +77,13 @@ STACKSTORM = {
     'stream_url': 'https://stackstorm.example.com/stream/v1',
 
     'verify_cert': True,
+    'secrets_store': {
+        'cleartext': {}
+        'keyring': {
+            'keyring_password': "<keyring_password>"
+        },
+        'vault': {}
+    },
     'api_auth': {
         'user': {
             'name': 'my_username',
@@ -83,6 +91,13 @@ STACKSTORM = {
         },
         'token': "<User token>",
         'key': '<API Key>'
+    },
+    'rbac_auth': {
+        'standalone': {},
+        'serverside': {},
+        'clientside': {
+            'url': '<url_to_errbot_webserver>',
+        }
     },
     'timer_update': 900, #  Unit: second.  Interval for Errbot to refresh to list of available action aliases.
 }
@@ -92,13 +107,21 @@ Option | Description
 --- | ---
 `auth_url` | StackStorm's authentication url end point.  Used to authenticate credentials against StackStorm.
 `api_url` | StackStorm's API url end point.  Used to execute action aliases received from the chat back-end.
-`stream_url` | StackStorm's Stream url end point.  Used to received chatops notifications.
+`stream_url` | StackStorm's Stream url end point.  Used to received ChatOps notifications.
 `verify_cert` | Default is *True*.  Verify the SSL certificate is valid when using https end points.  Applies to all end points.
 `api_auth.user.name` | Errbot username to authenticate with StackStorm.
 `api_auth.user.password` | Errbot password to authenticate with StackStorm.
 `api_auth.token` | Errbot user token to authenticate with StackStorm.  Used instead of a username/password pair.
 `api_auth.key` | Errbot API key to authenticate with StackStorm.  Used instead of a username/password pair or user token.
-`timer_update` | Unit: seconds.  Default is *60*. Interval for Errbot to refresh to list of available action aliases.  (deprecated)
+`timer_update` | Unit: seconds.  Default is *60*. Interval for err-stackstorm to refresh to list of available action aliases.  (deprecated)
+`rbac_auth.standalone` | Standalone authentication.
+`rbac_auth.serverside` | Serverside authentication, err-stackstorm will request StackStorm credentials on behalf of a chat user from StackStorm.
+`rbac_auth.clientside` | Clientside authentication, a chat user will supply StackStorm credentials to err-stackstorm via an authentication page.
+`rbac_auth.clientside.url` | Url to the authentication web page.
+`secrets_store.cleartext` | Use the in memory store.
+`secrets_store.keyring` | Use the system's keyring store.
+`secrets_store.keyring.keyring_password` | Password to unlock the keyring.
+`secrets_store.vault` | Use Hashicorp Vault store.
 
 
 ### Authentication <a name="Authentication"></a>
@@ -113,14 +136,111 @@ The Errbot plugin must have valid credentials to use StackStorm's API.  The cred
 See https://docs.stackstorm.com/authentication.html for more details.
 
 #### Username/Password
-Using a username and password will allow Errbot to renew the user token when it expires.  If a _User Token_ is supplied, it will be used in preference to username/password authentication until the token expires.
+Using a username and password will allow Errbot to renew the user token when it expires.  If a _User Token_ is supplied, it will be used in preference to username/password authentication.
 
 #### User Token
-To avoid using the username/password pair in a configuration file, it's possible to supply a pre-generated _User Token_ as generated by StackStorm.  Note when the token expires, a new one must be generated and updated in `config.py` which in turn requires Errbot to be restarted.
-This method is the least ideal for production environments.
+To avoid using the username/password pair in a configuration file, it's possible to supply a _User Token_ as generated by StackStorm when a username/password is authenticated successfully.  Note when the token expires, a new one must be generated and updated in `config.py` which in turn requires Errbot to be restarted.
+This form of authentication is the least practical for production environments.
 
 #### API Key
 _API Key_ support has been included since StackStorm v2.0.  When an _API Key_ is provided, it is used in preference to a _User Token_ or _username/password_ pair.  It is considered a mistake to supply a token or username/password pair when using the API Key.
+
+### Secrets Store
+The secrets store is used by err-stackstorm to cache StackStorm API credentials.  The available backends are:
+
+ - `cleartext`
+ - `keyring`
+ - `vault`
+
+#### ClearText
+The `cleartext` store maintains the cache in memory and does not encrypt the contents to disk.  This is option doesn't protect the stored secrets.
+
+#### KeyRing
+The `keyring` store uses the systems keyring manager to create a namespace and write secrets to it.  Secrets are persisted to disk in an encrypted format.  The keyring must be unlocked when errbot is started.  [detail](http://man7.org/linux/man-pages/man7/keyrings.7.html)
+
+#### HashiCorp Vault
+The `vault` store uses Hashicorp's Vault to store secrets.  [details](https://www.vaultproject.io)
+
+### Role Based Access Control Authentication
+
+#### Standalone RBAC
+
+This is the original authentication method where by err-stackstorm uses its own credentials for all
+calls to the StackStorm API.  All action-alias' issued by chat service users execute the underlying
+workflows with err-stackstorm credentials.
+
+
+##### Configuration
+It is considered an error to have multiple RBAC authentication configurations present at the same time.
+An empty dictionary in the *standalone* key is all that is required to maintain Err-stackstorm's
+original authentication method.
+```
+    'rbac_auth': {
+        'standalone': {},
+    },
+```
+
+#### Server-side RBAC
+
+The "server-side" RBAC implementation uses err-stackstorm credentials to call the StackStorm API
+to pass chat service user identification.  The err-stackstorm credentials must be defined as a
+service.  Chat service user identifications must be registered with StackStorm before being used.
+
+When a chat service user matches, StackStorm will return the associated user token and err-stackstorm
+will cache the result.  When a chat user triggers an action-alias, the associated workflow will be
+executed with the cached user token.
+
+##### Configuration
+It is considered an error to have multiple RBAC authentication configurations present at the same time.
+Only the *serverside* key with an empty dictionary is required to enable Server-side RBAC for ChatOps.
+
+```
+    'rbac_auth': {
+        'serverside': {}
+    },
+```
+
+#### Client-side RBAC
+
+Err-stackstorm provides a way to associate the chat service user account with a StackStorm
+username/password, user token or api token.
+
+This implementation is specific to err-stackstorm.  It is achieved by requesting a new authentication
+session with err-stackstorm.  A Universally Unique Identifier (UUID) is generated for the session
+and the chat user is invited to follow a URL to the authentication page hosted by errbot.  For
+security reasons, the UUID is a one time use and is consumed when the page is accessed.
+
+The login page must be protected by TLS encryption and ideally require an ssl client certificate.
+The login page should not be exposed directly to the internet, but have a reverse proxy such as
+nginx place between it and any external service consumers.
+
+The user enters their StackStorm credentials via the login page which err-stackstorm will validate
+against the StackStorm API.  If the credentials are valid, the user token or api key will be cached
+by err-stackstorm and the supplied credentials discarded.
+
+Once a chat user is associated with their StackStorm credentials, any action-alias will be executed
+using the associated StackStorm credentials.
+
+
+##### Configuration
+It is considered an error to have both *extended* and *proxied* RBAC authentication configurations
+present at the same time.  A *proxied* key with *url* and *keyring_password* are required to correctly
+configure Out-of-bands authentication for ChatOps.
+```
+    'rbac_auth': {
+        'clientside': {
+            'url': 'https://<hostname>:<port>/',
+            'keyring_password': "<password>"
+        }
+    },
+```
+
+Option | Description
+--- | ---
+`url` | Errbot's authentication web server end point.  Used for the out-of-bands authentication web page.
+`keyring_password` | The password used to unlock the keyring to read/write stored data.
+
+
 
 ## How to expose action-aliases as plugin commands <a name="ActionAliases"></a>
  1. Connect Errbot to your chat environment.
@@ -131,37 +251,38 @@ _API Key_ support has been included since StackStorm v2.0.  When an _API Key_ is
 
 ## Send messages from StackStorm to Errbot using Errbot's native webhook support <a name="Webhook"></a>
 
-Errbot has a built in web server which is configured and enabled through the bots admin chat interface.  The StackStorm plugin is written to listen for StackStorm's chatops messages and delivers them to the attached chat back-end.
+Errbot has a built in web server which is configured and enabled through the bots admin chat interface.  The StackStorm plugin is written to listen for StackStorm's ChatOps messages and delivers them to the attached chat back-end.
 
-To configure Errbot's web server plugin, the command below can be sent to Errbot.
+To configure Errbot's web server plugin, the command below can be sent to Errbot:
 ```
-!plugin config Webserver {'HOST': '0.0.0.0',
-'PORT': 8888,
-'SSL': {'certificate': '',
-'enabled': False,
-'host': '0.0.0.0',
-'key': '',
-'port': 8889}}
+!plugin config Webserver {'HOST': '0.0.0.0', 'PORT': 3141,
+'SSL': {'enabled': False, 'host': '0.0.0.0', 'port': 3142, 'certificate': '', 'key': ''}}
 ```
+
 **NOTE:** _The variables must be adjusted to match the operating environment in which Errbot is running.  See Errbot documentation for further configuration information._
 
-Enable to web server plugin.
+The configuration above is only applied for the current runtime and will not
+persist after the errbot process being restarted. Making the configuration
+change permanent is as simple as installing a special plugin:
 ```
-!plugin activate Webserver
+!repos install https://github.com/tkit/errbot-plugin-webserverconfiguration
 ```
+The configuration command from above is not required prior to installing this
+plugin.
+
 In production environments it may be desirable to place a reverse-proxy like nginx in front of errbot.
 
 ## Send notifications to Errbot from StackStorm using Server-Side Events (SSE) <a name="ServerSideEvents"></a>
 
-As of StackStorm 1.4. server-sent events (SSE) were added which allowed chatops messages to be
+As of StackStorm 1.4. server-sent events (SSE) were added which allowed ChatOps messages to be
 streamed from StackStorm to a connected listener (err-stackstorm in our case).  The StackStorm
 stream url must be supplied in the configuration so err-stackstorm knows where to establish the
 http connection.  The SSE configuration is complementary to the webhook method and both must be
-enabled for full chatops support between StackStorm and Errbot.
+enabled for full ChatOps support between StackStorm and Errbot.
 
-## StackStorm Chatops pack configuration. <a name="ChatopsPack"></a>
+## StackStorm ChatOps pack configuration. <a name="ChatOpsPack"></a>
 
-StackStorm's [chatops pack](https://github.com/StackStorm/st2/tree/master/contrib/chatops) is required
+StackStorm's [ChatOps pack](https://github.com/StackStorm/st2/tree/master/contrib/chatops) is required
 to be installed and a notify rule file added to the pack.
 
 The notify rule must be placed in `/<stackstorm installation>/packs/chatops/rules`.  The rule file
@@ -277,15 +398,15 @@ _This is a basic implementation of a chatroom_
 • *.room topic* - Get or set the topic for a room.
 ```
 
-### Is the StackStorm chatops pack installed and configured correctly?
-Err-stackstorm requires the chatops pack to be installed.  To confirm it is installed, use the st2 cli.
+### Is the StackStorm ChatOps pack installed and configured correctly?
+Err-stackstorm requires the ChatOps pack to be installed.  To confirm it is installed, use the st2 cli.
 
 ```
 $ st2 pack list
 +-------------------+-------------------+--------------------------------+---------+----------------------+
 | ref               | name              | description                    | version | author               |
 +-------------------+-------------------+--------------------------------+---------+----------------------+
-| chatops           | chatops           | Chatops integration pack       | 0.2.0   | Kirill Enykeev       |
+| chatops           | chatops           | ChatOps integration pack       | 0.2.0   | Kirill Enykeev       |
 ```
 
 Confirm the `notify_errbot.yaml` is inside the `chatops/rules` directory
@@ -376,4 +497,10 @@ If the announcement event is showing as
 ```
 2018-01-26 15:51:55,246 DEBUG    sseclient                 Dispatching st2.announcement__chatops event, 508 bytes...
 ```
-This indicates that the route wasn't set to `errbot`, see the Install Chatops section.
+This indicates that the route wasn't set to `errbot`, see the Install ChatOps section.
+
+
+## Legal
+
+StackStorm logo used with permission by StackStorm.
+Errbot logo used with permission by Errbot development team.

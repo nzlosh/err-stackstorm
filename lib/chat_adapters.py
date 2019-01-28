@@ -1,13 +1,17 @@
 # coding:utf-8
 import abc
 import logging
+
 LOG = logging.getLogger(__name__)
 
 
 class AbstractChatAdapterFactory(metaclass=abc.ABCMeta):
-
     @abc.abstractmethod
     def slack_adapter(self, bot_plugin):
+        pass
+
+    @abc.abstractmethod
+    def xmpp_adapter(self, bot_plugin):
         pass
 
     @abc.abstractmethod
@@ -16,10 +20,20 @@ class AbstractChatAdapterFactory(metaclass=abc.ABCMeta):
 
 
 class ChatAdapterFactory(AbstractChatAdapterFactory):
+    @staticmethod
+    def instance(chat_backend):
+        return {
+            "slack": ChatAdapterFactory.slack_adapter,
+            "xmpp": ChatAdapterFactory.xmpp_adapter
+        }.get(chat_backend, ChatAdapterFactory.generic_adapter)
 
     @staticmethod
     def slack_adapter(bot_plugin):
         return SlackChatAdapter(bot_plugin)
+
+    @staticmethod
+    def xmpp_adapter(bot_plugin):
+        return XMPPChatAdapter(bot_plugin)
 
     @staticmethod
     def generic_adapter(bot_plugin):
@@ -38,6 +52,10 @@ class AbstractChatAdapter(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def format_help(self, help_strings):
+        pass
+
+    @abc.abstractmethod
+    def normalise_user_id(self, user):
         pass
 
 
@@ -59,8 +77,8 @@ class GenericChatAdapter(AbstractChatAdapter):
                 help_text += "[{}]\n".format(help_obj["pack"])
                 pack = help_obj["pack"]
             help_text += "\t{}{} {} - {}\n".format(
-                    self.botplugin.st2config.bot_prefix,
-                    self.botplugin.st2config.plugin_prefix,
+                    self.botplugin.cfg.bot_prefix,
+                    self.botplugin.cfg.plugin_prefix,
                     help_obj["display"],
                     help_obj["description"],
                 )
@@ -88,6 +106,7 @@ class GenericChatAdapter(AbstractChatAdapter):
 
         if channel is not None:
             try:
+                LOG.debug("Channel {}".format(channel))
                 channel_id = self.botplugin.build_identifier(channel)
             except ValueError as err:
                 LOG.warning("Invalid channel identifier '{}'.  {}".format(channel, err))
@@ -106,6 +125,38 @@ class GenericChatAdapter(AbstractChatAdapter):
             LOG.error("Unable to post message as there is no user or channel destination.")
         else:
             self.botplugin.send(target_id, message)
+
+    def normalise_user_id(self, user):
+        return "GENERIC NORMALISE {}".format([
+            user.aclattr,
+            user.client,
+            user.fullname,
+            user.nick,
+            user.person])
+
+
+class XMPPChatAdapter(GenericChatAdapter):
+    def __init__(self, bot_plugin):
+        self.botplugin = bot_plugin
+
+    def normalise_user_id(self, user):
+        return "{}@{}/{}".format(user.nick, user.domain, user.resource)
+
+
+# Inheriting from Generic Chat Adapter until IRC backend specific methods are required.
+class IRCChatAdapter(GenericChatAdapter):
+    def __init__(self, bot_plugin):
+        self.botplugin = bot_plugin
+
+    def normalise_user_id(self, user):
+        return "IRC NORMALISE {}".format([
+            user.aclattr,
+            user.client,
+            user.fullname,
+            user.host,
+            user.nick,
+            user.person,
+            user.user])
 
 
 class SlackChatAdapter(AbstractChatAdapter):
@@ -170,12 +221,10 @@ class SlackChatAdapter(AbstractChatAdapter):
                 LOG.debug("Send card using backend {}".format(self.botplugin.mode))
                 backend = extra.get(self.botplugin.mode, {})
                 LOG.debug("fields {}".format(
-                    tuple(
-                            [
-                                (field.get("title"), field.get("value"))
-                                for field in backend.get("fields", [])
-                            ]
-                        )
+                    tuple([
+                        (field.get("title"), field.get("value"))
+                        for field in backend.get("fields", [])
+                    ])
                 ))
                 if backend is not {}:
                     kwargs = {
@@ -206,9 +255,12 @@ class SlackChatAdapter(AbstractChatAdapter):
                 help_text += "\n**{}**\n".format(help_obj["pack"])
                 pack = help_obj["pack"]
             help_text += "\t{}{} {} - _{}_\n".format(
-                    self.botplugin.st2config.bot_prefix,
-                    self.botplugin.st2config.plugin_prefix,
+                    self.botplugin.cfg.bot_prefix,
+                    self.botplugin.cfg.plugin_prefix,
                     help_obj["display"],
                     help_obj["description"],
                 )
         return help_text
+
+    def normalise_user_id(self, user):
+        return str(user.userid)
