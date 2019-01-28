@@ -23,7 +23,7 @@ Installation of the err-stackstorm plugin is performed from within a running Err
 
 The below command will install the plugin.
 ```
-!repos install https://github.com/fmnisme/err-stackstorm.git
+!repos install https://github.com/nzlosh/err-stackstorm.git
 ```
 
 ## Requirements <a name="Requirements"></a>
@@ -31,7 +31,7 @@ The plugin has been developed and tested against the below software.  For optima
 
 plugin tag (version) | Python | Errbot | StackStorm client
 --- | --- | --- | ---
-2.0 | 3.4 | 6? | 2.10
+2.0 | 3.4 | 5.2.0 | 2.10
 1.4 | 3.4 | 5.1.2 | 2.5
 1.3 | 3.4 | 5.1.2 | 2.5
 1.2 | 3.4 | 5.0   | 2.2
@@ -43,27 +43,19 @@ Errbot provides official support for a few of major chat back-ends and many more
 
 Back end | Mode value | Support type
 --- | --- | ---
-Hipchat | `hipchat` | Integrated
-IRC | `irc` | Integrated
 Slack | `slack` | Integrated
-Telegram Messenger | `telegram` | Integrated
 Text | `text` | Integrated
 XMPP | `xmpp` | Integrated
-[Skype](https://www.skype.com/) | `skype` | [Plugin](https://github.com/errbotio/errbot-backend-skype)
 [Mattermost](https://about.mattermost.com/) | `mattermost` | [Plugin](https://github.com/Vaelor/errbot-mattermost-backend)
 [Rocket Chat](https://rocket.chat/) | `aoikrocketchaterrbot` | [Plugin](https://github.com/AoiKuiyuyou/AoikRocketChatErrbot)
-[Glip](https://glip.com/) | `Glip` | [Plugin](https://github.com/ringcentral/ringcentral-glip-errbot)
 [Gitter](gitter.im/) | `gitter` | [Plugin](https://github.com/errbotio/err-backend-gitter)
-[VK](https://vk.com/) | `VK` | [Plugin](https://github.com/Ax3Effect/errbot-vk)
 [Discord](https://www.discordapp.com/) | `discord` | [Plugin](https://github.com/gbin/err-backend-discord)
-[Cisco Spark](https://www.ciscospark.com/) | `CiscoSpark` | [Plugin](https://github.com/marksull/err-backend-cisco-spark)
-[TOX](https://tox.im/) | `tox` | [Plugin](https://github.com/errbotio/err-backend-tox)
-[CampFire](https://campfirenow.com/) | `campfire` | [Plugin](https://github.com/errbotio/err-backend-campfire)
 
 Back-end support will provide a minimum set of back-end chat functionality to the err-stackstorm plugin like `connect` to and `authenticate` with chat back-end, `identify` users/rooms and `send_message` to users/rooms.  Advanced formatting may not be available on all back-ends since adaptor code is required in the err-stackstorm plugin to translate ActionAlias `extra` parameter on a per back-end basis.
 
 Currently supported extra back-ends
 * Slack
+* XMPP
 
 
 ## Configuration <a name="Configuration"></a>
@@ -499,6 +491,10 @@ If the announcement event is showing as
 ```
 This indicates that the route wasn't set to `errbot`, see the Install ChatOps section.
 
+
+## Acknowledgements
+
+The err-stackstorm plugin was founded by (fmnisme)[https://github.com/fmnisme], thanks for starting the project.
 
 ## Legal
 
