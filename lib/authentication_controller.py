@@ -5,7 +5,7 @@ from random import SystemRandom
 
 from lib.session_manager import SessionManager
 from lib.errors import SessionInvalidError
-
+from errbot.backends.base import Identifier
 LOG = logging.getLogger(__name__)
 
 
@@ -31,11 +31,29 @@ class AuthenticationController(object):
         self.bot = bot
         self.sessions = SessionManager(bot.cfg)
 
+    def to_userid(self, user):
+        """
+        Convert BotIdentity, Identifier to plain text string suitable for use as the key with
+        Sessions and cached tokens.
+        param: user: may be one of BotIdentity, errbot.backend.base.Identifier or string.
+        """
+        if isinstance(user, BotPluginIdentity):
+            user_id = user.name
+        elif isinstance(user, Identifier):
+            user_id = self.bot.chatbackend.normalise_user_id(user)
+        else:
+            user_id = user
+        LOG.info("User ID is '{}'".format(user_id))
+        return user_id
+
     def pre_execution_authentication(self, chat_user):
         """
         Look up the chat_user to confirm they are authenticated.
+        param: chat_user: the chat back end user.
+        return: A valid St2 Token or False in the case of an error
         """
-        return self.bot.cfg.auth_handler.pre_execution_authentication(self, chat_user)
+        user_id = self.to_userid(chat_user)
+        return self.bot.cfg.auth_handler.pre_execution_authentication(self, user_id)
 
     def consume_session(self, session_id):
         """
@@ -85,9 +103,7 @@ class AuthenticationController(object):
         secret is missing.
         """
         secret = False
-        if isinstance(user, BotPluginIdentity):
-            user = user.name
-        session = self.sessions.get_by_userid(user)
+        session = self.sessions.get_by_userid(self.to_userid(user))
         if session:
             secret = self.get_token_by_session(session.id())
         return secret
@@ -109,7 +125,7 @@ class AuthenticationController(object):
         """
         Store StackStorm user token or api key in the secrets store.
         """
-        session = self.sessions.get_by_userid(user_id)
+        session = self.sessions.get_by_userid(self.to_userid(user_id))
         if session:
             ret = self.set_token_by_session(session.id(), token)
         else:
@@ -120,22 +136,14 @@ class AuthenticationController(object):
         """
         Handle an initial request to establish a session.  If a session already exists, return it.
         """
-        if isinstance(user, BotPluginIdentity):
-            user_id = user.name
-        else:
-            user_id = self.bot.chatbackend.normalise_user_id(user)
-
+        user_id = self.to_userid(user)
         return self.sessions.create(user_id, user_secret)
 
     def get_session(self, user):
         """
         Returns the session associated with the user.
         """
-        if isinstance(user, BotPluginIdentity):
-            user_id = user.name
-        else:
-            user_id = self.bot.chatbackend.normalise_user_id(user)
-
+        user_id = self.to_userid(user)
         session = self.sessions.get_by_userid(user_id)
         if session is False:
             raise SessionInvalidError
@@ -172,5 +180,5 @@ class AuthenticationController(object):
             self.set_token_by_userid(user, token)
         else:
             LOG.warning("Failed to validate StackStorm credentials for {}.".format(user))
-        # Explicitly test not false to not return the value of token, just true/false if valid.
+        # Explicitly test not false to avoid returning tokens value.
         return token is not False

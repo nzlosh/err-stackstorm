@@ -40,7 +40,7 @@ class PluginConfiguration(BorgSingleton):
 
     def _configure_rbac_auth(self, bot_conf):
         self.auth_handler = None
-        rbac_auth = bot_conf.STACKSTORM.get("rbac_auth", {"standalone": {}})
+        rbac_auth = bot_conf.STACKSTORM.get("rbac_auth", {"no_rbac_auth_key": {}})
         for rbac_type in list(rbac_auth.keys()):
             self.auth_handler = AuthHandlerFactory.instantiate(rbac_type)(
                 self,

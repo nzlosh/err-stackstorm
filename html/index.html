@@ -4,7 +4,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.3.3/semantic.min.js"></script>
     <script>
-        console.log("err-stackstorm v0.3")
+        console.log("err-stackstorm v2.0")
         function get_uuid_from_querystring(){
             uuid = undefined;
             params = window.location.href.split("?");
@@ -65,7 +65,7 @@
                     },
                     onFailure: function(response) {
                         update_message(
-                            "Assocation failed",
+                            "Association failed",
                             response.message,
                             "error"
                         );
@@ -90,7 +90,7 @@
                     },
                     onFailure: function(response) {
                         update_message(
-                            "Assocation failed",
+                            "Association failed",
                             response.message,
                             "error"
                         );
@@ -115,7 +115,7 @@
                     },
                     onFailure: function(response) {
                         update_message(
-                            "Assocation failed",
+                            "Association failed",
                             response.message,
                             "error"
                         );

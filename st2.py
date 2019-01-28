@@ -139,22 +139,30 @@ class St2(BotPlugin):
         Establish a link between the chat backend and StackStorm by authenticating over an out of
         bands communication channel.
         """
-        ret = ""
-        if isinstance(self.cfg.auth_handler, ClientSideAuthHandler):
-            if msg.is_direct:
-                if len(args) > 0:
-                    session = self.accessctl.create_session(msg.frm, args)
-                    ret = "Your challenge response is {}".format(
-                        self.accessctl.session_url(session.id(), "/index.html")
-                    )
-                else:
-                    ret = "Please provide a shared word to use during the authenication process."
-            else:
-                ret = "Requests for authentication in a public channel isn't possible." \
-                      "  Request authentication in a private one-to-one message."
-        else:
-            ret = "Authentication is only available when Client side authentication is configured."
-        return ret
+        if isinstance(self.cfg.auth_handler, ClientSideAuthHandler) is False:
+            return "Authentication is only available when Client side authentication is configured."
+
+        if msg.is_direct is not True:
+            return "Requests for authentication in a public channel isn't possible." \
+                "  Request authentication in a private one-to-one message."
+
+        if len(args) < 1:
+            return "Please provide a shared word to use during the authenication process."
+
+        try:
+            session = self.accessctl.create_session(msg.frm, args)
+        except SessionExistsError as e:
+            try:
+                session = self.accessctl.get_session(msg.frm)
+                if session.is_expired() is False:
+                    return "A valid session already exists."
+            except SessionExpiredError:
+                self.accessctl.delete_session(session.id())
+                session = self.accessctl.create_session(msg.frm, args)
+
+        return "Your challenge response is {}".format(
+            self.accessctl.session_url(session.id(), "/index.html")
+        )
 
     @re_botcmd(pattern='^{} .*'.format(PLUGIN_PREFIX))
     def st2_execute_actionalias(self, msg, match):
@@ -169,12 +177,17 @@ class St2(BotPlugin):
             return msg.replace(self.cfg.plugin_prefix, "", 1).strip()
 
         user_id = self.chatbackend.normalise_user_id(msg.frm)
-        st2token = self.accessctl.pre_execution_authentication(user_id)
+        st2token = False
+        err_msg = "Failed to fetch valid credentials."
+        try:
+            st2token = self.accessctl.pre_execution_authentication(user_id)
+        except (SessionExpiredError, SessionInvalidError) as e:
+            err_msg = str(e)
 
         if st2token is False:
-            rejection = "Action-Alias execution is not allowed for chat user '{}'." \
+            rejection = "Error: {}  Action-Alias execution is not allowed for chat user '{}'." \
                 "  Please authenticate or see your StackStorm administrator to grant access" \
-                ".".format(user_id)
+                ".".format(err_msg, user_id)
             LOG.warning(rejection)
             return rejection
 
@@ -202,8 +215,7 @@ class St2(BotPlugin):
             else:
                 result = "st2 command '{}' is disabled.".format(msg.body)
         else:
-            result = matched_result.result #"st2 command '{}' not found.  View available commands with {}st2help."
-            #result = result.format(msg.body, self.cfg.bot_prefix)
+            result = matched_result.result
         return result
 
     @arg_botcmd("--pack", dest="pack", type=str)

@@ -216,7 +216,8 @@ class ServerSideAuthHandler(BaseAuthHandler):
         if isinstance(user, BotPluginIdentity):
             user_id = user.name
         else:
-            bot_session = self.sessions.get_by_userid(self.bot.internal_identity.name)
+            bot_id = accessctl.to_userid(user)
+            bot_session = self.sessions.get_by_userid(bot_id)
             bot_token = self.sessions.get_token_by_session(bot_session)
             user_id = self.bot.chatbackend.normalise_user_id(user)
 
@@ -298,10 +299,15 @@ class ClientSideAuthHandler(BaseAuthHandler):
 
     def pre_execution_authentication(self, accessctl, chat_user):
         """
-        TODO: Docstring
+        Fetch the chat user's st2 token.  A valid session must exist for the token to be fetched.
+        accessctl:  The bot's access controller used to lookup the session based on the chat user.
+        chat_user:  The chat_user number to lookup.
         """
         # TODO: FIXME: passing by reference to call itself isn't ideal, refactor!
-        return accessctl.get_token_by_userid(chat_user)
+        user_session = accessctl.get_session(chat_user)
+        if user_session:
+            user_session.is_expired()
+        return accessctl.get_token_by_session(user_session.id())
 
     def authenticate_user(self, creds, bot_creds):
         """

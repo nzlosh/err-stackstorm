@@ -73,7 +73,7 @@ class StackStormAPI(object):
         return urlunparse((tmp.scheme, tmp.netloc, "", None, None, None))
 
     def match(self, text, st2token):
-
+        LOG.debug("StackStorm Token is {}".format(st2token))
         auth_kwargs = st2token.st2client()
 
         if LOG.level <= logging.DEBUG:
