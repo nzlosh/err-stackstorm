@@ -8,26 +8,22 @@ import sseclient
 import traceback
 
 from requests.exceptions import HTTPError
-from st2client.client import Client
-from st2client.models.action_alias import ActionAliasMatch
-from st2client.models.aliasexecution import ActionAliasExecution
-from urllib.parse import urlparse, urlunparse
 
 LOG = logging.getLogger(__name__)
 
 
-class ResultSet(object):
-    def __init__(self, error_code=None, result=None):
-        self.error_code = error_code
-        self.result = result
+class Result(object):
+    def __init__(self, return_code=None, message=None):
+        self.return_code = return_code
+        self.message = message
 
-    def OK(self, result):
-        self.error_code = 0
-        self.result = result
+    def OK(self, message):
+        self.return_code = 0
+        self.message = message
 
-    def error(self, error_code, result):
-        self.error_code = error_code
-        self.result = result
+    def error(self, return_code, message):
+        self.return_code = return_code
+        self.message = message
 
 
 class StackStormAPI(object):
@@ -68,53 +64,42 @@ class StackStormAPI(object):
         else:
             response.raise_for_status()
 
-    def _baseurl(self, url):
-        tmp = urlparse(url)
-        return urlunparse((tmp.scheme, tmp.netloc, "", None, None, None))
-
     def match(self, text, st2token):
-        LOG.debug("StackStorm Token is {}".format(st2token))
-        auth_kwargs = st2token.st2client()
+        headers = st2token.requests()
 
         if LOG.level <= logging.DEBUG:
-            auth_kwargs['debug'] = True
+            headers['debug'] = True
 
-        base_url = self._baseurl(self.cfg.api_url)
+        url = "/".join([self.cfg.api_url, "actionalias/match"])
+        payload = json.loads({"command": text})
 
-        LOG.debug("Create st2 client with {} {} {}".format(
-            base_url,
-            self.cfg.api_url,
-            auth_kwargs)
-        )
-
-        st2_client = Client(
-            base_url=base_url,
-            api_url=self.cfg.api_url,
-            **auth_kwargs
-        )
-
-        alias_match = ActionAliasMatch()
-        alias_match.command = text
-
-        resp = ResultSet()
+        result = Result()
         try:
-            resp.OK(st2_client.managers['ActionAlias'].match(alias_match))
-        except HTTPError as e:
-            if e.response is not None and e.response.status_code == 400:
-                resp.error(
+            response = requests.post(
+                url,
+                headers=headers,
+                json=payload,
+                verify=self.cfg.verify_cert
+            )
+            if response.status_code == 200:
+                result.OK(response.json())
+            elif response.status_code == 400:
+                result.error(
                     1,
                     "st2 command '{}' not found.  View available commands with {}st2help.".format(
                         text, self.cfg.bot_prefix
                     )
                 )
-                LOG.info(resp.result)
+                LOG.error(result.message)
             else:
-                resp.error(2, "HTTPError {}".format(str(e)))
-                LOG.error(resp.result)
+                response.raise_for_status()
+        except HTTPError as e:
+                result.error(2, "HTTPError {}".format(str(e)))
+                LOG.error(result.message)
         except Exception as e:
-                resp.error(3, "Unexpected error {}".format(e))
-                LOG.error(resp.result)
-        return resp
+                result.error(3, "Unexpected error {}".format(e))
+                LOG.error(result.message)
+        return result
 
     def execute_actionalias(self, action_alias, representation, msg, chat_user, st2token):
         """
@@ -122,57 +107,39 @@ class StackStormAPI(object):
         @representation: the st2client representation for the action_alias.
         @msg: errbot message.
         """
-        auth_kwargs = st2token.st2client()
+        headers = st2token.requests()
 
-        base_url = self._baseurl(self.cfg.api_url)
-        LOG.debug("Create st2 client with {} {} {}".format(
-            base_url,
-            self.cfg.api_url,
-            auth_kwargs)
-        )
+        url = "/".join(self.cfg.api_url, "aliasexecution/match_and_execute")
 
-        st2_client = Client(
-            base_url=base_url,
-            api_url=self.cfg.api_url,
-            **auth_kwargs
-        )
+        payload = {
+            "command": msg.body,
+            "user": chat_user,
+            "notification_route": 'errbot'
+        }
 
-        execution = ActionAliasExecution()
-        execution.name = action_alias.name
-        execution.format = representation
-        execution.command = msg.body
         if msg.is_direct is False:
-            execution.notification_channel = str(msg.to)
-            execution.source_channel = str(msg.to)
+            payload["source_channel"] = str(msg.to)
+            payload["notification_channel"] = str(msg.to)
         else:
-            execution.notification_channel = str(msg.frm)
-            execution.source_channel = str(msg.frm)
+            payload["source_channel"] = str(msg.frm)
+            payload["notification_channel"] = str(msg.frm)
 
-        execution.notification_route = 'errbot'
-        execution.user = chat_user
-
-        LOG.debug("Execution: {}".format([
-            execution.command,
-            execution.format,
-            execution.name,
-            execution.notification_channel,
-            execution.notification_route,
-            execution.source_channel,
-            execution.user])
-        )
-
-        action_exec_mgr = st2_client.managers['ActionAliasExecution']
-        execution = action_exec_mgr.create(execution)
-
+        msg = ""
         try:
-            ret_msg = execution.message
-            LOG.debug("Execution Result: {}\nMessage: {}".format(
-                execution.execution,
-                execution.message)
+            response = requests.post(
+                url,
+                headers=headers,
+                json=json.loads(payload),
+                verify=self.cfg.verify_cert
             )
-        except AttributeError as e:
-            ret_msg = ""
-        return ret_msg
+
+            if response.status_code == 201:
+                msg = response.json()
+            else:
+                msg = response.body
+        except Exception as e:
+            msg = "Error getting execution and match:  {}".format(str(e))
+        return msg
 
     def st2stream_listener(self, callback=None, bot_identity=None):
         """
