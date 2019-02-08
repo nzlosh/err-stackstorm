@@ -71,7 +71,7 @@ class StackStormAPI(object):
             headers['debug'] = True
 
         url = "/".join([self.cfg.api_url, "actionalias/match"])
-        payload = json.loads({"command": text})
+        payload = json.dumps({"command": text})
 
         result = Result()
         try:
