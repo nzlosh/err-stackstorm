@@ -66,16 +66,17 @@ class StackStormAPI(object):
 
     def match(self, text, st2token):
         headers = st2token.requests()
-
         url = "/".join([self.cfg.api_url, "actionalias/match"])
+
         payload = json.dumps({"command": text})
+        headers["Content-Type"] = "application/json"
 
         result = Result()
         try:
             response = requests.post(
                 url,
                 headers=headers,
-                json=payload,
+                data=payload,
                 verify=self.cfg.verify_cert
             )
             if response.status_code == 200:
