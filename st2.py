@@ -212,7 +212,9 @@ class St2(BotPlugin):
                     st2token
                 )
                 LOG.debug("action alias execution result: type={} {}".format(type(res), res))
-                result = r"{}".format(res)
+                result = res ["results"][0]["message"]
+                if res["results"][0]["actionalias"]["ack"]["append_url"]:
+                    result = " ".join([result, res["results"][0]["execution"]["web_url"]])
             else:
                 result = "st2 command '{}' is disabled.".format(msg.body)
         else:
