@@ -107,7 +107,7 @@ class StackStormAPI(object):
         """
         headers = st2token.requests()
 
-        url = "/".join(self.cfg.api_url, "aliasexecution/match_and_execute")
+        url = "/".join([self.cfg.api_url, "aliasexecution/match_and_execute"])
 
         payload = {
             "command": msg.body,
@@ -127,7 +127,7 @@ class StackStormAPI(object):
             response = requests.post(
                 url,
                 headers=headers,
-                json=json.loads(payload),
+                json=payload,
                 verify=self.cfg.verify_cert
             )
 
