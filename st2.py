@@ -199,10 +199,11 @@ class St2(BotPlugin):
         LOG.debug("Message received from chat backend.\n{}\n".format(msg_debug))
 
         matched_result = self.st2api.match(msg.body, st2token)
-        if matched_result.error_code == 0:
-            action_alias, representation = matched_result.result
+        if matched_result.return_code == 0:
+            action_alias = matched_result.message["actionalias"]
+            representation = matched_result.message["representation"]
             del matched_result
-            if action_alias.enabled is True:
+            if action_alias["enabled"] is True:
                 res = self.st2api.execute_actionalias(
                     action_alias,
                     representation,
@@ -211,11 +212,13 @@ class St2(BotPlugin):
                     st2token
                 )
                 LOG.debug("action alias execution result: type={} {}".format(type(res), res))
-                result = r"{}".format(res)
+                result = res ["results"][0]["message"]
+                if res["results"][0]["actionalias"]["ack"]["append_url"]:
+                    result = " ".join([result, res["results"][0]["execution"]["web_url"]])
             else:
                 result = "st2 command '{}' is disabled.".format(msg.body)
         else:
-            result = matched_result.result
+            result = matched_result.message
         return result
 
     @arg_botcmd("--pack", dest="pack", type=str)
