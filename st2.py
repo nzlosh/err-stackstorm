@@ -64,8 +64,8 @@ class St2(BotPlugin):
         # Bot authentication is a corner case, it always requires the standalone model.
         standalone_auth = AuthHandlerFactory.instantiate("standalone")(self.cfg)
         bot_token = standalone_auth.authenticate(st2_creds=self.cfg.bot_creds)
-        LOG.debug("StackStorm authentication response {}".format(bot_token.requests()))
         if bot_token:
+            LOG.debug("StackStorm authentication response {}".format(bot_token.requests()))
             self.accessctl.set_token_by_session(bot_session.id(), bot_token)
         else:
             LOG.critical("Failed to authenticate bot credentials with StackStorm API.")
