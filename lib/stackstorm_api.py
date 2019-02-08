@@ -67,9 +67,6 @@ class StackStormAPI(object):
     def match(self, text, st2token):
         headers = st2token.requests()
 
-        if LOG.level <= logging.DEBUG:
-            headers['debug'] = True
-
         url = "/".join([self.cfg.api_url, "actionalias/match"])
         payload = json.dumps({"command": text})
 
