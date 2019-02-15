@@ -14,8 +14,8 @@ A plugin to run StackStorm actions, bringing StackStorm's ChatOps to Errbot.
 1. [Troubleshooting](#Troubleshooting)
 
 ## Getting help <a name="GettingHelp">
-You can find users of err-stackstorm on Gitter.  https://gitter.im/err-stackstorm/community
-
+You can find users of err-stackstorm on Gitter.  https://gitter.im/err-stackstorm/community or Slack https://stackstorm-community.slack.com `#err-stackstorm`
+ 
 ## Installation <a name="Installation"></a>
 Installation of the err-stackstorm plugin is performed from within a running Errbot instance.  Ensure Errbot is up and running before attempting to install the plugin.  See the Errbot installation documentation here https://github.com/Errbotio/Errbot for instructions on how to setup Errbot on your chat back-end.  These instructions assume a running instance of StackStorm is already in place.  See the official [StackStorm documentation](https://docs.stackstorm.com/install/index.html) for details.
 
