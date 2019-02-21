@@ -119,6 +119,28 @@ Option | Description
 `secrets_store.keyring.keyring_password` | Password to unlock the keyring.
 `secrets_store.vault` | Use Hashicorp Vault store.
 
+### Locale
+Errbot uses the systems locale for handling text, if your getting errors handling non ascii characters from chat
+`UnicodeEncodeError: 'ascii' codec can't encode character '\xe9' in position 83: ordinal not in range(128)`
+Make sure the systems locale is using a unicode encoding, the `.UTF8` indicates the system encoding uses unicode.
+```
+# locale
+LANG=en_NZ.UTF8
+LANGUAGE=
+LC_CTYPE="en_NZ.UTF8"
+LC_NUMERIC="en_NZ.UTF8"
+LC_TIME="en_NZ.UTF8"
+LC_COLLATE="en_NZ.UTF8"
+LC_MONETARY="en_NZ.UTF8"
+LC_MESSAGES="en_NZ.UTF8"
+LC_PAPER="en_NZ.UTF8"
+LC_NAME="en_NZ.UTF8"
+LC_ADDRESS="en_NZ.UTF8"
+LC_TELEPHONE="en_NZ.UTF8"
+LC_MEASUREMENT="en_NZ.UTF8"
+LC_IDENTIFICATION="en_NZ.UTF8"
+LC_ALL=en_NZ.UTF8
+```
 
 ### Authentication <a name="Authentication"></a>
 Authentication is possible with username/password, User Token or API Key.  In the case of a username and password, the plugin is requests a new User Token after it expires.  In the case of a User Token or API Key, once it expires, the Errbot plugin will no longer have access to the st2 API.
