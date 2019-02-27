@@ -231,7 +231,13 @@ class St2(BotPlugin):
         """
         Provide help for StackStorm action aliases.
         """
-        bot_session = self.accessctl.get_session(self.internal_identity)
+        # If the bot session is invalid, attempt to renew it.
+        try:
+            bot_session = self.accessctl.get_session(self.internal_identity)
+        except SessionInvalidError as e:
+            self.authenticate_bot_credentials()
+            bot_session = self.accessctl.get_session(self.internal_identity)
+
         st2_creds = self.accessctl.get_token_by_session(bot_session.id())
         help_result = self.st2api.actionalias_help(pack, filter, limit, offset, st2_creds)
         if isinstance(help_result, list) and len(help_result) == 0:

@@ -146,7 +146,16 @@ class StackStormAPI(object):
         LOG.info("*** Starting stream listener ***")
 
         def listener(callback=None, bot_identity=None):
+
             token = self.accessctl.get_token_by_userid(bot_identity)
+            if not token:
+                self.accessctrl.bot.authenticate_bot_credentials()
+                token = self.accessctl.get_token_by_userid(bot_identity)
+            if not token:
+                LOG.debug("[STREAM] Failed to get a valid token for the bot."
+                    "Reconnecting to stream api.")
+                return
+
             headers = token.requests()
             LOG.debug("Authentication headers {}".format(headers))
 
@@ -190,6 +199,6 @@ class StackStormAPI(object):
                     "St2 stream listener - An error occurred: {} {}.  "
                     "Backing off {} seconds.".format(type(err), err, StackStormAPI.stream_backoff)
                 )
-                LOG.critical(traceback.print_exc())
+                traceback.print_exc()
 
             time.sleep(StackStormAPI.stream_backoff)
