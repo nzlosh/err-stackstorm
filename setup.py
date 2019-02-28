@@ -7,11 +7,11 @@ setuptools.setup(
     name="err-stackstorm",
     version="2.0.0",
     author="Err-StackStorm Plugin contributors",
-    author_email="nobody@localhost",
+    author_email="nzlosh@yahoo.com",
     description="An Errbot plugin for StackStorm ChatOps.",
     long_description="Not available",
     long_description_content_type="text/markdown",
-    url="https://github.com/fmnisme/err-stackstorm",
+    url="https://github.com/nzlosh/err-stackstorm",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
