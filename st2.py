@@ -204,7 +204,7 @@ class St2(BotPlugin):
             action_alias = matched_result.message["actionalias"]
             representation = matched_result.message["representation"]
             del matched_result
-            if action_alias["enabled"] is True:
+            if action_alias.get("enabled", True) is True:
                 res = self.st2api.execute_actionalias(
                     action_alias,
                     representation,
@@ -213,10 +213,24 @@ class St2(BotPlugin):
                     st2token
                 )
                 LOG.debug("action alias execution result: type={} {}".format(type(res), res))
-                if action_alias["ack"]["enabled"]:
-                    result = res ["results"][0]["message"]
-                    if res["results"][0]["actionalias"]["ack"]["append_url"]:
-                        result = " ".join([result, res["results"][0]["execution"]["web_url"]])
+                if "ack" in action_alias:
+                    if action_alias["ack"].get("enabled", True) is True:
+                        result = res.get("results", [{}])[0].get("message", "")
+                        if res.get(
+                            "results", [{}]
+                        )[0].get(
+                            "actionalias",{}
+                        ).get(
+                            "ack", {}
+                        ).get(
+                            "append_url", False
+                        ):
+                            result = " ".join(
+                                [
+                                    result,
+                                    res.get("results",[{}])[0].get("execution").get("web_url", "")
+                                ]
+                            )
             else:
                 result = "st2 command '{}' is disabled.".format(msg.body)
         else:
