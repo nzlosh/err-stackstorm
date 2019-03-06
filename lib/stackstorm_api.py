@@ -37,6 +37,10 @@ class StackStormAPI(object):
         if self.cfg.verify_cert is False:
             urllib3.disable_warnings()
 
+    def refresh_bot_credentials(self):
+        LOG.warn("Bot credentials re-authentication required.")
+        self.accessctl.bot.authenticate_bot_credentials()
+
     def actionalias_help(self, pack=None, filter=None, limit=None, offset=None, st2_creds=None):
         """
         Call StackStorm API for action alias help.
@@ -61,6 +65,8 @@ class StackStormAPI(object):
         response = requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
         if response.status_code == requests.codes.ok:
             return response.json().get("helpstrings", [])
+        elif response.status_code == 401:
+            self.refresh_bot_credentials()
         else:
             response.raise_for_status()
 
@@ -149,12 +155,12 @@ class StackStormAPI(object):
 
             token = self.accessctl.get_token_by_userid(bot_identity)
             if not token:
-                self.accessctrl.bot.authenticate_bot_credentials()
+                self.refresh_bot_credentials()
                 token = self.accessctl.get_token_by_userid(bot_identity)
-            if not token:
-                LOG.debug("[STREAM] Failed to get a valid token for the bot."
-                    "Reconnecting to stream api.")
-                return
+                if not token:
+                    LOG.debug("[STREAM] Failed to get a valid token for the bot."
+                        "Reconnecting to stream api.")
+                    return
 
             headers = token.requests()
             LOG.debug("Authentication headers {}".format(headers))
@@ -172,33 +178,41 @@ class StackStormAPI(object):
                         response.reason,
                         response.status_code
                     ))
-                client = sseclient.SSEClient(response)
-                for event in client.events():
-                    data = json.loads(event.data)
-                    if event.event in ["st2.announcement__errbot"]:
-                        LOG.debug("*** Errbot announcement event detected! ***\n{}\n".format(event))
-                        p = data["payload"]
-                        callback(
-                            p.get('whisper'),
-                            p.get('message'),
-                            p.get('user'),
-                            p.get('channel'),
-                            p.get('extra')
-                        )
+                try:
+                    client = sseclient.SSEClient(response)
+                    for event in client.events():
+                        data = json.loads(event.data)
+                        if event.event in ["st2.announcement__errbot"]:
+                            LOG.debug("*** Errbot announcement event detected! ***\n{}\n".format(event))
+                            p = data["payload"]
+                            callback(
+                                p.get('whisper'),
+                                p.get('message'),
+                                p.get('user'),
+                                p.get('channel'),
+                                p.get('extra')
+                            )
+                except Exception as e:
+                    raise
+                finally:
+                    if client:
+                        client.close()
+
 
         StackStormAPI.stream_backoff = 10
         while True:
             try:
                 listener(callback, bot_identity)
-            except TypeError as err:
-                LOG.critical(
-                    "St2 stream listener - Type Error: {}.  "
-                    "Backing off {} seconds.".format(err, StackStormAPI.stream_backoff))
             except Exception as err:
                 LOG.critical(
                     "St2 stream listener - An error occurred: {} {}.  "
                     "Backing off {} seconds.".format(type(err), err, StackStormAPI.stream_backoff)
                 )
+                traceback.print_exc()
+            try:
+                self.refresh_bot_credentials()
+            except Exception as e:
+                LOG.critical("Error refreshing credentials")
                 traceback.print_exc()
 
             time.sleep(StackStormAPI.stream_backoff)
