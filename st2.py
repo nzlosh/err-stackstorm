@@ -219,7 +219,7 @@ class St2(BotPlugin):
                         if res.get(
                             "results", [{}]
                         )[0].get(
-                            "actionalias",{}
+                            "actionalias", {}
                         ).get(
                             "ack", {}
                         ).get(
@@ -228,7 +228,7 @@ class St2(BotPlugin):
                             result = " ".join(
                                 [
                                     result,
-                                    res.get("results",[{}])[0].get("execution").get("web_url", "")
+                                    res.get("results", [{}])[0].get("execution").get("web_url", "")
                                 ]
                             )
             else:
