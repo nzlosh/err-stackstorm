@@ -11,6 +11,10 @@ class AbstractChatAdapterFactory(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
+    def mattermost_adapter(self, bot_plugin):
+        pass
+
+    @abc.abstractmethod
     def xmpp_adapter(self, bot_plugin):
         pass
 
@@ -24,12 +28,17 @@ class ChatAdapterFactory(AbstractChatAdapterFactory):
     def instance(chat_backend):
         return {
             "slack": ChatAdapterFactory.slack_adapter,
-            "xmpp": ChatAdapterFactory.xmpp_adapter
+            "mattermost": ChatAdapterFactory.mattermost_adapter,
+            "xmpp": ChatAdapterFactory.xmpp_adapter,
         }.get(chat_backend, ChatAdapterFactory.generic_adapter)
 
     @staticmethod
     def slack_adapter(bot_plugin):
         return SlackChatAdapter(bot_plugin)
+
+    @staticmethod
+    def mattermost_adapter(bot_plugin):
+        return MattermostChatAdapter(bot_plugin)
 
     @staticmethod
     def xmpp_adapter(bot_plugin):
@@ -157,6 +166,25 @@ class IRCChatAdapter(GenericChatAdapter):
             user.nick,
             user.person,
             user.user])
+
+
+class MattermostChatAdapter(GenericChatAdapter):
+    def __init__(self, bot_plugin):
+        super().__init__(bot_plugin)
+
+    def get_username(self, msg):
+        LOG.debug("MattermostChatAdapter {} {}".format(type(msg.frm), msg.frm))
+        username, user_id, channel_name, channel_id = \
+            self.botplugin._bot.extract_identifiers_from_string(str(msg.frm))
+        LOG.debug("MattermostChatAdapter username={} userid={} "
+            "channel_name={} channel_id={}".format(
+                username,
+                user_id,
+                channel_name,
+                channel_id
+            )
+        )
+        return msg.frm.user_id
 
 
 class SlackChatAdapter(AbstractChatAdapter):
