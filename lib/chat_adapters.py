@@ -174,17 +174,18 @@ class MattermostChatAdapter(GenericChatAdapter):
 
     def get_username(self, msg):
         LOG.debug("MattermostChatAdapter {} {}".format(type(msg.frm), msg.frm))
-        username, user_id, channel_name, channel_id = \
-            self.botplugin._bot.extract_identifiers_from_string(str(msg.frm))
-        LOG.debug("MattermostChatAdapter username={} userid={} "
-            "channel_name={} channel_id={}".format(
-                username,
-                user_id,
-                channel_name,
-                channel_id
-            )
-        )
-        return msg.frm.user_id
+        username = None
+        try:
+            username = "~" + msg.frm.room
+        except Exception as e:
+            pass
+        try:
+            username = "@" + msg.frm.username
+        except Exception as e:
+            pass
+
+        LOG.debug("MattermostChatAdapter username={}".format(username))
+        return username
 
 
 class SlackChatAdapter(AbstractChatAdapter):
