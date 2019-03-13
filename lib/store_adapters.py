@@ -111,7 +111,7 @@ class KeyringStoreAdapter(AbstractStoreAdapter):
         # Path.unlink(self.kr.file_path)
 
     def set(self, name, secret, namespace="errst2"):
-        self.kr.set_password(namespace, name, secret)
+        self.kr.set_password(namespace, name, str(secret))
 
     def get(self, name, namespace="errst2"):
         self.kr.get_password(namespace, name)

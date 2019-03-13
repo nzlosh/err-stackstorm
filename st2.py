@@ -10,7 +10,7 @@ from lib.errors import SessionConsumedError, SessionExpiredError, \
     SessionInvalidError, SessionExistsError
 from lib.stackstorm_api import StackStormAPI
 from lib.authentication_controller import AuthenticationController, BotPluginIdentity
-from lib.authentication_handler import St2ApiKey, St2UserToken, St2UserCredentials
+from lib.credentials_adapters import St2ApiKey, St2UserToken, St2UserCredentials
 from lib.authentication_handler import AuthHandlerFactory, ClientSideAuthHandler
 
 LOG = logging.getLogger(__name__)
