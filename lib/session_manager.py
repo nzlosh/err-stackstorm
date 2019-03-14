@@ -3,9 +3,9 @@ import logging
 from lib.session import Session
 from lib.store_adapters import SessionStore
 from lib.store_adapters import StoreAdapterFactory
-from lib.errors import SessionExistsError
+from lib.errors import SessionExistsError, SessionInvalidError
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger("errbot.plugin.st2.session_mgr")
 
 
 class SessionManager(object):

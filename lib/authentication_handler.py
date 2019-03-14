@@ -7,7 +7,7 @@ from lib.credentials_adapters import St2UserCredentials, St2UserToken, St2ApiKey
 from lib.authentication_controller import BotPluginIdentity
 from lib.errors import SessionInvalidError
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger("errbot.plugin.st2.auth_handler")
 
 
 class AbstractAuthHandlerFactory(metaclass=abc.ABCMeta):
@@ -77,7 +77,8 @@ class BaseAuthHandler(AbstractAuthHandler):
         new_path = "{}{}".format(o.path, path)
 
         url = urljoin(base, new_path)
-        LOG.debug("HTTP Request: {} {} {}".format(verb, url, get_kwargs))
+        # WARNING: Sensitive security information will be loggged, uncomment only when necessary.
+        # LOG.debug("HTTP Request: {} {} {}".format(verb, url, get_kwargs))
         return requests.request(verb, url, **get_kwargs)
 
 

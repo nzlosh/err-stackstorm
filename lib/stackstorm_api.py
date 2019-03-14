@@ -9,7 +9,7 @@ import traceback
 
 from requests.exceptions import HTTPError
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger("errbot.plugin.st2.st2_api")
 
 
 class Result(object):
@@ -158,12 +158,15 @@ class StackStormAPI(object):
                 self.refresh_bot_credentials()
                 token = self.accessctl.get_token_by_userid(bot_identity)
                 if not token:
-                    LOG.debug("[STREAM] Failed to get a valid token for the bot."
-                        "Reconnecting to stream api.")
+                    LOG.debug(
+                        "[STREAM] Failed to get a valid token for the bot."
+                        "Reconnecting to stream api."
+                    )
                     return
 
             headers = token.requests()
-            LOG.debug("Authentication headers {}".format(headers))
+            # WARNING: Sensitive security information will be loggged, uncomment if when necessary.
+            # LOG.debug("Authentication headers {}".format(headers))
 
             headers.update({'Accept': 'text/event-stream'})
             with requests.Session() as session:
@@ -183,7 +186,9 @@ class StackStormAPI(object):
                     for event in client.events():
                         data = json.loads(event.data)
                         if event.event in ["st2.announcement__errbot"]:
-                            LOG.debug("*** Errbot announcement event detected! ***\n{}\n".format(event))
+                            LOG.debug(
+                                "*** Errbot announcement event detected! ***\n{}\n".format(event)
+                            )
                             p = data["payload"]
                             callback(
                                 p.get('whisper'),
@@ -197,7 +202,6 @@ class StackStormAPI(object):
                 finally:
                     if client:
                         client.close()
-
 
         StackStormAPI.stream_backoff = 10
         while True:
