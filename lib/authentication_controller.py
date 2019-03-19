@@ -6,7 +6,8 @@ from random import SystemRandom
 from lib.session_manager import SessionManager
 from lib.errors import SessionInvalidError
 from errbot.backends.base import Identifier
-LOG = logging.getLogger(__name__)
+
+LOG = logging.getLogger("errbot.plugin.st2.auth_ctrllr")
 
 
 def generate_password(length=8):
@@ -174,7 +175,10 @@ class AuthenticationController(object):
         """
         # get the configured authentication handler.
         token = self.bot.cfg.auth_handler.authenticate(user, creds, bot_creds)
-        LOG.debug("Token for {} was {}".format(user, token))
+
+        # WARNING: Sensitive security information will be loggged, uncomment only when necessary.
+        # LOG.debug("Token for {} was {}".format(user, token))
+
         # pass credentials to authentication handler verify credentials
         if token:
             self.set_token_by_userid(user, token)

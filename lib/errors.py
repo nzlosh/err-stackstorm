@@ -1,8 +1,10 @@
 # coding:utf-8
 
+
 class Error(Exception):
     def __str__(self):
         return self.message
+
 
 class SessionExpiredError(Error):
     def __init__(self, message="Session has expired."):

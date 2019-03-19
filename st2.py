@@ -10,10 +10,10 @@ from lib.errors import SessionConsumedError, SessionExpiredError, \
     SessionInvalidError, SessionExistsError
 from lib.stackstorm_api import StackStormAPI
 from lib.authentication_controller import AuthenticationController, BotPluginIdentity
-from lib.authentication_handler import St2ApiKey, St2UserToken, St2UserCredentials
+from lib.credentials_adapters import St2ApiKey, St2UserToken, St2UserCredentials
 from lib.authentication_handler import AuthHandlerFactory, ClientSideAuthHandler
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger("errbot.plugin.st2")
 
 # TODO: FIXME: Set the PLUGIN_PREFIX based on configuration from errbot config.py.
 # A plugin prefix for stackstorm action aliases to avoid name collisions between
@@ -265,7 +265,8 @@ class St2(BotPlugin):
         Webhook entry point for stackstorm to post messages into
         errbot which will relay them into the chat backend.
         """
-        LOG.debug("Webhook request: {}".format(request))
+        # WARNING: Sensitive security information will be loggged, uncomment only when necessary.
+        # LOG.debug("Webhook request: {}".format(request))
 
         channel = request.get('channel')
         message = request.get('message')

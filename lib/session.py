@@ -7,7 +7,7 @@ from lib.errors import SessionExpiredError, SessionConsumedError
 from datetime import datetime as dt
 from random import SystemRandom
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger("errbot.plugin.st2.session")
 
 
 def generate_password(length=8):

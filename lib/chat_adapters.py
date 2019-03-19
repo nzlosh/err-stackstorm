@@ -2,7 +2,7 @@
 import abc
 import logging
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger("errbot.plugin.st2.chat_adapters")
 
 
 class AbstractChatAdapterFactory(metaclass=abc.ABCMeta):
