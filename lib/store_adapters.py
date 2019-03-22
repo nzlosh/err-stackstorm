@@ -107,22 +107,20 @@ class KeyringStoreAdapter(AbstractStoreAdapter):
     def setup(self, filename='errbot_secrets.conf'):
         self.kr = KeyringStoreAdapter.keyring.get_keyring()
         self.kr.filename = filename
-        # TODO: fix calls to remove stored file when bot stops running.
-        # Path.unlink(self.kr.file_path)
 
     def set(self, name, secret, namespace="errst2"):
         self.kr.set_password(namespace, name, str(secret))
 
     def get(self, name, namespace="errst2"):
-        self.kr.get_password(namespace, name)
+        return self.kr.get_password(namespace, name)
 
     def delete(self, name, namespace="errst2"):
         raise NotImplementedError
 
     def teardown(self):
-        # TODO: fix calls to remove stored file when bot stops running.
-        # Path.unlink(self.kr.file_path)
-        Path(".").exists()
+        purge_secrets = True
+        if Path(self.kr.file_path).exists() and purge_secrets is True:
+            Path.unlink(self.kr.file_path)
 
 
 class VaultStoreAdapter(AbstractStoreAdapter):

@@ -20,7 +20,10 @@ class SessionManager(object):
         Fetch information from the store by user_id.
         param: user_id[string]  A string uniquely identifying the chat user.
         """
-        return self.store.get_by_userid(user_id)
+        session = self.store.get_by_userid(user_id)
+        if session is False:
+            raise SessionInvalidError
+        return session
 
     def get_by_uuid(self, _uuid):
         """
