@@ -53,9 +53,7 @@ class St2UserCredentials(AbstractCredentials):
         return "".join([
             self.username,
             " : ",
-            self.password[:1],
-            "*"*(len(self.password)-2),
-            self.password[-1:]
+            "".join(["*" for c in self.password])
         ])
 
     def requests(self, st2_x_auth=False):
