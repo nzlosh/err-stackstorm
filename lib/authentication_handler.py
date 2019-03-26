@@ -101,7 +101,8 @@ class StandaloneAuthHandler(BaseAuthHandler):
 
     def authenticate_user(self, st2_creds):
         """
-        TODO: Docstring
+        Validate the supplied Stackstorm user/password against the API.
+        Returns a StackStorm token on successful authentication otherwise False.
         """
         response = self._http_request(
             'POST',
@@ -118,7 +119,8 @@ class StandaloneAuthHandler(BaseAuthHandler):
 
     def authenticate_token(self, st2_creds):
         """
-        TODO: Docstring
+        Validate the supplied StackStorm Token against the API.
+        Returns the token if validation was successful otherwise False.
         """
         token = False
 
@@ -160,9 +162,10 @@ class StandaloneAuthHandler(BaseAuthHandler):
 
     def authenticate(self, chat_user=None, st2_creds=None, bot_creds=None):
         """
-        param: chat_user -
-        param: st2_creds -
+        param: chat_user - the chat backend user id.
+        param: st2_creds - the StackStorm credentials to be validated.
         param: bot_creds - not used, but present to have the same signature as other AuthHandlers.
+        Return a StackStorm token on successful authenticate otherwise False.
         """
         token = None
         if isinstance(st2_creds, St2UserCredentials):

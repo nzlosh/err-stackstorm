@@ -165,7 +165,7 @@ class StackStormAPI(object):
                     return
 
             headers = token.requests()
-            # WARNING: Sensitive security information will be loggged, uncomment if when necessary.
+            # WARNING: Sensitive security information will be logged, uncomment only when necessary.
             # LOG.debug("Authentication headers {}".format(headers))
 
             headers.update({'Accept': 'text/event-stream'})
