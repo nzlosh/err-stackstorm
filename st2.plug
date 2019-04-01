@@ -1,6 +1,6 @@
 [Core]
 Name = St2
-Module = .
+Module = st2
 
 [Documentation]
 Description = StackStorm chatops plugin for Errbot.
