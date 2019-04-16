@@ -1,25 +1,49 @@
 # coding:utf-8
-# import os
 import time
-# import st2
 
 import pytest
 from mock import Mock
 
 from lib.session import Session
 from lib.session_manager import SessionManager
-from lib.store_adapters import ClearTextStoreAdapter, KeyringStoreAdapter, VaultStoreAdapter
+from lib.credentials_adapters import CredentialsFactory
+from lib.store_adapters import ClearTextStoreAdapter, KeyringStoreAdapter, VaultStoreAdapter, \
+    StoreAdapterFactory
 from lib.errors import SessionExpiredError, SessionInvalidError, SessionConsumedError, \
     SessionExistsError
+
 
 pytest_plugins = ["errbot.backends.test"]
 extra_plugin_dir = '.'
 
-# secret_store
-# get a secret
-# set a secret
-# delete a secret
-# list secrets
+
+def test_secret_store():
+    """
+    Test StoreAdapter and each StoreAdapter.
+    """
+    st2_token = "123456-abcdef-123456"
+
+    cleartext = StoreAdapterFactory.instantiate("cleartext")
+    assert isinstance(cleartext, ClearTextStoreAdapter)
+
+    keyring = StoreAdapterFactory.instantiate("keyring")
+    assert isinstance(keyring, KeyringStoreAdapter)
+
+    vault = StoreAdapterFactory.instantiate("vault")
+    assert isinstance(vault, VaultStoreAdapter)
+
+    # set a secret
+    cleartext.set("token", st2_token)
+    keyring.set("token", st2_token)
+    valut.set("token", st2_token)
+    # get a secret
+
+    # list secrets
+
+    # delete a secret
+
+    # list secrets
+
 
 # access_control
 # create a session
@@ -42,6 +66,28 @@ extra_plugin_dir = '.'
 # bot_commands
 # display help
 # match and execute action-alias
+
+def test_credentials_manager():
+    """
+    Test credentials manager
+    """
+    username = "peter.parker"
+    password = "stickyweb"
+    token = "abcdef1234"
+    apikey = "1234abcdef"
+
+    user_creds = CredentialsFactory.instantiate("user")(username, password)
+    token_creds = CredentialsFactory.instantiate("token")(token)
+    apikey_creds = CredentialsFactory.instantiate("api")(apikey)
+
+    # request user
+    assert user_creds.requests() == {'Authorization': 'Basic cGV0ZXIucGFya2VyOnN0aWNreXdlYg=='}
+
+    # requests token
+    assert token_creds.requests() == {'X-Auth-Token': token}
+
+    # requests api key
+    assert apikey_creds.requests() == {'St2-Api-Key': apikey}
 
 
 def test_session_manager():
@@ -91,7 +137,7 @@ def test_session_manager():
     assert session_manager.exists(user_id) is True
 
     # confirm non-existence
-    assert session_manager.exists(user_id+"no_user") is False
+    assert session_manager.exists(user_id + "no_user") is False
 
     # Set value in secret store
     assert session_manager.put_secret(s.id(), user_token) is True
