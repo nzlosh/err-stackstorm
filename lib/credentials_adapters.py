@@ -26,7 +26,7 @@ class CredentialsFactory(AbstractCredentialsFactory):
         return {
             "user": St2UserCredentials,
             "token": St2UserToken,
-            "api": St2ApiKey
+            "key": St2ApiKey
         }.get(credential_type, St2UserCredentials)
 
 

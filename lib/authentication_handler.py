@@ -127,7 +127,7 @@ class StandaloneAuthHandler(BaseAuthHandler):
         response = self._http_request(
             "GET",
             self.cfg.auth_url,
-            path="/api/v1/token/validate",
+            path="/token/validate",
             headers=st2_creds.requests()
         )
 
@@ -144,19 +144,20 @@ class StandaloneAuthHandler(BaseAuthHandler):
 
     def authenticate_key(self, st2_creds):
         """
-        Authenicate against StackStorm API using API Key.
+        Authenicate against StackStorm API using the provided API Key.
         """
         api_key = False
 
         response = self._http_request(
             "GET",
-            self.cfg.auth_url,
-            path="/api/v1/key/check",
-            headers=st2_creds.request()
+            self.cfg.api_url,
+            path="/",
+            headers=st2_creds.requests()
         )
 
-        if response.status_code in [requests.codes.created]:
-            api_key = response.token
+        if response.status_code in [requests.codes.ok]:
+            # Since the API Key is valid, return it to be used for requests.
+            api_key = st2_creds
 
         return api_key
 
@@ -257,7 +258,7 @@ class ServerSideAuthHandler(BaseAuthHandler):
         response = self._http_request(
             "GET",
             self.cfg.auth_url,
-            path="/auth/v1/tokens/validate",
+            path="/tokens/validate",
             headers=bot_creds.requests(),
             payload={"user": chat_user}
         )
@@ -338,7 +339,7 @@ class ClientSideAuthHandler(BaseAuthHandler):
         response = self._http_request(
             "GET",
             self.cfg.auth_url,
-            path="/auth/v1/tokens/validate",
+            path="/tokens/validate",
             headers=bot_creds.requests(),
             payload=creds.st2client()
         )
@@ -350,20 +351,20 @@ class ClientSideAuthHandler(BaseAuthHandler):
 
     def authenticate_key(self, creds, bot_creds):
         """
-        TODO: Docstring
+        Use StackStorm API to validate the API key is valid.
         """
-        token = False
+        api_key = False
         response = self._http_request(
             "GET",
-            self.cfg.auth_url,
-            path="/auth/v1/key",
+            self.cfg.api_url,
+            path="/",
             header=creds.requests()
         )
-        if response == requests.codes.ok:
-            token = response.json().get("token", False)
-            if token is not False:
-                token = St2UserToken(token)
-        return token
+        if response.status_code in [requests.codes.ok]:
+            # Since the API Key is valid, return it to be used for requests.
+            api_key = creds
+
+        return api_key
 
     def authenticate(self, chat_user=None, st2_creds=None, bot_creds=None):
         token = None
