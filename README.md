@@ -1,8 +1,9 @@
+
 # err-stackstorm
 A plugin to run StackStorm actions, bringing StackStorm's ChatOps to Errbot.
 
 ## Table of Contents
-1. [Getting help](#GettingHelp)
+1. [Help](#Help)
 1. [Installation](#Installation)
 1. [Requirements](#Requirements)
 1. [Supported Chat Backends](#SupportedChatBackends)
@@ -13,11 +14,11 @@ A plugin to run StackStorm actions, bringing StackStorm's ChatOps to Errbot.
 1. [ChatOps Pack](#ChatOpsPack)
 1. [Troubleshooting](#Troubleshooting)
 
-## Getting help <a name="GettingHelp">
-You can find users of err-stackstorm on Gitter.  https://gitter.im/err-stackstorm/community or Slack https://stackstorm-community.slack.com `#err-stackstorm`
- 
+## Help <a name="GettingHelp">
+You can find users of err-stackstorm on Gitter.  https://gitter.im/err-stackstorm/community or Slack https://stackstorm-community.slack.com `#err-stackstorm`.  If you think you've found a bug or need a new feature open an issue on the [github repository](https://github.com/nzlosh/err-stackstorm/issues).  If you want to contribute to the err-stackstorm project, there's plenty of improvements to be made, contact nzlosh via chat or email to discuss how you can get involved.
+
 ## Installation <a name="Installation"></a>
-Installation of the err-stackstorm plugin is performed from within a running Errbot instance.  Ensure Errbot is up and running before attempting to install the plugin.  See the Errbot installation documentation here https://github.com/Errbotio/Errbot for instructions on how to setup Errbot on your chat back-end.  These instructions assume a running instance of StackStorm is already in place.  See the official [StackStorm documentation](https://docs.stackstorm.com/install/index.html) for details.
+Installation of the err-stackstorm plugin can be performed from within a running Errbot instance or from the command line using `git clone`.  Ensure Errbot is up and running before attempting to install the plugin.  See the Errbot installation documentation here https://github.com/Errbotio/Errbot for instructions on how to setup Errbot on your chat back-end.  These instructions assume a running instance of StackStorm is already in place.  See the official [StackStorm documentation](https://docs.stackstorm.com/install/index.html) for details.
 
  1. Install Errbot on the target system using standard package manager or Errbot installation method.
  1. Configure Errbot, see the [Configuration](#Configuration) section for help.
@@ -29,12 +30,14 @@ The below command will install the plugin.
 ```
 !repos install https://github.com/nzlosh/err-stackstorm.git
 ```
+*If errors are encountered, the plugin will fail to be installed.  Check the configuration is correct.*
 
 ## Requirements <a name="Requirements"></a>
 The plugin has been developed and tested against the below software.  For optimal operation it is recommended to use the following versions:
 
 plugin tag (version) | Python | Errbot | StackStorm client
 --- | --- | --- | ---
+2.1 | 3.6 | 6.0.0 | not used
 2.0 | 3.4 | 5.2.0 | 2.10
 1.4 | 3.4 | 5.1.2 | 2.5
 1.3 | 3.4 | 5.1.2 | 2.5
@@ -115,14 +118,14 @@ Option | Description
 `rbac_auth.clientside` | Clientside authentication, a chat user will supply StackStorm credentials to err-stackstorm via an authentication page.
 `rbac_auth.clientside.url` | Url to the authentication web page.
 `secrets_store.cleartext` | Use the in memory store.
-`secrets_store.keyring` | Use the system's keyring store.
+`secrets_store.keyring` | Use the system's keyring store (_unavailable_).
 `secrets_store.keyring.keyring_password` | Password to unlock the keyring.
-`secrets_store.vault` | Use Hashicorp Vault store.
+`secrets_store.vault` | Use Hashicorp Vault store. (_unavailable_)
 
 ### Locale
 Errbot uses the systems locale for handling text, if your getting errors handling non ascii characters from chat
 `UnicodeEncodeError: 'ascii' codec can't encode character '\xe9' in position 83: ordinal not in range(128)`
-Make sure the systems locale is using a unicode encoding, the `.UTF8` indicates the system encoding uses unicode.
+Make sure the systems locale is using a unicode encoding, which is indicted by the `.UTF8` extension.
 ```
 # locale
 LANG=en_NZ.UTF8
@@ -520,7 +523,7 @@ This indicates that the route wasn't set to `errbot`, see the Install ChatOps se
 
 ## Acknowledgements
 
-The err-stackstorm plugin was founded by (fmnisme)[https://github.com/fmnisme], thanks for starting the project.
+The err-stackstorm plugin was founded by [fmnisme](https://github.com/fmnisme), thanks for starting the project.
 
 ## Legal
 
