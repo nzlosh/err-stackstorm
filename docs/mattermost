@@ -1,0 +1,165 @@
+mattermost difficulties
+
+Ran errbot setup guide and got an error using a virtualenv.
+	errbot --init, the command is not found.
+
+The virtual environment wasn't activated correctly.
+
+Errbot doesn't install module dependencies unless explicitly configured to do so.
+Enable installation of dependencies when the plugin is installed using the
+`!repos install` command. http://errbot.io/en/latest/user_guide/administration.html#dependencies
+
+
+WebserverConfiguration plugin caused errors:
+
+Yes, just tried and getting: Error activating plugin: WebserverConfiguration failed to start : [Errno 11] Resource temporarily unavailable
+
+Removing the plugin resolved the issue.
+
+
+Seeing duplicate messages:
+	Last confirmed duplicate message incident 27 March 2019
+Unable to reproduce.
+
+Install script for mattermost
+
+#!/bin/bash
+
+echo "Centos 7.6 installed"
+yum update
+yum install python36 python36-pip
+pip3.6 install virtualenv
+
+mkdir /root/errbot
+
+python3.6 /usr/local/lib/python3.6/site-packages/virtualenv.py --python `which python3.6` /root/errbot/errbot-ve
+source /root/errbot/errbot-ve/bin/activate
+pip3.6 install errbot
+
+mkdir -p /root/errbot/errbot-root/backend
+mkdir -p /root/errbot/errbot-root/plugins
+
+cd /root/errbot/errbot-root/
+errbot --init
+
+echo 'Install Errbot Mattermost backend: https://github.com/Vaelor/errbot-mattermost-backend'
+cd /root/errbot/errbot-root/backend
+pip install git+https://github.com/Vaelor/errbot-mattermost-backend.git /root/errbot/errbot-mattermost-backend
+cd /root/errbot/errbot-root/backend/errbot-mattermost-backend
+pip install -r requirements.txt
+
+cd /root/errbot/errbot-root/plugins
+pip install git+https://github.com/nzlosh/err-stackstorm.git
+cd /root/errbot/errbot-root/plugins/err-stackstorm
+pip install -r requirements.txt
+
+cat <<EOF >/root/errbot/errbot-root/config.py
+    import logging
+
+    # This is a minimal configuration to get you started with the Text mode.
+    # If you want to connect Errbot to chat services, checkout
+    # the options in the more complete config-template.py from here:
+    # https://raw.githubusercontent.com/errbotio/errbot/master/errbot/config-template.py
+
+    BACKEND = 'Mattermost'  # Errbot will start in text mode (console only mode) and will answer commands from there.
+
+    BOT_EXTRA_BACKEND_DIR = '/root/errbot/errbot-mattermost-backend'
+
+    BOT_IDENTITY = {
+        # Required
+        'team': 'test',
+        'server': 'chat.thischanged.com',
+        # For the login, either
+        'login': 'bot',
+        'password': 'thischanged',
+        # Or, if you have a personal access token
+        #'token': 'YourPersonalAccessToken',
+        # Optional
+        'insecure': False, # Default = False. Set to true for self signed certificates
+        'scheme': 'https', # Default = https
+        'port': 443, # Default = 8065
+        'timeout': 30, # Default = 30. If the webserver disconnects idle connections later/earlier change this value
+        'cards_hook': 'incomingWebhookId' # Needed for cards/attachments
+    }
+
+    BOT_DATA_DIR = r'/root/errbot/errbot-root/data'
+    BOT_EXTRA_PLUGIN_DIR = r'/root/errbot/errbot-root/plugins'
+
+    BOT_LOG_FILE = r'/root/errbot/errbot-root/errbot.log'
+    BOT_LOG_LEVEL = logging.DEBUG
+
+    BOT_ADMINS = ('@lenba', )  # !! Don't leave that to "@CHANGE_ME" if you connect your errbot to a chat system !!
+
+    STACKSTORM = {
+        'auth_url': 'https://192.168.1.17/auth/v1',
+        'api_url': 'https://192.168.1.17/api/v1',
+        'stream_url': 'https://192.168.1.17/stream/v1',
+
+        'verify_cert': False,
+        'secrets_store': "cleartext",
+        'api_auth': {
+        'user': {
+            'name': 'admin',
+            'password': "admin",
+        }
+        },
+        'rbac_auth': {
+        'standalone': {}
+        },
+        'timer_update': 900, #  Unit: second.  Interval for Errbot to refresh to list of available action aliases.
+    }
+EOF
+
+echo "Configuring errbot unit file for systemd"
+cat <<EOF >/etc/systemd/system/errbot.service
+
+    [Unit]
+    Description=Errbot
+    After=network.target
+
+    [Service]
+    User=root
+    ExecStart=/root/errbot/errbot-ve/bin/errbot --config /root/errbot/errbot-root/config.py
+    ExecStop=/bin/kill -SIGINT $MAINPID
+
+    [Install]
+    WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable errbot
+systemctl start errbot
+
+
+echo "Configure Stackstorm"
+
+cat <<EOF > /opt/stackstorm/packs/chatops/rules/notify_errbot.yaml
+---
+name: "notify-errbot"
+pack: "chatops"
+enabled: true
+description: "Notification rule to send results of action executions to stream for chatops"
+trigger:
+  type: "core.st2.generic.notifytrigger"
+criteria:
+  trigger.route:
+    pattern: "errbot"
+    type: "equals"
+action:
+  ref: chatops.post_result
+  parameters:
+    channel: "{{trigger.data.source_channel}}"
+    user: "{{trigger.data.user}}"
+    execution_id: "{{trigger.execution_id}}"
+EOF
+
+echo "Updating post_message.yaml to use errbot instead of chatops"
+sed -i.bak 's/"chatops"/"errbot"/g' /opt/stackstorm/packs/chatops/actions/post_message.yaml
+
+cat <<EOF
+You need to run this command in errbot chat:
+
+!plugin config Webserver {'HOST': '0.0.0.0', 'PORT': 3141,
+'SSL': {'enabled': False, 'host': '0.0.0.0', 'port': 3142, 'certificate': '', 'key': ''}}
+
+EOF

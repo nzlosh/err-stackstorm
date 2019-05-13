@@ -24,18 +24,19 @@ def test_secret_store():
     st2_token = "123456-abcdef-123456"
 
     cleartext = StoreAdapterFactory.instantiate("cleartext")
-    assert isinstance(cleartext, ClearTextStoreAdapter)
+    assert cleartext.__name__ == "ClearTextStoreAdapter"
 
     keyring = StoreAdapterFactory.instantiate("keyring")
-    assert isinstance(keyring, KeyringStoreAdapter)
+    assert keyring.__name__ == "KeyringStoreAdapter"
 
     vault = StoreAdapterFactory.instantiate("vault")
-    assert isinstance(vault, VaultStoreAdapter)
+    assert vault.__name__ == "VaultStoreAdapter"
 
     # set a secret
     cleartext.set("token", st2_token)
     keyring.set("token", st2_token)
     valut.set("token", st2_token)
+
     # get a secret
 
     # list secrets
