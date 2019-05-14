@@ -1,7 +1,13 @@
-mattermost difficulties
+# mattermost
+
+## Troubleshooting
+
+### Errbot virtual environment not activated
 
 Ran errbot setup guide and got an error using a virtualenv.
-	errbot --init, the command is not found.
+```
+    errbot --init, the command is not found.
+```
 
 The virtual environment wasn't activated correctly.
 
@@ -10,16 +16,12 @@ Enable installation of dependencies when the plugin is installed using the
 `!repos install` command. http://errbot.io/en/latest/user_guide/administration.html#dependencies
 
 
-WebserverConfiguration plugin caused errors:
+### WebserverConfiguration plugin caused errors:
 
-Yes, just tried and getting: Error activating plugin: WebserverConfiguration failed to start : [Errno 11] Resource temporarily unavailable
+`Error activating plugin: WebserverConfiguration failed to start : [Errno 11] Resource temporarily unavailable`
 
 Removing the plugin resolved the issue.
 
-
-Seeing duplicate messages:
-	Last confirmed duplicate message incident 27 March 2019
-Unable to reproduce.
 
 Install script for mattermost
 

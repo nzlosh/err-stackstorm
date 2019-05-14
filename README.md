@@ -1,3 +1,5 @@
+
+
 # err-stackstorm
 A plugin to run StackStorm actions, bringing StackStorm's ChatOps to Errbot.
 
@@ -14,10 +16,15 @@ A plugin to run StackStorm actions, bringing StackStorm's ChatOps to Errbot.
 1. [Troubleshooting](#Troubleshooting)
 
 ## Help <a name="GettingHelp">
-You can find users of err-stackstorm on Gitter.  https://gitter.im/err-stackstorm/community or Slack https://stackstorm-community.slack.com `#err-stackstorm`.  If you think you've found a bug or need a new feature open an issue on the [github repository](https://github.com/nzlosh/err-stackstorm/issues).  If you want to contribute to the err-stackstorm project, there's plenty of improvements to be made, contact nzlosh via chat or email to discuss how you can get involved.
+
+You can find users of err-stackstorm on Gitter.  https://gitter.im/err-stackstorm/community or Slack https://stackstorm-community.slack.com `#err-stackstorm`.  There's also the comprehensive [troubleshooting](#Troubleshooting) section to help guide you through possible break/fix scenarios.
+
+If you think you've found a bug or need a new feature open an issue on the [github repository](https://github.com/nzlosh/err-stackstorm/issues).
+
+If you want to contribute to the err-stackstorm project, there are plenty of improvements to be made, contact nzlosh via chat or email to discuss how you can get involved.
 
 ## Installation <a name="Installation"></a>
-Installation of the err-stackstorm plugin can be performed from within a running Errbot instance or from the command line using `git clone`.  Ensure Errbot is up and running before attempting to install the plugin.  See the Errbot installation documentation here https://github.com/Errbotio/Errbot for instructions on how to setup Errbot on your chat back-end.  These instructions assume a running instance of StackStorm is already in place.  See the official [StackStorm documentation](https://docs.stackstorm.com/install/index.html) for details.
+Installation of the err-stackstorm plugin can be performed from within a running Errbot instance.  Ensure Errbot is up and running before attempting to install the plugin.  See the Errbot installation documentation here https://github.com/errbotio/errbot for instructions on how to setup Errbot on your chat back-end.  These instructions assume a running instance of StackStorm is already in place.  See the official [StackStorm documentation](https://docs.stackstorm.com/install/index.html) for details.
 
  1. Install Errbot on the target system using standard package manager or Errbot installation method.
  1. Configure Errbot, see the [Configuration](#Configuration) section for help.
@@ -26,17 +33,22 @@ Installation of the err-stackstorm plugin can be performed from within a running
  1. Connect to your chat back-end and starting interacting with your StackStorm/Errbot instance.
 
 The below command will install the plugin.
-```
-!repos install https://github.com/nzlosh/err-stackstorm.git
-```
-*If errors are encountered, the plugin will fail to be installed.  Check the configuration is correct.*
+ 1. Configure Errbot to install plugin dependencies by adding the below line to the `config.py` file.
+    ```
+    AUTOINSTALL_DEPS = True
+    ```
+ 1. From the chat backend, issue the command to install err-stackstorm.
+    ```
+    !repos install https://github.com/nzlosh/err-stackstorm.git
+    ```
+*The plugin will fail to install if any errors are encountered.  This is often caused by configuration errors in `config.py`.  Alternatively from the command line using `git clone`*
 
 ## Requirements <a name="Requirements"></a>
-The plugin has been developed and tested against the below software.  For optimal operation it is recommended to use the following versions:
+The plugin has been developed and tested against the below software combinations.  For optimal operation it is recommended to use the following versions:
 
 plugin tag (version) | Python | Errbot | StackStorm client
 --- | --- | --- | ---
-2.1 | 3.6 | 6.0.0 | not used
+2.1 | 3.6 | 6.0.0 | N/A
 2.0 | 3.4 | 5.2.0 | 2.10
 1.4 | 3.4 | 5.1.2 | 2.5
 1.3 | 3.4 | 5.1.2 | 2.5
@@ -45,7 +57,7 @@ plugin tag (version) | Python | Errbot | StackStorm client
 1.0 | 2.7 | 3.x   | 2.1
 
 ## Supported Chat Back-ends <a name="SupportedChatBackends"></a>
-Errbot provides official support for a few of major chat back-ends and many more chat back-ends are available through unofficial plugins.
+Errbot provides official support for most major chat back-ends and many more chat back-ends are available through unofficial plugins.
 
 Back end | Mode value | Support type
 --- | --- | ---
@@ -66,6 +78,7 @@ Currently supported extra back-ends
 
 ## Configuration <a name="Configuration"></a>
 Edit the `config.py` configuration file which is used to describe how the plugin will communicate with StackStorm's API and authentication end points.
+
 If you followed the Errbot setup documentation this file will have been created by downloading a template from the Errbot GitHub site.   If this file has not already been created, please create it following the instructions at https://github.com/Errbotio/Errbot
 
 ```
@@ -90,7 +103,7 @@ STACKSTORM = {
             'url': '<url_to_errbot_webserver>',
         }
     },
-    'timer_update': 900, #  Unit: second.  Interval for Errbot to refresh to list of available action aliases.
+    'timer_update': 900, #  Unit: second.  Interval to check the user token is still valid.
 }
 ```
 
@@ -104,16 +117,17 @@ Option | Description
 `api_auth.user.password` | Errbot password to authenticate with StackStorm.
 `api_auth.token` | Errbot user token to authenticate with StackStorm.  Used instead of a username/password pair.
 `api_auth.key` | Errbot API key to authenticate with StackStorm.  Used instead of a username/password pair or user token.
-`timer_update` | Unit: seconds.  Default is *60*. Interval for err-stackstorm to refresh to list of available action aliases.  (deprecated)
+`timer_update` | Unit: seconds.  Default is *60*. Interval for err-stackstorm to the user token is valid.
 `rbac_auth.standalone` | Standalone authentication.
 `rbac_auth.clientside` | Clientside authentication, a chat user will supply StackStorm credentials to err-stackstorm via an authentication page.
 `rbac_auth.clientside.url` | Url to the authentication web page.
 `secrets_store.cleartext` | Use the in memory store.
 
 ### Locale
-Errbot uses the systems locale for handling text, if your getting errors handling non ascii characters from chat
+Errbot uses the systems locale for handling text, if you're getting errors handling non-ascii characters from chat
 `UnicodeEncodeError: 'ascii' codec can't encode character '\xe9' in position 83: ordinal not in range(128)`
-Make sure the systems locale is using a unicode encoding, which is indicted by the `.UTF8` extension.
+Make sure the systems locale is configured for unicode encoding.  In the below example, the machine
+was set the English (`en`) New Zealand (`NZ`) with utf-8 encoding (`.UTF8`).
 ```
 # locale
 LANG=en_NZ.UTF8
@@ -163,18 +177,19 @@ The secrets store is used by err-stackstorm to cache StackStorm API credentials.
 The `cleartext` store maintains the cache in memory and does not persist contents to disk.  Cache content is stored in an unencrypted format in memory.
 
 
-### Role Based Access Control Authentication
+### StackStorm Authentication Credentials
 
-#### Standalone RBAC
+#### Standalone RBAC Authentication
 
-This is the original authentication method where by err-stackstorm uses its own credentials for all
+This is the original authentication method where err-stackstorm used its own credentials for all
 calls to the StackStorm API.  All action-alias' issued by chat service users execute the underlying
-workflows with err-stackstorm credentials.
+workflows with err-stackstorm credentials.  Any Role Based Access Control policies would only be
+applied to the bot user which gives coarse control.
 
 
 ##### Configuration
-It is considered an error to have multiple RBAC authentication configurations present at the same time.
-An empty dictionary in the *standalone* key is all that is required to maintain Err-stackstorm's
+Do not configure multiple RBAC authentication configurations at the same time.
+An empty dictionary in the *standalone* key is all that is required to maintain err-stackstorm's
 original authentication method.
 ```
     'rbac_auth': {
@@ -182,15 +197,16 @@ original authentication method.
     },
 ```
 
-#### Client-side RBAC
+#### Client-side RBAC Authentication
 
-Err-stackstorm provides a way to associate the chat service user account with a StackStorm
-username/password, user token or api token.
+err-stackstorm provides a way to associate the chat service user account with a StackStorm
+username/password or api token.
 
-This implementation is specific to err-stackstorm.  It is achieved by requesting a new authentication
-session with err-stackstorm.  A Universally Unique Identifier (UUID) is generated for the session
-and the chat user is invited to follow a URL to the authentication page hosted by errbot.  For
-security reasons, the UUID is a one time use and is consumed when the page is accessed.
+This implementation is specific to err-stackstorm.  It is achieved by requesting a new 
+authentication session with err-stackstorm.  A Universally Unique Identifier (UUID) is generated 
+for the session and the chat user is invited to follow a URL to the authentication page hosted by 
+errbot.  For security reasons, the UUID is a one time use and is consumed when the page is 
+accessed.  Any subsequent attempts to access the page will result in an error.
 
 The login page must be protected by TLS encryption and ideally require an ssl client certificate.
 The login page should not be exposed directly to the internet, but have a reverse proxy such as
@@ -205,7 +221,7 @@ using the associated StackStorm credentials.
 
 
 ##### Configuration
-A *url* is required to correctly configure Out-of-bands authentication for ChatOps.
+A *url* is required to correctly configure client-side authentication for ChatOps.
 ```
     'rbac_auth': {
         'clientside': {
@@ -216,11 +232,13 @@ A *url* is required to correctly configure Out-of-bands authentication for ChatO
 
 Option | Description
 --- | ---
-`url` | Errbot's authentication web server end point.  Used for the out-of-bands authentication web page.
+`url` | Errbot's authentication web server end point.  Used for the client-side authentication web page.
 
-## Errbot native access control
-Errbot comes with native Access Control List support.  It can be configured to constrain command execution by `command`, `channel` and `user`.  Glob patterns can be used in each field to provide flexibility in ACL definitions.
-As an example,  a StackStorm instance has an automatic package upgrade workflow.  It's progress can be viewed by executing the action alias: `apu stats <role>`, which is defined as shown below.
+## Errbot ACLs
+Errbot comes with native Access Control List support.  It can be configured to constrain command execution by grouping `command`, `channel` and `user`.  Glob patterns can be used in each field to provide flexibility in ACL definitions.
+
+As an example,  a StackStorm instance has an automatic package upgrade workflow.  Its progress can be viewed by executing the action alias: `apu stats <role>`, which is defined as shown below.
+
 ```
 | action_ref    | st2dm_apu.apu_status                                         |
 | formats       | [                                                            |
@@ -254,12 +272,10 @@ ACCESS_CONTROLS = {
 ```
 
 Getting the correct usernames to fill into `allowusers`/`denyusers` isn't obvious.  On a small 
-scale it's possibel to use the `!whoami` command to get the correct users account name. For large 
-installation it'd make more sense to use a pre-defined pattern.  In the output of the `!whoami` 
-command, use the `nick` field that corresponds to the Slack `username`.  The Slack username isn't 
-visible in the user profile, which makes it complicated to get.
+scale it's possibel to use the `!whoami` command to get the correct user account name.  For large 
+installation it'd make more sense to use a pre-defined pattern.
 
-### Action-Alias ACL from errbot
+Errbot matches `username` against the ACL definition.  This information isn't found easily in the Slack interface.  Use errbot's `!whoami`  command to find the value from the `nick` field which can be used with ACL definitions.
 
 
 ## How to expose action-aliases as plugin commands <a name="ActionAliases"></a>
@@ -303,12 +319,9 @@ enabled for full ChatOps support between StackStorm and Errbot.
 
 ## StackStorm ChatOps pack configuration. <a name="ChatOpsPack"></a>
 
-StackStorm's [ChatOps pack](https://github.com/StackStorm/st2/tree/master/contrib/chatops) is required
-to be installed and a notify rule file added to the pack.
+StackStorm's [ChatOps pack](https://github.com/StackStorm/st2/tree/master/contrib/chatops) is required to be installed and a notify rule file added to the pack.
 
-The notify rule must be placed in `/<stackstorm installation>/packs/chatops/rules`.  The rule file
-[notify_errbot.yaml](https://raw.githubusercontent.com/fmnisme/err-stackstorm/master/contrib/stackstorm-chatops/rules/notify_errbot.yaml) can be found
-in this repository under
+The notify rule must be placed in `/<stackstorm installation>/packs/chatops/rules`.  The rule file [notify_errbot.yaml](https://raw.githubusercontent.com/nzlosh/err-stackstorm/master/contrib/stackstorm-chatops/rules/notify_errbot.yaml) can be found in this repository under
 
 Edit the `chatops/actions/post_message.yaml` file to use the errbot route as it's default value.
 ```
@@ -326,15 +339,15 @@ root     158707  0.1  0.0 2922228 59640 pts/21  Sl+  Aug14   2:29  |   \_ /opt/e
 ```
 
 ### Is the Errbot webhook listening?
-Check Errbot's internal web server is listening on the correct interface.
+Check Errbot's internal web server is listening on the correct interface.  Use the PID `158707` from the previous command to filter the output to find which port the errbot process is listening on.  If the result is empty, errbot is not listening on any ports.
 ```
 # ss -tlpn | grep 158707
-LISTEN     0      128                       *:8888                     *:*      users:(("errbot",158707,21))
+LISTEN     0      128                       *:3141                     *:*      users:(("errbot",158707,21))
 ```
 OR
 ```
 # netstat -tlpn | grep 158707
-tcp        0      0 0.0.0.0:8888            0.0.0.0:*               LISTEN      158707/python3
+tcp        0      0 0.0.0.0:3141            0.0.0.0:*               LISTEN      158707/python3
 ```
 
 ### Is the Errbot machine able to communicate with the StackStorm end points?
@@ -420,7 +433,7 @@ _This is a basic implementation of a chatroom_
 ```
 
 ### Is the StackStorm ChatOps pack installed and configured correctly?
-Err-stackstorm requires the ChatOps pack to be installed.  To confirm it is installed, use the st2 cli.
+err-stackstorm requires the ChatOps pack to be installed.  To confirm it is installed, use the st2 cli.
 
 ```
 $ st2 pack list
@@ -523,7 +536,8 @@ This indicates that the route wasn't set to `errbot`, see the Install ChatOps se
 
 ## Acknowledgements
 
-The err-stackstorm plugin was founded by [fmnisme](https://github.com/fmnisme), thanks for starting the project.
+A special thank you to [fmnisme](https://github.com/fmnisme) who started the err-stackstorm plugin project.
+Thanks to the StackStorm and Errbot community for their support and interest.
 
 ## Legal
 
