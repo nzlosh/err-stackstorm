@@ -331,6 +331,14 @@ Edit the `chatops/actions/post_message.yaml` file to use the errbot route as it'
 
 ## Troubleshooting <a name="Troubleshooting"></a>
 
+### Is the virtual environment active?
+
+If Errbot was installed in a python virtual environement and a `command is not found` is reported.
+```
+errbot --init, the command is not found.
+```
+Make sure the virtual environment is activated correctly.
+
 ### Is the Errbot process running?
 Check an instance of Errbot is running on the host
 ```
