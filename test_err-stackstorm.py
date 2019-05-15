@@ -23,7 +23,7 @@ def test_secret_store():
     st2_token = "123456-abcdef-123456"
 
     cleartext = StoreAdapterFactory.instantiate("cleartext")
-    assert isinstance(cleartext, ClearTextStoreAdapter)
+    assert cleartext.__name__ == "ClearTextStoreAdapter"
 
     # set a secret
     cleartext.set("token", st2_token)
