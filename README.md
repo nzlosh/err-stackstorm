@@ -25,16 +25,15 @@ If you want to contribute to the err-stackstorm project, there are plenty of imp
 ## Installation <a name="Installation"></a>
 Installation of the err-stackstorm plugin can be performed from within a running Errbot instance.  Ensure Errbot is up and running before attempting to install the plugin.  See the Errbot installation documentation here https://github.com/errbotio/errbot for instructions on how to setup Errbot on your chat back-end.  These instructions assume a running instance of StackStorm is already in place.  See the official [StackStorm documentation](https://docs.stackstorm.com/install/index.html) for details.
 
-
  1. Install Errbot on the target system using standard package manager or Errbot installation method.
  1. Configure Errbot, see the [Configuration](#Configuration) section for help.
  1. Enable Errbot's internal web server, see the [Webhook](#Webhook) section for help.
  1. Install ChatOps pack on StackStorm, see the [ChatOps Pack](#ChatOpsPack) section for help.
  1. Connect to your chat back-end and starting interacting with your StackStorm/Errbot instance.
 
-The below command will install the plugin.
+After completing the above steps, issue The below command will install the plugin.
 
- 1. Configure Errbot to install plugin dependencies by adding the below line to the `config.py` file.
+ 1. Confirm Errbot is configured to install plugin dependencies. The below line should be present in `config.py`, if it is not add it.
     ```
     AUTOINSTALL_DEPS = True
     ```
@@ -42,14 +41,14 @@ The below command will install the plugin.
     ```
     !repos install https://github.com/nzlosh/err-stackstorm.git
     ```
-*The plugin will fail to install if any errors are encountered.  This is often caused by configuration errors in `config.py`.  Alternatively from the command line using `git clone`*
+*The plugin will fail to install if any errors are encountered.  This is often caused by configuration errors in `config.py`.*
 
 ## Requirements <a name="Requirements"></a>
 The plugin has been developed and tested against the below software combinations.  For optimal operation it is recommended to use the following versions:
 
 plugin tag (version) | Python | Errbot | StackStorm client
 --- | --- | --- | ---
-2.1 | 3.6 | 6.0.0 | N/A
+2.1 | 3.6 | 6.0.0 | not used
 2.0 | 3.4 | 5.2.0 | 2.10
 1.4 | 3.4 | 5.1.2 | 2.5
 1.3 | 3.4 | 5.1.2 | 2.5
@@ -120,6 +119,7 @@ Option | Description
 `rbac_auth.clientside` | Clientside authentication, a chat user will supply StackStorm credentials to err-stackstorm via an authentication page.
 `rbac_auth.clientside.url` | Url to the authentication web page.
 `secrets_store.cleartext` | Use the in memory store.
+
 
 ### Locale
 Errbot uses the systems locale for handling text, if you're getting errors handling non-ascii characters from chat
