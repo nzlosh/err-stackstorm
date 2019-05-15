@@ -187,7 +187,7 @@ workflows with err-stackstorm credentials.  Any Role Based Access Control polici
 applied to the bot user which gives coarse control.
 
 
-##### Configuration
+##### Standalone RBAC Configuration
 Do not configure multiple RBAC authentication configurations at the same time.
 An empty dictionary in the *standalone* key is all that is required to maintain err-stackstorm's
 original authentication method.
@@ -220,7 +220,7 @@ Once a chat user is associated with their StackStorm credentials, any action-ali
 using the associated StackStorm credentials.
 
 
-##### Configuration
+##### Client-side RBAC Configuration
 A *url* is required to correctly configure client-side authentication for ChatOps.
 ```
     'rbac_auth': {
