@@ -29,15 +29,10 @@ credentials store and provide the corresponding StackStorm user token/api key to
 
 Nginx is used as a reverse proxy to errbot's webserver.  Nginx should perform TLS and authentication.
 
-### vault
-
-### keyring
-
 #### limitation
-must unlock the keyring manually when the bot starts.
+
+Clear text in memory doesn't provides weak secret protection.
 
 ### security considerations
 
-use ssl client certificates for auth page.
-keyring should be considered a weak security mechanism.
-
+Use ssl client certificates for auth page.

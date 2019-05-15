@@ -1,10 +1,6 @@
 # coding:utf-8
 import abc
-import time
-import string
 import logging
-from pathlib import Path
-from random import SystemRandom  # TODO: replace SystemRandom secrets which is added to Python 3.6
 
 LOG = logging.getLogger(__name__)
 
@@ -14,14 +10,6 @@ class AbstractStoreAdapterFactory(metaclass=abc.ABCMeta):
     def instantiate(store_type):
         raise NotImplementedError
 
-    @abc.abstractmethod
-    def keyring_adapter(self):
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def vault_adpater(self):
-        raise NotImplementedError
-
 
 class StoreAdapterFactory(AbstractStoreAdapterFactory):
     @staticmethod
@@ -29,21 +17,7 @@ class StoreAdapterFactory(AbstractStoreAdapterFactory):
         LOG.debug("Create secret store for '{}'".format(store_type))
         return {
             "cleartext": ClearTextStoreAdapter,
-            "keyring": KeyringStoreAdapter,
-            "vault": VaultStoreAdapter
-        }.get(store_type, KeyringStoreAdapter)
-
-    @staticmethod
-    def keyring_adapter():
-        return KeyringStoreAdapter()
-
-    @staticmethod
-    def vault_adapter():
-        return VaultStoreAdapter()
-
-    @staticmethod
-    def developer_adapter():
-        return ClearTextStoreAdapter()
+        }.get(store_type, ClearTextStoreAdapter)
 
 
 class AbstractStoreAdapter(metaclass=abc.ABCMeta):
@@ -66,8 +40,8 @@ class AbstractStoreAdapter(metaclass=abc.ABCMeta):
 
 class ClearTextStoreAdapter(AbstractStoreAdapter):
     """
-    This is only intended for use in development environments.
-    Never use this in production, it offers no security.
+    The clear text store adapter doesn't encrypt data in memory, but doesn't persist it to disk
+    either.  If more secure methods are required to operate, open an issue requesting a new feature.
     """
     def __init__(self):
         self.associations = {}
@@ -79,70 +53,18 @@ class ClearTextStoreAdapter(AbstractStoreAdapter):
         pass
 
     def set(self, name, secret, namespace=""):
-        # TODO: disable this log after debugging complete.
-        LOG.debug("__ClearTextStoreAdapter.set({}, {}).".format(name, secret))
         self.associations[name] = secret
         return True
 
     def get(self, name, namespace=""):
-        LOG.debug("__ClearTextStoreAdapter.get({}).".format(name))
         return self.associations.get(name)
 
     def delete(self, name, namespace=""):
-        LOG.debug("__ClearTextStoreAdapter.delete({}).".format(name))
         if name in self.associations:
             del self.associations[name]
 
     def teardown(self):
         pass
-
-
-class KeyringStoreAdapter(AbstractStoreAdapter):
-    import keyring
-
-    def __init__(self):
-        rnd = SystemRandom(str(int(time.time()) % 1000))
-        self.password = "".join([rnd.choice(string.hexdigits) for _ in range(46)])
-
-    def setup(self, filename='errbot_secrets.conf'):
-        self.kr = KeyringStoreAdapter.keyring.get_keyring()
-        self.kr.filename = filename
-
-    def set(self, name, secret, namespace="errst2"):
-        self.kr.set_password(namespace, name, str(secret))
-
-    def get(self, name, namespace="errst2"):
-        return self.kr.get_password(namespace, name)
-
-    def delete(self, name, namespace="errst2"):
-        raise NotImplementedError
-
-    def teardown(self):
-        purge_secrets = True
-        if Path(self.kr.file_path).exists() and purge_secrets is True:
-            Path.unlink(self.kr.file_path)
-
-
-class VaultStoreAdapter(AbstractStoreAdapter):
-    import hvac
-
-    def __init__(self):
-        self.client = None
-
-    def setup(self, filename):
-        self.client = VaultStoreAdapter.hvac.Client()
-
-    def set(self, name, secret, namespace="errst2"):
-        raise NotImplementedError
-
-    def delete(self, name, namespace="errst2"):
-        raise NotImplementedError
-
-    def get(self, name, namespace="errst2"):
-        raise NotImplementedError
-
-    def teardown():
-        raise NotImplementedError
 
 
 class SessionStore(object):
@@ -160,7 +82,6 @@ class SessionStore(object):
         """
         Get information by user_id.
         """
-        LOG.debug("__SessionStore.get_by_userid(user_id={})".format(user_id))
         return self.memory.get(user_id, False)
 
     def put(self, session):
@@ -168,7 +89,6 @@ class SessionStore(object):
         Put a new session in the store using the user_id as the key
         and create a reverse mapping between the user_id and the session_id.
         """
-        LOG.debug("__SessionStore.put(session={})".format(session))
         self.memory[session.user_id] = session
         self.id_to_user_map[session.id()] = session.user_id
 
@@ -177,7 +97,6 @@ class SessionStore(object):
         Delete a session by user_id.  Delete the reverse mapping
         if it exists.
         """
-        LOG.debug("__SessionStore.delete(user_id={})".format(user_id))
         session = self.memory.get(user_id, False)
         if session:
             if session.id() in self.id_to_user_map:
@@ -190,12 +109,10 @@ class SessionStore(object):
         """
         Put a session in the store using the session id.
         """
-        LOG.debug("__SessionStore.put_by_id(session_id={}, session={})".format(session_id, session))
         if session.user_id in self.memory:
             self.id_to_user_map[session_id] = session.user_id
 
     def get_by_uuid(self, session_id):
-        LOG.debug("__SessionStore.get_by_uuid(session_id={})".format(session_id))
         user_id = self.id_to_user_map.get(session_id, False)
         session = self.memory.get(user_id, False)
         if session is False:

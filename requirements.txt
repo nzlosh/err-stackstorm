@@ -1,5 +1,3 @@
 requests>=2.20.0
 sseclient-py
 sseclient
-keyring
-hvac
