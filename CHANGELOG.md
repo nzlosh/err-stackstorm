@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.1.0-rc1] 2019-05-15
+### Added
+  - unit tests for more low level objects used by err-stackstorm.
+
+### Changed
+  - updated makefile to be better adapted to CircleCI's build process.  (Still a work in progress)
+  - numerious documentation updates to improve installation process for new users.
+  - documented errbot's ACL features.
+  
+### Removed
+  - removed unused code for keyring and vault.
+
 ## [2.0.0-rc2] 2019-02-08
 ### Added
   - Correctly support action-alias acknowledge enabled flag in StackStorm API.
