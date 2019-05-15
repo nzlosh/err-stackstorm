@@ -1,5 +1,4 @@
 
-
 # err-stackstorm
 A plugin to run StackStorm actions, bringing StackStorm's ChatOps to Errbot.
 
@@ -26,6 +25,7 @@ If you want to contribute to the err-stackstorm project, there are plenty of imp
 ## Installation <a name="Installation"></a>
 Installation of the err-stackstorm plugin can be performed from within a running Errbot instance.  Ensure Errbot is up and running before attempting to install the plugin.  See the Errbot installation documentation here https://github.com/errbotio/errbot for instructions on how to setup Errbot on your chat back-end.  These instructions assume a running instance of StackStorm is already in place.  See the official [StackStorm documentation](https://docs.stackstorm.com/install/index.html) for details.
 
+
  1. Install Errbot on the target system using standard package manager or Errbot installation method.
  1. Configure Errbot, see the [Configuration](#Configuration) section for help.
  1. Enable Errbot's internal web server, see the [Webhook](#Webhook) section for help.
@@ -33,6 +33,7 @@ Installation of the err-stackstorm plugin can be performed from within a running
  1. Connect to your chat back-end and starting interacting with your StackStorm/Errbot instance.
 
 The below command will install the plugin.
+
  1. Configure Errbot to install plugin dependencies by adding the below line to the `config.py` file.
     ```
     AUTOINSTALL_DEPS = True
@@ -99,9 +100,6 @@ STACKSTORM = {
     },
     'rbac_auth': {
         'standalone': {},
-        'clientside': {
-            'url': '<url_to_errbot_webserver>',
-        }
     },
     'timer_update': 900, #  Unit: second.  Interval to check the user token is still valid.
 }
@@ -126,8 +124,10 @@ Option | Description
 ### Locale
 Errbot uses the systems locale for handling text, if you're getting errors handling non-ascii characters from chat
 `UnicodeEncodeError: 'ascii' codec can't encode character '\xe9' in position 83: ordinal not in range(128)`
+
 Make sure the systems locale is configured for unicode encoding.  In the below example, the machine
 was set the English (`en`) New Zealand (`NZ`) with utf-8 encoding (`.UTF8`).
+
 ```
 # locale
 LANG=en_NZ.UTF8
@@ -174,7 +174,7 @@ The secrets store is used by err-stackstorm to cache StackStorm API credentials.
  - `cleartext`
 
 #### ClearText
-The `cleartext` store maintains the cache in memory and does not persist contents to disk.  Cache content is stored in an unencrypted format in memory.
+The `cleartext` store maintains the cache in memory and does not encrypt the contents to disk.  This is option doesn't protect the stored secrets in memory.
 
 
 ### StackStorm Authentication Credentials
@@ -270,6 +270,7 @@ ACCESS_CONTROLS = {
     },
 }
 ```
+
 
 Getting the correct usernames to fill into `allowusers`/`denyusers` isn't obvious.  On a small 
 scale it's possibel to use the `!whoami` command to get the correct user account name.  For large 
@@ -546,6 +547,7 @@ This indicates that the route wasn't set to `errbot`, see the Install ChatOps se
 
 A special thank you to [fmnisme](https://github.com/fmnisme) who started the err-stackstorm plugin project.
 Thanks to the StackStorm and Errbot community for their support and interest.
+
 
 ## Legal
 

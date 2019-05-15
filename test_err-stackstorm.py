@@ -7,8 +7,7 @@ from mock import Mock
 from lib.session import Session
 from lib.session_manager import SessionManager
 from lib.credentials_adapters import CredentialsFactory
-from lib.store_adapters import ClearTextStoreAdapter, KeyringStoreAdapter, VaultStoreAdapter, \
-    StoreAdapterFactory
+from lib.store_adapters import ClearTextStoreAdapter, StoreAdapterFactory
 from lib.errors import SessionExpiredError, SessionInvalidError, SessionConsumedError, \
     SessionExistsError
 
@@ -26,16 +25,8 @@ def test_secret_store():
     cleartext = StoreAdapterFactory.instantiate("cleartext")
     assert cleartext.__name__ == "ClearTextStoreAdapter"
 
-    keyring = StoreAdapterFactory.instantiate("keyring")
-    assert keyring.__name__ == "KeyringStoreAdapter"
-
-    vault = StoreAdapterFactory.instantiate("vault")
-    assert vault.__name__ == "VaultStoreAdapter"
-
     # set a secret
     cleartext.set("token", st2_token)
-    keyring.set("token", st2_token)
-    valut.set("token", st2_token)
 
     # get a secret
 
