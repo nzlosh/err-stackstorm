@@ -76,13 +76,7 @@ STACKSTORM = {
     'stream_url': 'https://stackstorm.example.com/stream/v1',
 
     'verify_cert': True,
-    'secrets_store': {
-        'cleartext': {}
-        'keyring': {
-            'keyring_password': "<keyring_password>"
-        },
-        'vault': {}
-    },
+    'secrets_store': 'cleartext',
     'api_auth': {
         'user': {
             'name': 'my_username',
@@ -93,10 +87,6 @@ STACKSTORM = {
     },
     'rbac_auth': {
         'standalone': {},
-        'serverside': {},
-        'clientside': {
-            'url': '<url_to_errbot_webserver>',
-        }
     },
     'timer_update': 900, #  Unit: second.  Interval for Errbot to refresh to list of available action aliases.
 }
@@ -114,13 +104,9 @@ Option | Description
 `api_auth.key` | Errbot API key to authenticate with StackStorm.  Used instead of a username/password pair or user token.
 `timer_update` | Unit: seconds.  Default is *60*. Interval for err-stackstorm to refresh to list of available action aliases.  (deprecated)
 `rbac_auth.standalone` | Standalone authentication.
-`rbac_auth.serverside` | Serverside authentication, err-stackstorm will request StackStorm credentials on behalf of a chat user from StackStorm.
 `rbac_auth.clientside` | Clientside authentication, a chat user will supply StackStorm credentials to err-stackstorm via an authentication page.
 `rbac_auth.clientside.url` | Url to the authentication web page.
 `secrets_store.cleartext` | Use the in memory store.
-`secrets_store.keyring` | Use the system's keyring store (_unavailable_).
-`secrets_store.keyring.keyring_password` | Password to unlock the keyring.
-`secrets_store.vault` | Use Hashicorp Vault store. (_unavailable_)
 
 ### Locale
 Errbot uses the systems locale for handling text, if your getting errors handling non ascii characters from chat
@@ -170,17 +156,9 @@ _API Key_ support has been included since StackStorm v2.0.  When an _API Key_ is
 The secrets store is used by err-stackstorm to cache StackStorm API credentials.  The available backends are:
 
  - `cleartext`
- - `keyring`
- - `vault`
 
 #### ClearText
-The `cleartext` store maintains the cache in memory and does not encrypt the contents to disk.  This is option doesn't protect the stored secrets.
-
-#### KeyRing
-The `keyring` store uses the systems keyring manager to create a namespace and write secrets to it.  Secrets are persisted to disk in an encrypted format.  The keyring must be unlocked when errbot is started.  [detail](http://man7.org/linux/man-pages/man7/keyrings.7.html)
-
-#### HashiCorp Vault
-The `vault` store uses Hashicorp's Vault to store secrets.  [details](https://www.vaultproject.io)
+The `cleartext` store maintains the cache in memory and does not encrypt the contents to disk.  This is option doesn't protect the stored secrets in memory.
 
 ### Role Based Access Control Authentication
 
@@ -198,26 +176,6 @@ original authentication method.
 ```
     'rbac_auth': {
         'standalone': {},
-    },
-```
-
-#### Server-side RBAC
-
-The "server-side" RBAC implementation uses err-stackstorm credentials to call the StackStorm API
-to pass chat service user identification.  The err-stackstorm credentials must be defined as a
-service.  Chat service user identifications must be registered with StackStorm before being used.
-
-When a chat service user matches, StackStorm will return the associated user token and err-stackstorm
-will cache the result.  When a chat user triggers an action-alias, the associated workflow will be
-executed with the cached user token.
-
-##### Configuration
-It is considered an error to have multiple RBAC authentication configurations present at the same time.
-Only the *serverside* key with an empty dictionary is required to enable Server-side RBAC for ChatOps.
-
-```
-    'rbac_auth': {
-        'serverside': {}
     },
 ```
 
@@ -245,13 +203,12 @@ using the associated StackStorm credentials.
 
 ##### Configuration
 It is considered an error to have both *extended* and *proxied* RBAC authentication configurations
-present at the same time.  A *proxied* key with *url* and *keyring_password* are required to correctly
+present at the same time.  A *proxied* key with *url* is required to correctly
 configure Out-of-bands authentication for ChatOps.
 ```
     'rbac_auth': {
         'clientside': {
             'url': 'https://<hostname>:<port>/',
-            'keyring_password': "<password>"
         }
     },
 ```
@@ -259,7 +216,6 @@ configure Out-of-bands authentication for ChatOps.
 Option | Description
 --- | ---
 `url` | Errbot's authentication web server end point.  Used for the out-of-bands authentication web page.
-`keyring_password` | The password used to unlock the keyring to read/write stored data.
 
 
 
