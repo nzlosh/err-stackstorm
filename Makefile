@@ -1,8 +1,7 @@
 SHELL=/bin/sh
-VENVDIR=/tmp/err-stackstorm-venv
 
 .PHONY: all
-all: setup lint_test unit_test
+all: lint_test unit_test
 
 .PHONY: clean
 clean:
@@ -10,21 +9,22 @@ clean:
 
 .PHONY: setup
 setup:
-	test -d "${VENVDIR}" || virtualenv -p python3 "${VENVDIR}"
-	. ${VENVDIR}/bin/activate
-	${VENVDIR}/bin/pip install errbot flake8 pep8 pytest mock
-	${VENVDIR}/bin/pip install -r requirements.txt
-	cd "${VENVDIR}" && "${VENVDIR}/bin/errbot" --init
+	@test -n "${VIRTUAL_ENV}" || (echo "Not running in virtualenv - abort setup"; exit 1 ) && echo "Running in virtualenv"
+	pip install -r requirements.txt
+	pip install -r test_requirements.txt
 
 .PHONY: activate
 activate:
 	. ${VENVDIR}/bin/activate
 
 .PHONY: unit_test
-unit_test: activate
-	${VENVDIR}/bin/pytest test_err-stackstorm.py
+unit_test:
+	@echo "Running Python unit tests"
+	@python -m pytest
 
 .PHONY: lint_test
-lint_test: activate
-	${VENVDIR}/bin/flake8 --max-line-length=100 st2.py lib/*.py || true
-	${VENVDIR}/bin/pep8 --max-line-length=100  st2.py lib/*.py
+lint_test:
+	@echo -n "Running LINT tests"
+	@flake8 --max-line-length=100 st2.py lib/*.py || true
+	@pep8 --max-line-length=100  st2.py lib/*.py
+	@echo " ... OK"
