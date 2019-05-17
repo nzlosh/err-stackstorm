@@ -64,7 +64,7 @@ class PluginConfiguration(BorgSingleton):
     def _configure_credentials(self, bot_conf):
         self.api_auth = bot_conf.STACKSTORM.get("api_auth", {})
         self.bot_creds = None
-        for cred_type in ["key", "user", "token"]:
+        for cred_type in ["apikey", "user", "token"]:
             c = self.api_auth.get(cred_type)
             if c:
                 if cred_type == "user":
