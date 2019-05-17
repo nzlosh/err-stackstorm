@@ -27,6 +27,6 @@ unit_test:
 .PHONY: lint_test
 lint_test:
 	@echo -n "Running LINT tests [VirtualEnv:${VIRTUAL_ENV}]"
-	@flake8 --max-line-length=100 st2.py lib/*.py || true
-	@pep8 --max-line-length=100  st2.py lib/*.py
+	@flake8 --max-line-length=100 st2.py lib/*.py
+	@pycodestyle --max-line-length=100  st2.py lib/*.py
 	@echo " ... OK"
