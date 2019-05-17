@@ -1,4 +1,4 @@
 pytest
 mock
-pep8
+pycodestyle
 flake8
