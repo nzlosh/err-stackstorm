@@ -10,8 +10,10 @@ clean:
 .PHONY: setup
 setup:
 	@test -n "${VIRTUAL_ENV}" || (echo "Not running in virtualenv - abort setup"; exit 1 ) && echo "Running in virtualenv"
+	pip install errbot
+	${VIRTUAL_ENV}/bin/errbot --init
 	pip install -r requirements.txt
-	pip install -r test_requirements.txt
+	pip install -r requirements-test.txt
 
 .PHONY: activate
 activate:
