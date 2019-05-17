@@ -56,7 +56,7 @@ class St2(BotPlugin):
                 self.internal_identity.secret
             )
             self.accessctl.consume_session(bot_session.id())
-        except SessionExistsError as e:
+        except SessionExistsError:
             LOG.warning("Internal logic error, bot session already exists.")
             bot_session = self.accessctl.get_session(self.internal_identity)
         LOG.debug("Bot session {}".format(bot_session))
@@ -151,7 +151,7 @@ class St2(BotPlugin):
 
         try:
             session = self.accessctl.create_session(msg.frm, args)
-        except SessionExistsError as e:
+        except SessionExistsError:
             try:
                 session = self.accessctl.get_session(msg.frm)
                 if session.is_expired() is False:
@@ -248,7 +248,7 @@ class St2(BotPlugin):
         # If the bot session is invalid, attempt to renew it.
         try:
             bot_session = self.accessctl.get_session(self.internal_identity)
-        except SessionInvalidError as e:
+        except SessionInvalidError:
             self.authenticate_bot_credentials()
             bot_session = self.accessctl.get_session(self.internal_identity)
 

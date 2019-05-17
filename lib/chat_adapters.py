@@ -177,11 +177,11 @@ class MattermostChatAdapter(GenericChatAdapter):
         username = None
         try:
             username = "~" + msg.frm.room
-        except Exception as e:
+        except AttributeError:
             pass
         try:
             username = "@" + msg.frm.username
-        except Exception as e:
+        except AttributeError:
             pass
 
         LOG.debug("MattermostChatAdapter username={}".format(username))
