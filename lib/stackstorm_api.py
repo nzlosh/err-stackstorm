@@ -98,11 +98,11 @@ class StackStormAPI(object):
             else:
                 response.raise_for_status()
         except HTTPError as e:
-                result.error(2, "HTTPError {}".format(str(e)))
-                LOG.error(result.message)
+            result.error(2, "HTTPError {}".format(str(e)))
+            LOG.error(result.message)
         except Exception as e:
-                result.error(3, "Unexpected error {}".format(e))
-                LOG.error(result.message)
+            result.error(3, "Unexpected error {}".format(e))
+            LOG.error(result.message)
         return result
 
     def execute_actionalias(self, action_alias, representation, msg, chat_user, st2token):
@@ -198,7 +198,7 @@ class StackStormAPI(object):
                                 p.get('extra')
                             )
                 except Exception as e:
-                    raise
+                    raise e
                 finally:
                     if client:
                         client.close()
@@ -216,7 +216,7 @@ class StackStormAPI(object):
             try:
                 self.refresh_bot_credentials()
             except Exception as e:
-                LOG.critical("Error refreshing credentials")
+                LOG.critical("Error refreshing credentials {}".format(e))
                 traceback.print_exc()
 
             time.sleep(StackStormAPI.stream_backoff)
