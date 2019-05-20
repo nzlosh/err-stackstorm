@@ -302,11 +302,11 @@ To configure Errbot's web server plugin, the command below can be sent to Errbot
 The configuration above is only applied for the current runtime and may not persist after the errbot
 process is restarted.  Making the configuration change permanent is as simple as installing a
 special plugin:
+
 ```
 !repos install https://github.com/tkit/errbot-plugin-webserverconfiguration
 ```
 The configuration command from above is not required prior to installing this plugin.
----
 
 In production environments it may be desirable to place a reverse-proxy like nginx in front of errbot.
 
