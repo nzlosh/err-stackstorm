@@ -30,8 +30,15 @@ class St2(BotPlugin):
         super(St2, self).__init__(bot, name)
 
         # Initialised shared configuraiton with the bot's stackstorm settings.
-        self.cfg = PluginConfiguration()
-        self.cfg.setup(self.bot_config, PLUGIN_PREFIX)
+        try:
+            self.cfg = PluginConfiguration()
+            self.cfg.setup(self.bot_config, PLUGIN_PREFIX)
+        except Exception as e:
+            LOG.critical(
+                "Errors were encountered processing the STACKSTORM configuration."
+                "Please correct the errors and restart the bot."
+                "{}".format(e)
+            )
 
         # The chat backend adapter mediates data format and api calls between
         # stackstorm, errbot and the chat backend.

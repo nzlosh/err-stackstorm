@@ -24,6 +24,13 @@ class PluginConfiguration(BorgSingleton):
         super(BorgSingleton, self).__init__()
 
     def setup(self, bot_conf, plugin_prefix):
+        if not hasattr(bot_conf, "STACKSTORM"):
+            LOG.critical(
+                "Missing STACKSTORM configuration in config.py.   err-stackstorm must be configured"
+                " correctly to function.  For configuration insturction visit the err-stackstorm"
+                " homepage."
+            )
+            bot_conf.__setattr__("STACKSTORM", {})
         self.plugin_prefix = plugin_prefix
         self._configure_prefixes(bot_conf)
         self._configure_credentials(bot_conf)
@@ -40,7 +47,7 @@ class PluginConfiguration(BorgSingleton):
 
     def _configure_rbac_auth(self, bot_conf):
         self.auth_handler = None
-        rbac_auth = bot_conf.STACKSTORM.get("rbac_auth", {"no_rbac_auth_key": {}})
+        rbac_auth = bot_conf.STACKSTORM.get("rbac_auth", {"standalone": {}})
         for rbac_type in list(rbac_auth.keys()):
             self.auth_handler = AuthHandlerFactory.instantiate(rbac_type)(
                 self,

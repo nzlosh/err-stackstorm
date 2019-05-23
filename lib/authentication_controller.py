@@ -7,7 +7,7 @@ from lib.session_manager import SessionManager
 from lib.errors import SessionInvalidError
 from errbot.backends.base import Identifier
 
-LOG = logging.getLogger("errbot.plugin.st2.auth_ctrllr")
+LOG = logging.getLogger("errbot.plugin.st2.auth_ctrl")
 
 
 def generate_password(length=8):
