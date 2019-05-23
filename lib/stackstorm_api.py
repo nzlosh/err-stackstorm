@@ -164,59 +164,44 @@ class StackStormAPI(object):
                     )
                     return
 
-            headers = token.requests()
-            # WARNING: Sensitive security information will be logged, uncomment only when necessary.
-            # LOG.debug("Authentication headers {}".format(headers))
+            stream_kwargs = {
+                "headers": token.requests(),
+                "verify": self.cfg.verify_cert
+            }
 
-            headers.update({'Accept': 'text/event-stream'})
-            with requests.Session() as session:
-                response = session.get(
-                    "".join([self.cfg.stream_url, "/stream"]),
-                    headers=headers,
-                    stream=True,
-                    verify=self.cfg.verify_cert
-                )
-                if response.raise_for_status():
-                    raise HTTPError("HTTP Error {} ({})".format(
-                        response.reason,
-                        response.status_code
-                    ))
-                try:
-                    client = sseclient.SSEClient(response)
-                    for event in client.events():
+            stream_url = "".join([self.cfg.stream_url, "/stream"])
+            try:
+                stream = sseclient.SSEClient(stream_url, **stream_kwargs)
+                for event in stream:
+                    if event.event in ["st2.announcement__errbot"]:
+                        LOG.debug(
+                            "*** Errbot announcement event detected! ***\n{}\n{}\n".format(
+                                event.dump(),
+                                stream
+                            )
+                        )
                         data = json.loads(event.data)
-                        if event.event in ["st2.announcement__errbot"]:
-                            LOG.debug(
-                                "*** Errbot announcement event detected! ***\n{}\n".format(event)
-                            )
-                            p = data["payload"]
-                            callback(
-                                p.get('whisper'),
-                                p.get('message'),
-                                p.get('user'),
-                                p.get('channel'),
-                                p.get('extra')
-                            )
-                except Exception as e:
-                    raise e
-                finally:
-                    if client:
-                        client.close()
+                        p = data["payload"]
+                        callback(
+                            p.get('whisper'),
+                            p.get('message'),
+                            p.get('user'),
+                            p.get('channel'),
+                            p.get('extra')
+                        )
+            except Exception as e:
+                raise e
 
         StackStormAPI.stream_backoff = 10
         while True:
             try:
+                self.refresh_bot_credentials()
                 listener(callback, bot_identity)
             except Exception as err:
                 LOG.critical(
                     "St2 stream listener - An error occurred: {} {}.  "
                     "Backing off {} seconds.".format(type(err), err, StackStormAPI.stream_backoff)
                 )
-                traceback.print_exc()
-            try:
-                self.refresh_bot_credentials()
-            except Exception as e:
-                LOG.critical("Error refreshing credentials {}".format(e))
                 traceback.print_exc()
 
             time.sleep(StackStormAPI.stream_backoff)
