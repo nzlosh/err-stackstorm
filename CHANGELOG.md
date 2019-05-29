@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.1.0-rc2] 2019-05-29
+### Added
+  - Split unit tests in separate test files.
+  - Added linting to CircleCI
+  - Added try/except blocks around plugin configuration code to improve installation and startup
+    experience when there are errors in the configuration.
+
+### Changed
+  - Fixed dictionary keys to reference 'apikey' consistently.
+  - Switch CircleCI from calling pytest directly to using Makefile.
+  - Dropped using sseclient-py in favour of btubbs sseclient.
+  - Corrected references to apikey configuration.
+
+### Removed
+
 ## [2.1.0-rc1] 2019-05-15
 ### Added
   - unit tests for more low level objects used by err-stackstorm.
@@ -13,7 +28,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - updated makefile to be better adapted to CircleCI's build process.  (Still a work in progress)
   - numerious documentation updates to improve installation process for new users.
   - documented errbot's ACL features.
-  
+
 ### Removed
   - removed unused code for keyring and vault.
 

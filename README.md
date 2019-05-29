@@ -95,7 +95,7 @@ STACKSTORM = {
             'password': "my_password",
         },
         'token': "<User token>",
-        'key': '<API Key>'
+        'apikey': '<API Key>'
     },
     'rbac_auth': {
         'standalone': {},
@@ -113,7 +113,7 @@ Option | Description
 `api_auth.user.name` | Errbot username to authenticate with StackStorm.
 `api_auth.user.password` | Errbot password to authenticate with StackStorm.
 `api_auth.token` | Errbot user token to authenticate with StackStorm.  Used instead of a username/password pair.
-`api_auth.key` | Errbot API key to authenticate with StackStorm.  Used instead of a username/password pair or user token.
+`api_auth.apikey` | Errbot API key to authenticate with StackStorm.  Used instead of a username/password pair or user token.
 `timer_update` | Unit: seconds.  Default is *60*. Interval for err-stackstorm to the user token is valid.
 `rbac_auth.standalone` | Standalone authentication.
 `rbac_auth.clientside` | Clientside authentication, a chat user will supply StackStorm credentials to err-stackstorm via an authentication page.
@@ -202,10 +202,10 @@ original authentication method.
 err-stackstorm provides a way to associate the chat service user account with a StackStorm
 username/password or api token.
 
-This implementation is specific to err-stackstorm.  It is achieved by requesting a new 
-authentication session with err-stackstorm.  A Universally Unique Identifier (UUID) is generated 
-for the session and the chat user is invited to follow a URL to the authentication page hosted by 
-errbot.  For security reasons, the UUID is a one time use and is consumed when the page is 
+This implementation is specific to err-stackstorm.  It is achieved by requesting a new
+authentication session with err-stackstorm.  A Universally Unique Identifier (UUID) is generated
+for the session and the chat user is invited to follow a URL to the authentication page hosted by
+errbot.  For security reasons, the UUID is a one time use and is consumed when the page is
 accessed.  Any subsequent attempts to access the page will result in an error.
 
 The login page must be protected by TLS encryption and ideally require an ssl client certificate.
@@ -272,8 +272,8 @@ ACCESS_CONTROLS = {
 ```
 
 
-Getting the correct usernames to fill into `allowusers`/`denyusers` isn't obvious.  On a small 
-scale it's possibel to use the `!whoami` command to get the correct user account name.  For large 
+Getting the correct usernames to fill into `allowusers`/`denyusers` isn't obvious.  On a small
+scale it's possibel to use the `!whoami` command to get the correct user account name.  For large
 installation it'd make more sense to use a pre-defined pattern.
 
 Errbot matches `username` against the ACL definition.  This information isn't found easily in the Slack interface.  Use errbot's `!whoami`  command to find the value from the `nick` field which can be used with ACL definitions.
