@@ -244,7 +244,7 @@ class SlackChatAdapter(AbstractChatAdapter):
         if target_id is None:
             LOG.error("Unable to post message as there is no user or channel destination.")
         else:
-            if extra is None or extra is {}:
+            if extra is None or extra == {}:
                 self.botplugin.send(target_id, message)
             else:
                 LOG.debug("Send card using backend {}".format(self.botplugin.mode))
