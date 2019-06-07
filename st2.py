@@ -47,14 +47,18 @@ class St2(BotPlugin):
         self.accessctl = AuthenticationController(self)
 
         self.st2api = StackStormAPI(self.cfg, self.accessctl)
+
+        # Wrap err-stackstorm credentials to distinguish it from chat backend credentials.
+        self.internal_identity = BotPluginIdentity()
         self.authenticate_bot_credentials()
+
+        self.run_listener = True
+        self.st2events_listener = None
 
     def authenticate_bot_credentials(self):
         """
         Create a session and associate valid StackStorm credentials with it for the bot to use.
         """
-        # Wrap err-stackstorm credentials to distinguish it from chat backend credentials.
-        self.internal_identity = BotPluginIdentity()
 
         # Create a session for internal use by err-stackstorm
         try:
@@ -95,26 +99,39 @@ class St2(BotPlugin):
             LOG.debug("{}".format(e))
             self.authenticate_bot_credentials()
 
-    def st2listener(self):
+    def st2listener(self, start=False, stop=False):
         """
         Start a new thread to listen to StackStorm's stream events.
         """
-        # Run the stream listener loop in a separate thread.
-        st2events_listener = threading.Thread(
-            target=self.st2api.st2stream_listener,
-            args=[self.chatbackend.post_message, self.internal_identity]
-        )
-        st2events_listener.setDaemon(True)
-        st2events_listener.start()
+        if start:
+            self.run_listener = True
+            self.st2events_listener.start()
+            LOG.debug("st2stream listener thread starting.")
+        if stop:
+            self.run_listener = False
+            LOG.debug("st2stream listener thread stopping.")
 
     def activate(self):
         """
         Activate Errbot's poller to periodically validate st2 credentials.
         """
         super(St2, self).activate()
-        LOG.info("Poller activated")
+        LOG.info("Activate St2 plugin")
         self.start_poller(self.cfg.timer_update, self.validate_bot_credentials)
-        self.st2listener()
+        self.st2events_listener = threading.Thread(
+            target=self.st2api.st2stream_listener,
+            name="st2stream_listener",
+            args=[self.chatbackend.post_message, self.internal_identity]
+        )
+        self.st2listener(start=True)
+
+    def deactivate(self):
+        super(St2, self).deactivate()
+        self.st2listener(stop=True)
+        LOG.info("st2stream listener wait for thread to exit.")
+        self.st2events_listener.join()
+        LOG.info("st2stream listener exited.")
+        del self.st2events_listener
 
     @botcmd(admin_only=True)
     def st2sessionlist(self, msg, args):

@@ -149,7 +149,7 @@ class StackStormAPI(object):
         """
         Listen for events passing through the stackstorm bus
         """
-        LOG.info("*** Starting stream listener ***")
+        LOG.info("*** Start stream listener ***")
 
         def listener(callback=None, bot_identity=None):
 
@@ -162,7 +162,7 @@ class StackStormAPI(object):
                         "[STREAM] Failed to get a valid token for the bot."
                         "Reconnecting to stream api."
                     )
-                    return
+                    raise ValueError("Bot token is not valid for Stream API.")
 
             stream_kwargs = {
                 "headers": token.requests(),
@@ -170,30 +170,31 @@ class StackStormAPI(object):
             }
 
             stream_url = "".join([self.cfg.stream_url, "/stream"])
-            try:
-                stream = sseclient.SSEClient(stream_url, **stream_kwargs)
-                for event in stream:
-                    if event.event in ["st2.announcement__errbot"]:
-                        LOG.debug(
-                            "*** Errbot announcement event detected! ***\n{}\n{}\n".format(
-                                event.dump(),
-                                stream
-                            )
+
+            stream = sseclient.SSEClient(stream_url, **stream_kwargs)
+            for event in stream:
+                if event.event in ["st2.announcement__errbot"]:
+                    LOG.debug(
+                        "*** Errbot announcement event detected! ***\n{}\n{}\n".format(
+                            event.dump(),
+                            stream
                         )
-                        data = json.loads(event.data)
-                        p = data["payload"]
-                        callback(
-                            p.get('whisper'),
-                            p.get('message'),
-                            p.get('user'),
-                            p.get('channel'),
-                            p.get('extra')
-                        )
-            except Exception as e:
-                raise e
+                    )
+                    data = json.loads(event.data)
+                    p = data["payload"]
+                    callback(
+                        p.get('whisper'),
+                        p.get('message'),
+                        p.get('user'),
+                        p.get('channel'),
+                        p.get('extra')
+                    )
+                # Test for shutdown after event to avoid losing messages.
+                if self.accessctl.bot.run_listener is False:
+                    break
 
         StackStormAPI.stream_backoff = 10
-        while True:
+        while self.accessctl.bot.run_listener:
             try:
                 self.refresh_bot_credentials()
                 listener(callback, bot_identity)
@@ -203,5 +204,5 @@ class StackStormAPI(object):
                     "Backing off {} seconds.".format(type(err), err, StackStormAPI.stream_backoff)
                 )
                 traceback.print_exc()
-
-            time.sleep(StackStormAPI.stream_backoff)
+                time.sleep(StackStormAPI.stream_backoff)
+        LOG.info("*** Exit stream listener ***")
