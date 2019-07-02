@@ -38,7 +38,7 @@ class StackStormAPI(object):
             urllib3.disable_warnings()
 
     def refresh_bot_credentials(self):
-        LOG.warn("Bot credentials re-authentication required.")
+        LOG.warning("Bot credentials re-authentication required.")
         self.accessctl.bot.authenticate_bot_credentials()
 
     def actionalias_help(self, pack=None, filter=None, limit=None, offset=None, st2_creds=None):

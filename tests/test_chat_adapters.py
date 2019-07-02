@@ -1,16 +1,7 @@
 # coding:utf-8
-import time
-
-import pytest
 from mock import Mock
-
-from lib.session import Session
-from lib.session_manager import SessionManager
-from lib.credentials_adapters import CredentialsFactory
-from lib.store_adapters import ClearTextStoreAdapter, StoreAdapterFactory
-from lib.errors import SessionExpiredError, SessionInvalidError, SessionConsumedError, \
-    SessionExistsError
-
+from lib.chat_adapters import ChatAdapterFactory, GenericChatAdapter, XMPPChatAdapter, \
+    MattermostChatAdapter, SlackChatAdapter
 
 pytest_plugins = ["errbot.backends.test"]
 extra_plugin_dir = '.'
@@ -20,13 +11,17 @@ def test_chat_adapters():
     """
     Chat Adapters
     """
-# chat_adapters
-# slack
-# xmpp
-# mattermost
-# rocketchat
-# gitter
-# discord
+    slack = ChatAdapterFactory.instance("slack")(Mock())
+    assert isinstance(slack, SlackChatAdapter)
+
+    mattermost = ChatAdapterFactory.instance("mattermost")(Mock())
+    assert isinstance(mattermost, MattermostChatAdapter)
+
+    xmpp = ChatAdapterFactory.instance("xmpp")(Mock())
+    assert isinstance(xmpp, XMPPChatAdapter)
+
+    generic = ChatAdapterFactory.instance("generic")(Mock())
+    assert isinstance(generic, GenericChatAdapter)
 
 
 if __name__ == "__main__":

@@ -149,7 +149,7 @@ class St2(BotPlugin):
             self.accessctl.delete_session(args)
 
     @botcmd
-    def st2disconnect(self, msg):
+    def st2disconnect(self, msg, args):
         """
         Usage: st2disconnect
         Closes the session.  StackStorm credentials are purged when the session is closed.
