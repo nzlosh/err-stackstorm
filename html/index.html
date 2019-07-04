@@ -1,10 +1,12 @@
 <html>
 <head>
+    <meta charset="UTF-8">
     <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.3.3/semantic.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.3.3/semantic.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-serialize-object/2.5.0/jquery.serialize-object.min.js"></script>
     <script>
-        console.log("err-stackstorm v2.0")
+        console.log("err-stackstorm v2.1.1")
         function get_uuid_from_querystring(){
             uuid = undefined;
             params = window.location.href.split("?");
@@ -53,6 +55,17 @@
                         uuid: uuid
                     },
                     serializeForm: true,
+                    beforeXHR: function(xhr) {
+                        xhr.setRequestHeader("Content-Type", "appication/json");
+                    },
+                    beforeSend: function(settings) {
+                        settings.data = JSON.stringify({
+                            "shared_word": $("#login input[name=shared_word]").val(),
+                            "username": $("#login input[name=username]").val(),
+                            "password": $("#login input[name=password]").val()
+                        });
+                        return settings;
+                    },
                     successTest: function(response){
                         return response.authenticated
                     },
@@ -78,6 +91,16 @@
                         uuid: uuid
                     },
                     serializeForm: true,
+                    beforeXHR: function(xhr) {
+                        xhr.setRequestHeader("Content-Type", "appication/json");
+                    },
+                    beforeSend: function(settings) {
+                        settings.data = JSON.stringify({
+                            "shared_word": $("#login input[name=shared_word]").val(),
+                            "username": $("#login input[name=user_token]").val(),
+                        });
+                        return settings;
+                    },
                     successTest: function(response){
                         return response.authenticated
                     },
@@ -103,6 +126,16 @@
                         uuid: uuid
                     },
                     serializeForm: true,
+                    beforeXHR: function(xhr) {
+                        xhr.setRequestHeader("Content-Type", "appication/json");
+                    },
+                    beforeSend: function(settings) {
+                        settings.data = JSON.stringify({
+                            "shared_word": $("#login input[name=shared_word]").val(),
+                            "username": $("#login input[name=api_key]").val(),
+                        });
+                        return settings;
+                    },
                     successTest: function(response){
                         return response.authenticated
                     },
