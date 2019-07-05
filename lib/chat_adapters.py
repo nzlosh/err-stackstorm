@@ -30,11 +30,21 @@ class ChatAdapterFactory(AbstractChatAdapterFactory):
             "slack": ChatAdapterFactory.slack_adapter,
             "mattermost": ChatAdapterFactory.mattermost_adapter,
             "xmpp": ChatAdapterFactory.xmpp_adapter,
+            "irc": ChatAdapterFactory.irc_adapter,
+            "discord": ChatAdapterFactory.discord_adapter
         }.get(chat_backend, ChatAdapterFactory.generic_adapter)
+
+    @staticmethod
+    def discord_adapter(bot_plugin):
+        return DiscordAdapter(bot_plugin)
 
     @staticmethod
     def slack_adapter(bot_plugin):
         return SlackChatAdapter(bot_plugin)
+
+    @staticmethod
+    def irc_adapter(bot_plugin):
+        return IRCChatAdapter(bot_plugin)
 
     @staticmethod
     def mattermost_adapter(bot_plugin):
@@ -97,12 +107,15 @@ class GenericChatAdapter(AbstractChatAdapter):
         """
         Post messages to the chat backend.
         """
-        LOG.debug("Posting Message: whisper={}, message={}, user={}, channel={}, extra={}".format(
-            whisper,
-            message,
-            user,
-            channel,
-            extra)
+        LOG.debug(
+            "GenericChatAdapter posting message: whisper={},"
+            " message={}, user={}, channel={}, extra={}".format(
+                whisper,
+                message,
+                user,
+                channel,
+                extra
+            )
         )
         user_id = None
         channel_id = None
@@ -110,6 +123,7 @@ class GenericChatAdapter(AbstractChatAdapter):
         if user is not None:
             try:
                 user_id = self.botplugin.build_identifier(user)
+                LOG.debug("UserID: {}".format(user_id))
             except ValueError as err:
                 LOG.warning("Invalid user identifier '{}'.  {}".format(channel, err))
 
@@ -136,12 +150,20 @@ class GenericChatAdapter(AbstractChatAdapter):
             self.botplugin.send(target_id, message)
 
     def normalise_user_id(self, user):
-        return "GENERIC NORMALISE {}".format([
+        return "Generic normalise {}".format([
             user.aclattr,
             user.client,
             user.fullname,
             user.nick,
             user.person])
+
+
+class DiscordAdapter(GenericChatAdapter):
+    def __init__(self, bot_plugin):
+        super().__init__(bot_plugin)
+
+    def normalise_user_id(self, user):
+        return str(user.id)
 
 
 class XMPPChatAdapter(GenericChatAdapter):
@@ -155,10 +177,10 @@ class XMPPChatAdapter(GenericChatAdapter):
 # Inheriting from Generic Chat Adapter until IRC backend specific methods are required.
 class IRCChatAdapter(GenericChatAdapter):
     def __init__(self, bot_plugin):
-        self.botplugin = bot_plugin
+        super().__init__(bot_plugin)
 
     def normalise_user_id(self, user):
-        return "IRC NORMALISE {}".format([
+        return "IRC normalise {}".format([
             user.aclattr,
             user.client,
             user.fullname,
@@ -190,7 +212,7 @@ class MattermostChatAdapter(GenericChatAdapter):
 
 class SlackChatAdapter(AbstractChatAdapter):
     def __init__(self, bot_plugin):
-        self.botplugin = bot_plugin
+        super().__init__(bot_plugin)
 
     def get_username(self, msg):
         """
@@ -209,12 +231,15 @@ class SlackChatAdapter(AbstractChatAdapter):
         """
         Post messages to the chat backend.
         """
-        LOG.debug("Posting Message: whisper={}, message={}, user={}, channel={}, extra={}".format(
-            whisper,
-            message,
-            user,
-            channel,
-            extra)
+        LOG.debug(
+            "Slack posting message: whisper={}, message={},"
+            " user={}, channel={}, extra={}".format(
+                whisper,
+                message,
+                user,
+                channel,
+                extra
+            )
         )
         user_id = None
         channel_id = None

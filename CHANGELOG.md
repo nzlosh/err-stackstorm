@@ -1,9 +1,21 @@
-
 # Changelog
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
+
+## [2.1.0] 2019-07-05
+### Added
+  - Added `deactivate` method to correctly handle errbot reload and stop process.
+  - Added initial files for documentation to be served on readthedocs.
+  - Added missing documentation for nginx configuration when using Client-side authentication.
+  - Added support for IRC and Discord Chat Adapters.
+
+### Changed
+  - Correctly detect when the `extra` attribute is passed to the Slack Chat Adapter.
+  - Send web login form data as JSON to be compatible with errbot >=v6.0.
+
+### Removed
 
 ## [2.1.0-rc2] 2019-05-29
 ### Added
@@ -26,7 +38,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
   - updated makefile to be better adapted to CircleCI's build process.  (Still a work in progress)
-  - numerious documentation updates to improve installation process for new users.
+  - numerous documentation updates to improve installation process for new users.
   - documented errbot's ACL features.
 
 ### Removed
@@ -51,7 +63,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Support for formatting with XMMP backend.
 
 ### Changed
- - Updated err-stacksotorm python module requirements.
+ - Updated err-stackstorm python module requirements.
 
 ### Removed
 

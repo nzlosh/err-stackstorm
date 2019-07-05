@@ -1,5 +1,3 @@
-
-
 # err-stackstorm
 A plugin to run StackStorm actions, bringing StackStorm's ChatOps to Errbot.
 
@@ -346,7 +344,7 @@ ACCESS_CONTROLS = {
 ```
 
 Getting the correct usernames to fill into `allowusers`/`denyusers` isn't obvious.  On a small
-scale it's possibel to use the `!whoami` command to get the correct user account name.  For large
+scale it's possible to use the `!whoami` command to get the correct user account name.  For large
 installation it'd make more sense to use a pre-defined pattern.
 
 Errbot matches `username` against the ACL definition.  This information isn't found easily in the Slack interface.  Use errbot's `!whoami`  command to find the value from the `nick` field which can be used with ACL definitions.
@@ -407,7 +405,7 @@ Edit the `chatops/actions/post_message.yaml` file to use the errbot route as it'
 
 ### Is the virtual environment active?
 
-If Errbot was installed in a python virtual environement and a `command is not found` is reported.
+If Errbot was installed in a python virtual environment and a `command is not found` is reported.
 ```
 errbot --init, the command is not found.
 ```
