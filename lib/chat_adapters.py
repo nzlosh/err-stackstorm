@@ -212,7 +212,7 @@ class MattermostChatAdapter(GenericChatAdapter):
 
 class SlackChatAdapter(AbstractChatAdapter):
     def __init__(self, bot_plugin):
-        super().__init__(bot_plugin)
+        self.bot_plugin = bot_plugin
 
     def get_username(self, msg):
         """
