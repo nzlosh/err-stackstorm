@@ -40,7 +40,7 @@ If you are familiar with Errbot and Stackstorm, this guide will get you up and r
 
    !repos install https://github.com/nzlosh/err-stackstorm.git
 
-4. Install ``ChatOps` pack on Stackstorm and copy `this rule <https://raw.githubusercontent.com/nzlosh/err-stackstorm/master/contrib/stackstorm-chatops/rules/notify_errbot.yaml>`_ to it.
+4. Install ``ChatOps`` pack on Stackstorm and copy `this rule <https://raw.githubusercontent.com/nzlosh/err-stackstorm/master/contrib/stackstorm-chatops/rules/notify_errbot.yaml>`_ to it.
 
 5. Edit the ``chatops/actions/post_message.yaml`` file and replace ``chatops`` with ``errbot``.
 
