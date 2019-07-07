@@ -64,10 +64,10 @@ Errbot provides official support for most major chat back-ends and many more cha
          "Slack", "slack", "Integrated"
          "Text", "text", "Integrated"
          "XMPP", "xmpp", "Integrated"
-         "Mattermost", "mattermost", "Plugin"
-         "Rocket Chat", "aoikrocketchaterrbot", "Plugin"
-         "Gitter", "gitter", "Plugin"
-         "Discord", "discord", "Plugin"
+         "Mattermost", "mattermost", "`Plugin <https://github.com/Vaelor/errbot-mattermost-backend>`_"
+         "Rocket Chat", "aoikrocketchaterrbot", "`Plugin <https://github.com/AoiKuiyuyou/AoikRocketChatErrbot>`_"
+         "Gitter", "gitter", "`Plugin <https://github.com/errbotio/err-backend-gitter>`_"
+         "Discord", "discord", "`Plugin <https://github.com/gbin/err-backend-discord>`_"
 
 Backend support provides a minimum set of operations such as `connect` and `authentication` methods along with ways to `identify` and `send messages` to users/rooms.
 
