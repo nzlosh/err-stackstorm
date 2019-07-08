@@ -4,12 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [2.1.0] 2019-07-05
+## [2.1.0] 2019-07-08
 ### Added
   - Added `deactivate` method to correctly handle errbot reload and stop process.
   - Added initial files for documentation to be served on readthedocs.
   - Added missing documentation for nginx configuration when using Client-side authentication.
   - Added support for IRC and Discord Chat Adapters.
+  - Added source documentation for ReadTheDocs.
 
 ### Changed
   - Correctly detect when the `extra` attribute is passed to the Slack Chat Adapter.
