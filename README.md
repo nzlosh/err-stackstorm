@@ -1,6 +1,7 @@
 # err-stackstorm
 A plugin to run StackStorm actions, bringing StackStorm's ChatOps to Errbot.
 
+[![CircleCI](https://circleci.com/gh/nzlosh/err-stackstorm.svg?style=svg)](https://circleci.com/gh/nzlosh/err-stackstorm)
 [![Documentation Status](https://readthedocs.org/projects/err-stackstorm/badge/?version=latest)](https://err-stackstorm.readthedocs.io/en/latest/?badge=latest)
 
 ## Table of Contents
