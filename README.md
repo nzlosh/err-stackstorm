@@ -1,6 +1,8 @@
 # err-stackstorm
 A plugin to run StackStorm actions, bringing StackStorm's ChatOps to Errbot.
 
+[![Documentation Status](https://readthedocs.org/projects/err-stackstorm/badge/?version=latest)](https://err-stackstorm.readthedocs.io/en/latest/?badge=latest)
+
 ## Table of Contents
 1. [Help](#Help)
 1. [Installation](#Installation)
