@@ -36,7 +36,7 @@ class ChatAdapterFactory(AbstractChatAdapterFactory):
 
     @staticmethod
     def discord_adapter(bot_plugin):
-        return DiscordAdapter(bot_plugin)
+        return DiscordChatAdapter(bot_plugin)
 
     @staticmethod
     def slack_adapter(bot_plugin):
@@ -158,9 +158,53 @@ class GenericChatAdapter(AbstractChatAdapter):
             user.person])
 
 
-class DiscordAdapter(GenericChatAdapter):
+class DiscordChatAdapter(GenericChatAdapter):
     def __init__(self, bot_plugin):
         super().__init__(bot_plugin)
+
+    def post_message(self, whisper, message, user, channel, extra):
+        """
+        Post messages to the chat backend.
+        """
+        LOG.debug(
+            "GenericChatAdapter posting message: whisper={},"
+            " message={}, user={}, channel={}, extra={}".format(
+                whisper,
+                message,
+                user,
+                channel,
+                extra
+            )
+        )
+        user_id = None
+        channel_id = None
+
+        if user is not None:
+            try:
+                user_id = self.botplugin.build_identifier(user)
+            except ValueError as err:
+                LOG.warning("Invalid user identifier '{}'.  {}".format(channel, err))
+
+        if channel is not None:
+            try:
+                channel_id = self.botplugin.build_identifier(channel)
+            except ValueError as err:
+                LOG.warning("Invalid channel identifier '{}'.  {}".format(channel, err))
+
+        # Only whisper to users, not channels.
+        if whisper and user_id is not None:
+            target_id = user_id
+        else:
+            if channel_id is None:
+                # Fall back to user if no channel is set.
+                target_id = user_id
+            else:
+                target_id = channel_id
+
+        if target_id is None:
+            LOG.error("Unable to post message as there is no user or channel destination.")
+        else:
+            self.botplugin.send(target_id, message)
 
     def normalise_user_id(self, user):
         return str(user.id)
