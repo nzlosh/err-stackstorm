@@ -1,19 +1,23 @@
 #!/bin/sh
-export ERRBOT=errbot
+export ERRBOT_ROOT=/opt/errbot
+export ERRBOT_USER=errbot
 
 function setup_account
 {
     echo -e "\e[93mUser/Group\e[0m"
-    mkdir -p /opt/errbot
-    addgroup -S $ERRBOT_USER
-    adduser -S -g $ERRBOT -h /opt/errbot -s /bin/false $ERRBOT_USER
-    chown -R $ERRBOT:$ERRBOT /opt/errbot
+    mkdir -p ${ERRBOT_ROOT}
+    addgroup ${ERRBOT_USER}
+    addgroup ${ERRBOT_USER} ${ERRBOT_USER}
+    adduser -S -g ${ERRBOT_USER} -h ${ERRBOT_ROOT} -s /bin/false ${ERRBOT_USER}
+    chown -R ${ERRBOT_USER}:${ERRBOT_USER} ${ERRBOT_ROOT}
+    id ${ERRBOT_USER}
+    ls -ld ${ERRBOT_ROOT}
 }
 
 function install_prod_packages
 {
     echo -e "\e[93mPackage\e[0m"
-    apk add --no-cache py3-virtualenv python3 git openssl
+    apk add --no-cache py3-virtualenv python3 git openssl rsync
 }
 
 function install_build_packages
@@ -39,8 +43,8 @@ function install_openssh
 function setup_virtual_env
 {
     echo -e "\e[93mVirtual Environment\e[0m"
-    virtualenv -p python3 /opt/errbot
-    source /opt/errbot/bin/activate
+    virtualenv -p python3 ${ERRBOT_ROOT}
+    source ${ERRBOT_ROOT}/bin/activate
 }
 
 function install_plugin
@@ -48,12 +52,11 @@ function install_plugin
     GIT_URL="$(echo ${1} | cut -d@ -f1)"
     GIT_BRANCH="$(echo ${1} | cut -d@ -f2)"
     PLUGIN_DIR="$(basename ${GIT_URL} | cut -d. -f1)"
-    cd /opt/errbot/plugins
+    cd ${ERRBOT_ROOT}/plugins
     git clone $GIT_URL
     cd $PLUGIN_DIR
     git checkout $GIT_BRANCH
     pip install -r requirements.txt
-    pip install .
 }
 
 function install_backend
@@ -61,136 +64,46 @@ function install_backend
     GIT_URL="$(echo ${1} | cut -d@ -f1)"
     GIT_BRANCH="$(echo ${1} | cut -d@ -f2)"
     BACKEND_DIR="$(basename ${GIT_URL} | cut -d. -f1)"
-    cd /opt/errbot/backends
+    cd ${ERRBOT_ROOT}/backends
     git clone $GIT_URL
     cd $BACKEND_DIR
     git checkout $GIT_BRANCH
     pip install -r requirements.txt
-    pip install .
-    pip install trio
-    pip install trio-websocket
 }
 
 function initialise_errbot
 {
     echo -e "\e[93mErrbot initialisation\e[0m"
-    cd /opt/errbot
+    cd ${ERRBOT_ROOT}
     errbot --init
-    cat <<xxEOFxx >/opt/errbot/config.py
-import logging
-BACKEND = 'Mattermost'
-BOT_DATA_DIR = r'/opt/errbot/data'
-BOT_EXTRA_PLUGIN_DIR = r'/opt/errbot/plugins'
-BOT_EXTRA_BACKEND_DIR = '/opt/errbot/backends'
-BOT_PREFIX = '.'
-
-# Gitter
-GITTER = {
-    'token' : '54537fa855b9a7bbbbbbbbbc568ea7c069d8c34d'
-}
-
-# Mattermost
-MATTERMOST = {
-    # Required
-    'team': 'everyone',
-    'server': '172.17.0.1',
-    # For the login, either
-    'login': 'prime',
-    'password': 'autobots',
-    # Or, if you have a personal access token
-    #'token': 'YourPersonalAccessToken',
-    # Optional
-    'insecure': False, # Default = False. Set to true for self signed certificates
-    'scheme': 'http', # Default = https
-    'port': 8065, # Default = 8065
-    'timeout': 30, # Default = 30. If the webserver disconnects idle connections later/earlier change this value
-    'cards_hook': 'incomingWebhookId' # Needed for cards/attachments
-}
-BOT_IDENTITY=MATTERMOST
-
-# Rocket.Chat
-ROCKETCHAT = {
-    "server_uri": "",
-    "login_username": "",
-    "login_password": ""
-}
-
-# Err-StackStorm
-STACKSTORM = {
-    'auth_url': 'https://192.168.7.113/auth/v1',
-    'api_url': 'https://192.168.7.113/api/v1',
-    'stream_url': 'https://192.168.7.113/stream/v1',
-
-    'verify_cert': False,
-    'secrets_store': 'cleartext',
-    'api_auth': {
-        'user': {
-            'name': 'st2admin',
-            'password': "winter",
-        },
-    },
-    'rbac_auth': {
-        'standalone': {}
-    },
-    'timer_update': 900, #  Unit: second.  Interval for Errbot to refresh to list of available action aliases.
-}
-
-BOT_LOG_FILE = r'/opt/errbot/errbot.log'
-BOT_LOG_LEVEL = logging.DEBUG
-
-BOT_ADMINS = ('prime', )
-
-class ROCKETCHAT_CONFIG(object):
-    """
-    Config object for AoikRocketChatErrbot.
-    Config values can be overridden by env variables. Config key `SERVER_URI`
-    maps to env variable name `AOIKROCKETCHATERRBOT_SERVER_URI`. Use string
-    '0', 'false' or 'no' to mean boolean false in env variable value.
-    """
-    SERVER_URI = 'ws://172.17.0.1:3000/websocket'
-    LOGIN_USERNAME = 'prime'
-    LOGIN_PASSWORD = 'autobots'
-    PATCH_METEOR_CLIENT = True
-    RECONNECT_ENABLED = True
-
-    HEARTBEAT_ENABLED = False
-    HEARTBEAT_INTERVAL = 10
-    @classmethod
-    def _heartbeat_func(cls, backend):
-        """
-        Heartbeat function.
-        :param backend: Backend object.
-        :return: None.
-        """
-        msg = 'Heartbeat: {}'.format(datetime.now().strftime('%H:%M:%S'))
-        backend.send_rocketchat_message(
-            params={
-                'rid': 'GENERAL',
-                'msg': msg,
-            }
-        )
-    HEARTBEAT_FUNC = _heartbeat_func
-BOT_LOG_LEVEL = logging.DEBUG
-xxEOFxx
+    rm -rf /opt/errbot/plugins/err-example
 }
 
 function install_errbot
 {
     echo -e "\e[93mErrbot plugins installation\e[0m"
     pip3 install --upgrade pip setuptools
-    pip3 install errbot
+    # Use slackclient 1.3.1 until support for slack 2.0 has been added to slack backend.
+    pip3 install errbot slackclient==1.3.1 sleekxmpp IRC
     initialise_errbot
-    mkdir -p /opt/errbot/plugins/
-    mkdir -p /opt/errbot/backends/
+    for dirname in plugins backends log
+    do
+        mkdir -p ${ERRBOT_ROOT}/${dirname}
+    done
     for plugin in 'https://github.com/nzlosh/err-stackstorm.git'
     do
         install_plugin $plugin
     done
 
-    for backend in 'https://github.com/nzlosh/err-backend-rocketchat.git@maint_nzlosh' 'https://github.com/nzlosh/err-backend-gitter.git@maint_nzlosh' 'https://github.com/nzlosh/err-backend-discord.git@maint_nzlosh' 'https://github.com/nzlosh/err-backend-mattermost.git@maint_nzlosh'
+    for backend in 'https://github.com/nzlosh/err-backend-rocketchat.git@maint_nzlosh' 'https://github.com/nzlosh/err-backend-gitter.git@maint_nzlosh' 'https://github.com/nzlosh/err-backend-discord.git@development' 'https://github.com/nzlosh/err-backend-mattermost.git@maint_nzlosh'
     do
         install_backend $backend
     done
+}
+
+function cleanup
+{
+    test -f /root/docker_build_installer && rm /root/docker_build_installer
 }
 
 function stage1_build
@@ -213,4 +126,5 @@ then
     stage1_build
 else
     stage2_build
+    cleanup
 fi
