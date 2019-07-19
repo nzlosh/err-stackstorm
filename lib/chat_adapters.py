@@ -80,7 +80,7 @@ class AbstractChatAdapter(metaclass=abc.ABCMeta):
 
 class GenericChatAdapter(AbstractChatAdapter):
     def __init__(self, bot_plugin):
-        self.botplugin = bot_plugin
+        self.bot_plugin = bot_plugin
 
     def get_username(self, msg):
         """
@@ -96,8 +96,8 @@ class GenericChatAdapter(AbstractChatAdapter):
                 help_text += "[{}]\n".format(help_obj["pack"])
                 pack = help_obj["pack"]
             help_text += "\t{}{} {} - {}\n".format(
-                    self.botplugin.cfg.bot_prefix,
-                    self.botplugin.cfg.plugin_prefix,
+                    self.bot_plugin.cfg.bot_prefix,
+                    self.bot_plugin.cfg.plugin_prefix,
                     help_obj["display"],
                     help_obj["description"],
                 )
@@ -122,7 +122,7 @@ class GenericChatAdapter(AbstractChatAdapter):
 
         if user is not None:
             try:
-                user_id = self.botplugin.build_identifier(user)
+                user_id = self.bot_plugin.build_identifier(user)
                 LOG.debug("UserID: {}".format(user_id))
             except ValueError as err:
                 LOG.warning("Invalid user identifier '{}'.  {}".format(channel, err))
@@ -130,7 +130,7 @@ class GenericChatAdapter(AbstractChatAdapter):
         if channel is not None:
             try:
                 LOG.debug("Channel {}".format(channel))
-                channel_id = self.botplugin.build_identifier(channel)
+                channel_id = self.bot_plugin.build_identifier(channel)
             except ValueError as err:
                 LOG.warning("Invalid channel identifier '{}'.  {}".format(channel, err))
 
@@ -147,7 +147,7 @@ class GenericChatAdapter(AbstractChatAdapter):
         if target_id is None:
             LOG.error("Unable to post message as there is no user or channel destination.")
         else:
-            self.botplugin.send(target_id, message)
+            self.bot_plugin.send(target_id, message)
 
     def normalise_user_id(self, user):
         return "Generic normalise {}".format([
@@ -181,13 +181,13 @@ class DiscordChatAdapter(GenericChatAdapter):
 
         if user is not None:
             try:
-                user_id = self.botplugin.build_identifier(user)
+                user_id = self.bot_plugin.build_identifier(user)
             except ValueError as err:
                 LOG.warning("Invalid user identifier '{}'.  {}".format(channel, err))
 
         if channel is not None:
             try:
-                channel_id = self.botplugin.build_identifier(channel)
+                channel_id = self.bot_plugin.build_identifier(channel)
             except ValueError as err:
                 LOG.warning("Invalid channel identifier '{}'.  {}".format(channel, err))
 
@@ -204,7 +204,7 @@ class DiscordChatAdapter(GenericChatAdapter):
         if target_id is None:
             LOG.error("Unable to post message as there is no user or channel destination.")
         else:
-            self.botplugin.send(target_id, message)
+            self.bot_plugin.send(target_id, message)
 
     def normalise_user_id(self, user):
         return str(user.id)
@@ -212,7 +212,7 @@ class DiscordChatAdapter(GenericChatAdapter):
 
 class XMPPChatAdapter(GenericChatAdapter):
     def __init__(self, bot_plugin):
-        self.botplugin = bot_plugin
+        self.bot_plugin = bot_plugin
 
     def normalise_user_id(self, user):
         return "{}@{}/{}".format(user.nick, user.domain, user.resource)
@@ -264,7 +264,7 @@ class SlackChatAdapter(AbstractChatAdapter):
         Slack identity tuple (username, userid, channelname, channelid)
         """
         username, user_id, channel_name, channel_id = \
-            self.botplugin._bot.extract_identifiers_from_string(str(msg.frm))
+            self.bot_plugin._bot.extract_identifiers_from_string(str(msg.frm))
         if username is None:
             name = "#{}".format(channel_name)
         else:
@@ -290,13 +290,13 @@ class SlackChatAdapter(AbstractChatAdapter):
 
         if user is not None:
             try:
-                user_id = self.botplugin.build_identifier(user)
+                user_id = self.bot_plugin.build_identifier(user)
             except ValueError as err:
                 LOG.warning("Invalid user identifier '{}'.  {}".format(channel, err))
 
         if channel is not None:
             try:
-                channel_id = self.botplugin.build_identifier(channel)
+                channel_id = self.bot_plugin.build_identifier(channel)
             except ValueError as err:
                 LOG.warning("Invalid channel identifier '{}'.  {}".format(channel, err))
 
@@ -314,10 +314,10 @@ class SlackChatAdapter(AbstractChatAdapter):
             LOG.error("Unable to post message as there is no user or channel destination.")
         else:
             if extra is None or extra == {}:
-                self.botplugin.send(target_id, message)
+                self.bot_plugin.send(target_id, message)
             else:
-                LOG.debug("Send card using backend {}".format(self.botplugin.mode))
-                backend = extra.get(self.botplugin.mode, {})
+                LOG.debug("Send card using backend {}".format(self.bot_plugin.mode))
+                backend = extra.get(self.bot_plugin.mode, {})
                 LOG.debug("fields {}".format(
                     tuple([
                         (field.get("title"), field.get("value"))
@@ -340,10 +340,10 @@ class SlackChatAdapter(AbstractChatAdapter):
                             ])
                     }
                     LOG.debug("Type: {}, Args: {}".format(type(kwargs), kwargs))
-                    self.botplugin.send_card(**kwargs)
+                    self.bot_plugin.send_card(**kwargs)
                 else:
                     LOG.warning("{} not found.".format(self.mode))
-                    self.botplugin.send(target_id, message)
+                    self.bot_plugin.send(target_id, message)
 
     def format_help(self, help_strings):
         help_text = ""
@@ -353,8 +353,8 @@ class SlackChatAdapter(AbstractChatAdapter):
                 help_text += "\n**{}**\n".format(help_obj["pack"])
                 pack = help_obj["pack"]
             help_text += "\t{}{} {} - _{}_\n".format(
-                    self.botplugin.cfg.bot_prefix,
-                    self.botplugin.cfg.plugin_prefix,
+                    self.bot_plugin.cfg.bot_prefix,
+                    self.bot_plugin.cfg.plugin_prefix,
                     help_obj["display"],
                     help_obj["description"],
                 )
