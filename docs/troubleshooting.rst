@@ -209,7 +209,9 @@ Are events being sent via the StackStorm Stream?
 
 From the errbot host connect to the StackStorm stream endpoint and watch for events emitted as actions are executed by StackStorm::
 
-    curl -s -v -H 'Accept: text/event-stream' -H 'X-Auth-Token: 10342978da134ae5bbb7dc94d2ba9c08' http://<stackstorm_host>/stream/v1
+    curl -s -v -H 'Accept: text/event-stream' -H 'X-Auth-Token: 10342978da134ae5bbb7dc94d2ba9c08' http://<stackstorm_host>/stream/v1/stream
+
+The correct URL will depend on your StackStorm installation, the URL must corresponds to https://api.stackstorm.com/stream/v1/stream/
 
 
 Are the events seen in the errbot logs using errbot as their route?
@@ -244,9 +246,4 @@ st2chatops is not running
 --------------------------
 
 This is okay, ``err-stackstorm`` **replaces** ``st2chatops``.
-
-
-
-
-
 
