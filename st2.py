@@ -3,22 +3,40 @@ import json
 import logging
 import threading
 from types import SimpleNamespace
-from errbot import BotPlugin, re_botcmd, botcmd, arg_botcmd, webhook
+
+from errbot import (
+    BotPlugin,
+    Command,
+    re_botcmd,
+    botcmd,
+    arg_botcmd,
+    webhook
+)
+
 from lib.config import PluginConfiguration
 from lib.chat_adapters import ChatAdapterFactory
-from lib.errors import SessionConsumedError, SessionExpiredError, \
-    SessionInvalidError, SessionExistsError
+from lib.errors import (
+    SessionConsumedError,
+    SessionExpiredError,
+    SessionInvalidError,
+    SessionExistsError
+)
 from lib.stackstorm_api import StackStormAPI
-from lib.authentication_controller import AuthenticationController, BotPluginIdentity
-from lib.credentials_adapters import St2ApiKey, St2UserToken, St2UserCredentials
-from lib.authentication_handler import AuthHandlerFactory, ClientSideAuthHandler
+from lib.authentication_controller import (
+    AuthenticationController,
+    BotPluginIdentity
+)
+from lib.credentials_adapters import (
+    St2ApiKey,
+    St2UserToken,
+    St2UserCredentials
+)
+from lib.authentication_handler import (
+    AuthHandlerFactory,
+    ClientSideAuthHandler
+)
 
 LOG = logging.getLogger("errbot.plugin.st2")
-
-# TODO: FIXME: Set the PLUGIN_PREFIX based on configuration from errbot config.py.
-# A plugin prefix for stackstorm action aliases to avoid name collisions between
-# them and native errbot plugins.  Defined here so it's available to errbot's facade decorator.
-PLUGIN_PREFIX = r"st2"
 
 
 class St2(BotPlugin):
@@ -32,7 +50,7 @@ class St2(BotPlugin):
         # Initialised shared configuraiton with the bot's stackstorm settings.
         try:
             self.cfg = PluginConfiguration()
-            self.cfg.setup(self.bot_config, PLUGIN_PREFIX)
+            self.cfg.setup(self.bot_config)
         except Exception as e:
             LOG.critical(
                 "Errors were encountered processing the STACKSTORM configuration."
@@ -54,6 +72,8 @@ class St2(BotPlugin):
 
         self.run_listener = True
         self.st2events_listener = None
+
+        self.dynamic_commands()
 
     def authenticate_bot_credentials(self):
         """
@@ -133,14 +153,12 @@ class St2(BotPlugin):
         LOG.info("st2stream listener exited.")
         del self.st2events_listener
 
-    @botcmd(admin_only=True)
     def st2sessionlist(self, msg, args):
         """
         List any established sessions between the chat service and StackStorm API.
         """
         return "Sessions: " + "\n\n".join(self.accessctl.list_sessions())
 
-    @botcmd(admin_only=True)
     def st2sessiondelete(self, msg, args):
         """
         Delete an established session.
@@ -148,7 +166,6 @@ class St2(BotPlugin):
         if len(args) > 0:
             self.accessctl.delete_session(args)
 
-    @botcmd
     def st2disconnect(self, msg, args):
         """
         Usage: st2disconnect
@@ -156,7 +173,6 @@ class St2(BotPlugin):
         """
         return "Not implemented yet."
 
-    @botcmd
     def st2authenticate(self, msg, args):
         """
         Usage: st2authenticate <secret>
@@ -188,7 +204,6 @@ class St2(BotPlugin):
             self.accessctl.session_url(session.id(), "/index.html")
         )
 
-    @re_botcmd(pattern='^{} .*'.format(PLUGIN_PREFIX))
     def st2_execute_actionalias(self, msg, match):
         """
         Run an arbitrary stackstorm command.
@@ -256,16 +271,12 @@ class St2(BotPlugin):
                                 ]
                             )
             else:
-                result = "st2 command '{}' is disabled.".format(msg.body)
+                result = "The command '{}' is disabled.".format(msg.body)
         else:
             result = matched_result.message
         return result
 
-    @arg_botcmd("--pack", dest="pack", type=str)
-    @arg_botcmd("--filter", dest="filter", type=str)
-    @arg_botcmd("--limit", dest="limit", type=int)
-    @arg_botcmd("--offset", dest="offset", type=int)
-    def st2help(self, msg, pack=None, filter=None, limit=None, offset=None):
+    def st2help(self, msg, args, pack=None, filter=None, limit=None, offset=None):
         """
         Provide help for StackStorm action aliases.
         """
@@ -378,3 +389,84 @@ class St2(BotPlugin):
             LOG.warning(r.message)
 
         return json.dumps(vars(r))
+
+    def dynamic_commands(self):
+        """
+        Register commands.
+        """
+
+        def st2help(plugin, msg, pack=None, filter=None, limit=None, offset=None):
+            return self.st2help(msg, pack, filter, limit, offset)
+
+        def append_args(func, args, kwargs):
+            wrapper = func.definition
+            wrapper._err_command_parser.add_argument(*args, **kwargs)
+            wrapper.__doc__ = wrapper._err_command_parser.format_help()
+            fmt = wrapper._err_command_parser.format_usage()
+            wrapper._err_command_syntax = fmt[
+                len('usage: ') + len(wrapper._err_command_parser.prog) + 1:-1
+            ]
+
+        Help_Command = Command(
+            st2help,
+            name="{}help".format(self.cfg.plugin_prefix),
+            cmd_type=arg_botcmd,
+            cmd_args=("--pack",),
+            cmd_kwargs={"dest": "pack", "type": str},
+            doc="Provide help for StackStorm action aliases."
+        )
+        append_args(Help_Command, ("--filter",), {"dest": "filter", "type": str})
+        append_args(Help_Command, ("--limit",), {"dest": "limit", "type": int})
+        append_args(Help_Command, ("--offset",), {"dest": "offset", "type": int})
+
+        self.create_dynamic_plugin(
+            name="St2",
+            doc="StackStorm plugin for authentication and Action Alias execution."
+                "  Use {}{}help for action alias"
+                " help.".format(self.cfg.bot_prefix, self.cfg.plugin_prefix),
+            commands=(
+                Command(
+                    lambda plugin, msg, args: self.st2sessionlist(msg, args),
+                    name="{}session_list".format(self.cfg.plugin_prefix),
+                    cmd_type=botcmd,
+                    cmd_kwargs={"admin_only": True},
+                    doc="List any established sessions between the chat service and StackStorm API."
+                ),
+                Command(
+                    lambda plugin, msg, args: self.st2sessiondelete(msg, args),
+                    name="{}session_cancel".format(self.cfg.plugin_prefix),
+                    cmd_type=botcmd,
+                    cmd_kwargs={"admin_only": True},
+                    doc="Allow an administrator to cancel a users session."
+                ),
+                Command(
+                    lambda plugin, msg, args: self.st2disconnect(msg, args),
+                    name="{}session_end".format(self.cfg.plugin_prefix),
+                    cmd_type=botcmd,
+                    cmd_kwargs={"admin_only": False},
+                    doc="End a user session.  StackStorm credentials are "
+                        "purged when the session is closed."
+                ),
+                Command(
+                    lambda plugin, msg, args: self.st2authenticate(msg, args),
+                    name="{}session_start".format(self.cfg.plugin_prefix),
+                    cmd_type=botcmd,
+                    cmd_kwargs={"admin_only": False},
+                    doc="Usage: {}session_start <shared_secret>.\n"
+                        "Authenticate with StackStorm API over an out of bands communication"
+                        " channel.  User Token or API Key are stored in a user session managed by"
+                        " err-stackstorm.".format(self.cfg.plugin_prefix)
+                ),
+                Command(
+                    lambda plugin, msg, args: self.st2_execute_actionalias(msg, args),
+                    name="{} <action-alias>".format(self.cfg.plugin_prefix),
+                    cmd_type=re_botcmd,
+                    cmd_kwargs={"pattern": "^{} .*".format(self.cfg.plugin_prefix)},
+                    doc="Run an arbitrary StackStorm command (action-alias).\n"
+                        "Available commands can be listed using {}{}help".format(
+                            self.cfg.bot_prefix,
+                            self.cfg.plugin_prefix
+                        )
+                ),
+                Help_Command)
+        )
