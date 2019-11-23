@@ -74,14 +74,19 @@ class St2(BotPlugin):
         self.run_listener = True
         self.st2events_listener = None
         self.check_latest_version()
-
+        self.dynamic_commands()
 
     def check_latest_version(self):
         url = "https://raw.githubusercontent.com/nzlosh/err-stackstorm/master/version.json"
         response = requests.get(url)
-        print(response)
-
-        self.dynamic_commands()
+        if response.status_code == 200:
+            latest = response.json.get("version")
+            with open("version.json", "r") as f:
+                buf = f.read()
+                local_version = json.loads(buf)
+                current = local_version.get("version")
+                if current != latest:
+                    LOG.info("A newer version of err-stackstorm is available.")
 
     def authenticate_bot_credentials(self):
         """
