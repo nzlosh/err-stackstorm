@@ -40,6 +40,7 @@ class PluginConfiguration(BorgSingleton):
         self.timer_update = bot_conf.STACKSTORM.get("timer_update", 60)
         self.verify_cert = bot_conf.STACKSTORM.get("verify_cert", True)
         self.secrets_store = bot_conf.STACKSTORM.get("secrets_store", "cleartext")
+        self.route_key = bot_conf.STACKSTORM.get("route_key", "errbot")
 
         self.client_cert = bot_conf.STACKSTORM.get("client_cert", None)
         self.client_key = bot_conf.STACKSTORM.get("client_key", None)

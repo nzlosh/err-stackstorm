@@ -2,6 +2,7 @@
 import json
 import logging
 import threading
+import requests
 from types import SimpleNamespace
 from errbot import BotPlugin, re_botcmd, botcmd, arg_botcmd, webhook
 from lib.config import PluginConfiguration
@@ -54,6 +55,13 @@ class St2(BotPlugin):
 
         self.run_listener = True
         self.st2events_listener = None
+        self.check_latest_version()
+
+
+    def check_latest_version(self):
+        url = "https://raw.githubusercontent.com/nzlosh/err-stackstorm/master/version.json"
+        response = requests.get(url)
+        print(response)
 
     def authenticate_bot_credentials(self):
         """
