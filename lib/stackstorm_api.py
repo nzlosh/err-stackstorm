@@ -173,7 +173,7 @@ class StackStormAPI(object):
 
             stream = sseclient.SSEClient(stream_url, **stream_kwargs)
             for event in stream:
-                if event.event in ["st2.announcement__errbot", "st2.announcement__chatops"]:
+                if event.event == "st2.announcement__{}".format(self.cfg.route_key):
                     LOG.debug(
                         "*** Errbot announcement event detected! ***\n{}\n{}\n".format(
                             event.dump(),

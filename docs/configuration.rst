@@ -21,7 +21,8 @@ Here's a sample err-stackstorm configuration:
         'auth_url': 'https://your.stackstorm.com/auth/v1',
         'api_url': 'https://your.stackstorm.com/api/v1',
         'stream_url': 'https://your.stackstorm.com/stream/v1',
-
+        'route_key': 'errbot',
+        'plugin_prefix': 'st2',
         'verify_cert': True,
         'secrets_store': 'cleartext',
         'api_auth': {
@@ -52,6 +53,7 @@ Edit the ``/<st2>/packs/chatops/actions/post_message.yaml`` file and replace `ch
   route:
     default: "errbot"
 
+.. note:: See Route Key below for information on customising the route.
 
 Authentication
 ---------------
@@ -105,6 +107,16 @@ Cleartext
 
 The cleartext store maintains the cache in memory and does not encrypt the contents to disk. It **does not** protect the stored secrets in memory.
 
+Route Key
+---------
+
+StackStorm ChatOps uses `routes` to indicate where a notification should be sent.  By default the StackStorm ChatOps pack uses **chatops** as the route kei to send messages when an action result is posted.  It is possible to run more than one errbot instance per StackStorm instance by configuring different route keys.  Such a feature would allow running one errbot instance that listens on Slack and another that listens on Discord, where both would expose StackStorm's action-aliases.
+
+Plugin Prefix
+-------------
+
+Errbot detects commands using a **bot_plugin** prefix, often ``!`` character.  Errbot functionality is extended through plugins.  Plugins register new commands with Errbot as they are loaded.  Err-stackstorm is a plugin and adds a special command for calling StackStorm Action-Aliases.  To avoid name collisions between *Errbot Commands* and *StackStorm Action-Aliases*, a **plugin_prefix** is used which is ``st2`` by default.  The plugin_prefix can be customised to be any string, but be careful not to use strings that conflict with existing commands.
+
 Locale
 -------
 
@@ -112,7 +124,7 @@ Errbot uses the system's locale for handling text. If you're getting unicode err
 
   UnicodeEncodeError: 'ascii' codec can't encode character '\xe9' in position 83: ordinal not in range(128)
 
-Make sure the systems locale is configured for unicode encoding. In the example below, the machine has set the English (en) New Zealand (NZ) with utf-8 encoding (.UTF8).
+Make sure the systems locale is configured for unicode encoding. In the example below, the machine has been set to English (en) New Zealand (NZ) with utf-8 encoding (.UTF8).
 
 .. code-block:: bash
 
@@ -142,15 +154,17 @@ Reference
     :header: "Option", "Description"
     :widths: 25, 40
 
-    "auth_url", "StackStorm's authentication url end point. Used to authenticate credentials against StackStorm."
-    "api_url", "StackStorm's API url end point. Used to execute action aliases received from the chat back-end."
-    "stream_url", "StackStorm's Stream url end point. Used to received ChatOps notifications."
-    "verify_cert", "Default is *True*. Verify the SSL certificate is valid when using https end points. Applies to all end points."
+    "auth_url", "StackStorm's authentication url end point.  Used to authenticate credentials against StackStorm."
+    "api_url", "StackStorm's API url end point.  Used to execute action aliases received from the chat back-end."
+    "stream_url", "StackStorm's Stream url end point.  Used to received ChatOps notifications."
+    "verify_cert", "Default is *True*.  Verify the SSL certificate is valid when using https end points. Applies to all end points."
+    "route_key", "Default is *errbot*. The name of the route to bot will listen for and submit action-alias executions with."
+    "plugin_prefix", "Default is *st2*. Text used to prefix action-alias commands with to avoid name collisions between StackStorm Action-Aliases and Errbot plugin commands."
     "api_auth.user.name", "Errbot's username to authenticate with StackStorm."
     "api_auth.user.password", "Errbot's password to authenticate with StackStorm."
     "api_auth.token", "Errbot's user token to authenticate with StackStorm. Used instead of a username/password pair."
     "api_auth.apikey", "Errbot API key to authenticate with StackStorm. Used instead of a username/password pair or user token."
-    "timer_update", "Unit: seconds. Default is 60. Interval for err-stackstorm to the user token is valid."
+    "timer_update", "Unit: seconds. Default is 60. Interval to test if err-stackstorm's user token is valid."
     "rbac_auth.standalone", "Standalone authentication."
     "rbac_auth.clientside", "Clientside authentication, a chat user will supply StackStorm credentials to err-stackstorm via an authentication page."
     "rbac_auth.clientside.url", "Url to the authentication web page."

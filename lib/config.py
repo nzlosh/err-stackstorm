@@ -23,7 +23,7 @@ class PluginConfiguration(BorgSingleton):
     def __init__(self):
         super(BorgSingleton, self).__init__()
 
-    def setup(self, bot_conf, plugin_prefix):
+    def setup(self, bot_conf):
         if not hasattr(bot_conf, "STACKSTORM"):
             LOG.critical(
                 "Missing STACKSTORM configuration in config.py.   err-stackstorm must be configured"
@@ -31,7 +31,6 @@ class PluginConfiguration(BorgSingleton):
                 " homepage."
             )
             bot_conf.__setattr__("STACKSTORM", {})
-        self.plugin_prefix = plugin_prefix
         self._configure_prefixes(bot_conf)
         self._configure_credentials(bot_conf)
         self._configure_rbac_auth(bot_conf)
@@ -40,6 +39,7 @@ class PluginConfiguration(BorgSingleton):
         self.timer_update = bot_conf.STACKSTORM.get("timer_update", 60)
         self.verify_cert = bot_conf.STACKSTORM.get("verify_cert", True)
         self.secrets_store = bot_conf.STACKSTORM.get("secrets_store", "cleartext")
+        self.route_key = bot_conf.STACKSTORM.get("route_key", "errbot")
 
         self.client_cert = bot_conf.STACKSTORM.get("client_cert", None)
         self.client_key = bot_conf.STACKSTORM.get("client_key", None)
@@ -61,6 +61,7 @@ class PluginConfiguration(BorgSingleton):
 
     def _configure_prefixes(self, bot_conf):
         self.bot_prefix = bot_conf.BOT_PREFIX
+        self.plugin_prefix = bot_conf.STACKSTORM.get("plugin_prefix", "st2")
         self.full_prefix = "{}{} ".format(bot_conf.BOT_PREFIX, self.plugin_prefix)
 
     def _configure_stackstorm(self, bot_conf):
