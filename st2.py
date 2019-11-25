@@ -38,6 +38,7 @@ from lib.authentication_handler import (
 )
 
 LOG = logging.getLogger("errbot.plugin.st2")
+ERR_STACKSTORM_VERSION = "2.1.2"
 
 
 class St2(BotPlugin):
@@ -73,20 +74,31 @@ class St2(BotPlugin):
 
         self.run_listener = True
         self.st2events_listener = None
-        self.check_latest_version()
         self.dynamic_commands()
+        self.check_latest_version()
 
     def check_latest_version(self):
         url = "https://raw.githubusercontent.com/nzlosh/err-stackstorm/master/version.json"
-        response = requests.get(url)
-        if response.status_code == 200:
-            latest = response.json.get("version")
-            with open("version.json", "r") as f:
-                buf = f.read()
-                local_version = json.loads(buf)
-                current = local_version.get("version")
-                if current != latest:
-                    LOG.info("A newer version of err-stackstorm is available.")
+        response = requests.get(url, timeout=5)
+
+        if response.status_code != 200:
+            LOG.warning(
+                "Unable to fetch err-stackstorm version from {}. HTTP code: {}".format(
+                    url,
+                    response.status_code
+                )
+            )
+            return True
+
+        latest = response.json().get("version")
+        if latest is None:
+            LOG.warning("Failed to read err-stackstorm 'version' from {}.".format(url))
+            return True
+
+        if ERR_STACKSTORM_VERSION != latest:
+            LOG.info("err-stackstorm can be updated to {}.".format(latest))
+        else:
+            LOG.info("err-stackstorm {} is up to date.".format(ERR_STACKSTORM_VERSION))
 
     def authenticate_bot_credentials(self):
         """

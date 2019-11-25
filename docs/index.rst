@@ -8,7 +8,7 @@
 Welcome to err-stackstorm's documentation!
 ==========================================
 
-err-stackstorm is an unofficial community project to bring StackStorm ChatOps to Errbot.
+err-stackstorm is a community project to bring StackStorm ChatOps to Errbot.  No commercial support is provided by StackStorm.
 
 .. toctree::
    :maxdepth: 2

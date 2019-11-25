@@ -18,7 +18,8 @@ If you are familiar with Errbot and Stackstorm, this guide will get you up and r
         'auth_url': 'https://your.stackstorm.com/auth/v1',
         'api_url': 'https://your.stackstorm.com/api/v1',
         'stream_url': 'https://your.stackstorm.com/stream/v1',
-
+        'route_key': 'errbot',
+        'plugin_prefix': 'st2',
         'verify_cert': True,
         'secrets_store': 'cleartext',
         'api_auth': {
@@ -49,3 +50,5 @@ If you are familiar with Errbot and Stackstorm, this guide will get you up and r
 7. Sending ``!st2help`` to your bot will list the available Stackstorms's aliases.
 
 8. Aliases can be run like this: ``!st2 run date on 192.168.5.1``
+
+.. important:: `st2chatops` does not have to be running on your StackStorm instance. This plugin *replaces* `st2chatops`.
