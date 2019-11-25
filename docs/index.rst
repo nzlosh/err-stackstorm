@@ -18,7 +18,8 @@ err-stackstorm is a community project to bring StackStorm ChatOps to Errbot.  No
    quick_start.rst
    installation.rst
    configuration.rst
-   rbac.rst
+   authn.rst
+   authz.rst
    action_aliases.rst
    troubleshooting.rst
    project.rst

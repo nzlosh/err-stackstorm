@@ -110,7 +110,12 @@ The cleartext store maintains the cache in memory and does not encrypt the conte
 Route Key
 ---------
 
-StackStorm ChatOps uses `routes` to indicate where a notification should be sent to.  By default the StackStorm ChatOps pack uses **chatops** for the send message action.
+StackStorm ChatOps uses `routes` to indicate where a notification should be sent.  By default the StackStorm ChatOps pack uses **chatops** as the route kei to send messages when an action result is posted.  It is possible to run more than one errbot instance per StackStorm instance by configuring different route keys.  Such a feature would allow running one errbot instance that listens on Slack and another that listens on Discord, where both would expose StackStorm's action-aliases.
+
+Plugin Prefix
+-------------
+
+Errbot detects commands using a **bot_plugin** prefix, often ``!`` character.  Errbot functionality is extended through plugins.  Plugins register new commands with Errbot as they are loaded.  Err-stackstorm is a plugin and adds a special command for calling StackStorm Action-Aliases.  To avoid name collisions between *Errbot Commands* and *StackStorm Action-Aliases*, a **plugin_prefix** is used which is ``st2`` by default.  The plugin_prefix can be customised to be any string, but be careful not to use strings that conflict with existing commands.
 
 Locale
 -------
