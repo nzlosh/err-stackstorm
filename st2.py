@@ -301,7 +301,7 @@ class St2(BotPlugin):
             result = matched_result.message
         return result
 
-    def st2help(self, msg, args, pack=None, filter=None, limit=None, offset=None):
+    def st2help(self, msg, pack=None, filter=None, limit=None, offset=None):
         """
         Provide help for StackStorm action aliases.
         """
