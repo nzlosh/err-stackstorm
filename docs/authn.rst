@@ -132,6 +132,6 @@ A url is required to correctly configure client-side authentication for ChatOps.
 Authenticating
 ^^^^^^^^^^^^^^^
 
-Once the client side authentication is setup, you should be able to trigger the authentication process with ``!st2session_start my_secret_word`` which will return a url to complete the login processes. This is how the page looks like:
+Once the client side authentication is setup, you should be able to trigger the authentication process with ``!st2authenticate my_secret_word`` which will return a url to complete the login processes. This is how the page looks like:
 
 .. image:: images/authentication_screen.jpg
