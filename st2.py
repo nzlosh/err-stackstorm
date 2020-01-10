@@ -446,8 +446,8 @@ class St2(BotPlugin):
 
         self.create_dynamic_plugin(
             name="St2",
-            doc="err-stackstorm v{} - A StackStorm plugin for authentication and Action Alias execution."
-                "  Use {}{}help for action alias help.".format(
+            doc="err-stackstorm v{} - A StackStorm plugin for authentication and Action Alias "
+                "execution.  Use {}{}help for action alias help.".format(
                     ERR_STACKSTORM_VERSION, self.cfg.bot_prefix, self.cfg.plugin_prefix
                 ),
             commands=(
