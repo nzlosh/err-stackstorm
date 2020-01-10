@@ -38,7 +38,7 @@ from lib.authentication_handler import (
 )
 
 LOG = logging.getLogger("errbot.plugin.st2")
-ERR_STACKSTORM_VERSION = "2.1.2"
+ERR_STACKSTORM_VERSION = "2.1.3"
 
 
 class St2(BotPlugin):
