@@ -35,7 +35,7 @@ class SessionManager(object):
             raise SessionInvalidError
         return session
 
-    def create(self, user_id, user_secret):
+    def create(self, user_id, user_secret, session_ttl):
         """
         param: user_id - Chat user unique identifier.
         param: user_secret - A pseudo-secret word provided by
@@ -44,7 +44,7 @@ class SessionManager(object):
         # Don't create a new session if one already exists.
         if self.exists(user_id):
             raise SessionExistsError
-        session = Session(user_id, user_secret)
+        session = Session(user_id, user_secret, session_ttl)
         # Store the session.
         self.store.put(session)
         return session

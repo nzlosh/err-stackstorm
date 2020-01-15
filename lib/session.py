@@ -18,14 +18,14 @@ def generate_password(length=8):
 
 
 class Session(object):
-    def __init__(self, user_id, user_secret):
+    def __init__(self, user_id, user_secret, session_ttl):
         self.bot_secret = None
         self.user_id = user_id
         self._is_sealed = True
         self.session_id = uuid.uuid4()
         self.create_date = int(dt.now().timestamp())
         self.modified_date = self.create_date
-        self.ttl_in_seconds = 3600
+        self.ttl_in_seconds = session_tt
         self._hashed_secret = self.hash_secret(user_secret)
         del user_secret
 
