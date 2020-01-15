@@ -4,17 +4,11 @@ import logging
 from random import SystemRandom
 
 from lib.session_manager import SessionManager
+from lib.session import generate_password
 from lib.errors import SessionInvalidError
 from errbot.backends.base import Identifier
 
 LOG = logging.getLogger("errbot.plugin.st2.auth_ctrl")
-
-
-def generate_password(length=8):
-    rnd = SystemRandom()
-    if length > 255:
-        length = 255
-    return "".join([rnd.choice(string.hexdigits) for _ in range(length)])
 
 
 class BotPluginIdentity(object):
