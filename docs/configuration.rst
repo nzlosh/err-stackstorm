@@ -164,11 +164,11 @@ Reference
     "api_auth.user.password", "Errbot's password to authenticate with StackStorm."
     "api_auth.token", "Errbot's user token to authenticate with StackStorm. Used instead of a username/password pair."
     "api_auth.apikey", "Errbot API key to authenticate with StackStorm. Used instead of a username/password pair or user token."
-    "timer_update", "Unit: seconds. Default is 60. Interval to test if err-stackstorm's user token is valid."
+    "timer_update", "Unit: seconds. Default: 60.  Interval for err-stackstorm to the user token is valid."
     "rbac_auth.standalone", "Standalone authentication."
     "rbac_auth.clientside", "Clientside authentication, a chat user will supply StackStorm credentials to err-stackstorm via an authentication page."
     "rbac_auth.clientside.url", "Url to the authentication web page."
-    "secrets_store.cleartext", "Use the in memory store."
-
-
+    "session_ttl", "Unit: seconds.  Default: 3600.  The time to live for a authentication session."
+    "user_token_ttl", "Unit: seconds. Default: 86400.  The time to live for a StackStorm user token."
+    "secrets_store.cleartext", "Use the in-memory store."
 

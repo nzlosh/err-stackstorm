@@ -1,7 +1,5 @@
 # coding:utf-8
-import string
 import logging
-from random import SystemRandom
 
 from lib.session_manager import SessionManager
 from lib.session import generate_password
@@ -132,7 +130,7 @@ class AuthenticationController(object):
         Handle an initial request to establish a session.  If a session already exists, return it.
         """
         user_id = self.to_userid(user)
-        return self.sessions.create(user_id, user_secret)
+        return self.sessions.create(user_id, user_secret, self.bot.cfg.session_ttl)
 
     def get_session(self, user):
         """

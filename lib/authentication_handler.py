@@ -109,7 +109,7 @@ class StandaloneAuthHandler(BaseAuthHandler):
             self.cfg.auth_url,
             path="/tokens",
             headers=st2_creds.requests(),
-            payload={"ttl": 86400}
+            payload={"ttl": self.cfg.user_token_ttl}
         )
         if response.status_code in [requests.codes.created]:
             return St2UserToken(response.json().get("token"))
@@ -323,7 +323,7 @@ class ClientSideAuthHandler(BaseAuthHandler):
             self.cfg.auth_url,
             path="/tokens",
             headers=creds.requests(),
-            payload={"ttl": 86400}
+            payload={"ttl": self.user_token_ttl}
         )
         if response.status_code in [requests.codes.created]:
             return St2UserToken(response.json().get("token"))

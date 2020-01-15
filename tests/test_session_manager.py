@@ -22,6 +22,7 @@ def test_session_manager():
     user_id = 'test%user'
     user_secret = 'secret_for_test'
     user_token = '1234567890-0987654321'
+    session_ttl = 5000
 
     session_manager = SessionManager(cfg)
 
@@ -29,7 +30,7 @@ def test_session_manager():
     assert isinstance(session_manager.secure_store, ClearTextStoreAdapter)
 
     # create a new user
-    s = session_manager.create(user_id, user_secret)
+    s = session_manager.create(user_id, user_secret, session_ttl)
     assert s.user_id == user_id
 
     # 1 session in list
@@ -37,7 +38,7 @@ def test_session_manager():
 
     # create same user raise exception
     with pytest.raises(SessionExistsError):
-        session_manager.create(user_id, user_secret)
+        session_manager.create(user_id, user_secret, session_ttl)
 
     # get an existing session
     s1 = session_manager.get_by_uuid(s.id())
