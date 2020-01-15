@@ -26,6 +26,7 @@ class Session(object):
         self.create_date = int(dt.now().timestamp())
         self.modified_date = self.create_date
         self.ttl_in_seconds = session_ttl
+
         self._hashed_secret = self.hash_secret(user_secret)
         del user_secret
 
