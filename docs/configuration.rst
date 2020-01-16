@@ -9,7 +9,7 @@ Configuration
 General
 --------
 
-`err-stackstorm` configuration lives in Errbot's `config.py` file.
+`err-stackstorm` configuration is found in Errbot's `config.py` file.
 
 .. note:: If you followed the Errbot setup documentation this file will have been created by downloading a template. If this file has not already been created, please create it following the `Errbot's instructions <http://errbot.io/en/latest/user_guide/setup.html#id1>`_.
 
@@ -18,25 +18,27 @@ Here's a sample err-stackstorm configuration:
 .. code-block:: python
 
     STACKSTORM = {
-        'auth_url': 'https://your.stackstorm.com/auth/v1',
-        'api_url': 'https://your.stackstorm.com/api/v1',
-        'stream_url': 'https://your.stackstorm.com/stream/v1',
-        'route_key': 'errbot',
-        'plugin_prefix': 'st2',
-        'verify_cert': True,
-        'secrets_store': 'cleartext',
-        'api_auth': {
-            'user': {
-                'name': 'my_username',
-                'password': "my_password",
+        "auth_url": "https://your.stackstorm.com/auth/v1",
+        "api_url": "https://your.stackstorm.com/api/v1",
+        "stream_url": "https://your.stackstorm.com/stream/v1",
+        "route_key": "errbot",
+        "plugin_prefix": "st2",
+        "verify_cert": True,
+        "secrets_store": "cleartext",
+        "session_ttl": 3600,
+        "user_token_ttl": 86400,
+        "api_auth": {
+            "user": {
+                "name": "my_username",
+                "password": "my_password",
             },
-            'token': "<User token>",
-            'apikey': '<API Key>'
+            "token": "<User token>",
+            "apikey": "<API Key>"
         },
-        'rbac_auth': {
-            'standalone': {},
+        "rbac_auth": {
+            "standalone": {},
         },
-        'timer_update': 900, #  Unit: second.  Interval to check the user token is still valid.
+        "timer_update": 900, #  Unit: second.  Interval to check the user token is still valid.
     }
 
 ST2 ChatOps Configuration
@@ -107,15 +109,43 @@ Cleartext
 
 The cleartext store maintains the cache in memory and does not encrypt the contents to disk. It **does not** protect the stored secrets in memory.
 
-Route Key
----------
+Advanced Options
+----------------
 
-StackStorm ChatOps uses `routes` to indicate where a notification should be sent.  By default the StackStorm ChatOps pack uses **chatops** as the route kei to send messages when an action result is posted.  It is possible to run more than one errbot instance per StackStorm instance by configuring different route keys.  Such a feature would allow running one errbot instance that listens on Slack and another that listens on Discord, where both would expose StackStorm's action-aliases.
+Route Key
+^^^^^^^^^
+
+The route key is used by err-stackstorm to inform StackStorm where to send result notifications for action-aliases.  StackStorm sends notification events via the stream interface that are marked with the route key.  Err-stackstorm filters these events using the route key and will handle any events that match its configured route key.
+
+By altering the route key, it is possible to have multiple instances of err-stackstorm that are connected to the same StackStorm instance.  This would allow for configurations where StackStorm is available on multiple chat backends.
+
+Example
+"""""""
+A StackStorm instance has 2 err-stackstorm instances.  The first err-stackstorm instance uses the `errbot-slack` route key while the second instance uses the `errbot-discord` route key.  Both instances have the same plugin prefix and expose the same action-aliases.  This would mean the command `!st2 pack list` could be run on discord and the result notification would be routed to the `errbot-discord` err-stackstorm instance.
+
 
 Plugin Prefix
--------------
+^^^^^^^^^^^^^
 
-Errbot detects commands using a **bot_plugin** prefix, often ``!`` character.  Errbot functionality is extended through plugins.  Plugins register new commands with Errbot as they are loaded.  Err-stackstorm is a plugin and adds a special command for calling StackStorm Action-Aliases.  To avoid name collisions between *Errbot Commands* and *StackStorm Action-Aliases*, a **plugin_prefix** is used which is ``st2`` by default.  The plugin_prefix can be customised to be any string, but be careful not to use strings that conflict with existing commands.
+By default the plugin prefix is set to `st2`.  The plugin prefix serves to prevent action-aliases collisions with errbot's native plugins commands.  It is possible to customise the plugin prefix to use a more appropriate naming scheme for the environment err-stackstorm is running.
+
+Aside from cosmetic value, customising the plugin prefix can allow for multiple err-stackstorm instances to occupy the same chat channel.  This would be achieved by setting a unique plugin-prefix per instance.
+
+.. note:: Always use strings that do not conflict with existing errbot commands.
+
+Example
+"""""""
+In the case of multiple instances of a StackStorm and err-stackstorm pair, say 1 per data centre or 1 per region, it would be possible to assign a unique plugin prefix per instance.  Let's say there were 2 pairs with the plugin-prefix of `dc1` and `dc2`.  Both bots could occupy `#automation` channel and users could trigger the pack list action-alias in data centre #1 by calling `!dc1 pack list` or get available action-aliases from data centre #2 by calling `!dc2help`.
+
+Session TTL
+^^^^^^^^^^^
+
+The session time to live is used to set the maximum lifetime an err-stackstorm sessoin is permitted to exist.  Once the session expires the user will need to re-authenticate before being able to execute action-alias commands.
+
+User Token TTL
+^^^^^^^^^^^^^^
+
+The user token ttl is used to set the maximum life time a StackStorm User Token will be permitted to exist.  Once the user token has expired the user will need to re-authenticate before being able to execute action-alias commnds.
 
 Locale
 -------
