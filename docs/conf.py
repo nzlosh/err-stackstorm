@@ -22,7 +22,7 @@ copyright = '2019, err-stackstorm contributors'
 author = 'err-stackstorm contributors'
 
 # The full version, including alpha/beta/rc tags
-release = '2.1'
+release = '2.1.3'
 
 
 # -- General configuration ---------------------------------------------------
