@@ -74,8 +74,6 @@ class St2(BotPlugin):
 
         self.run_listener = True
         self.st2events_listener = None
-        self.dynamic_commands()
-        self.check_latest_version()
 
     def check_latest_version(self):
         url = "https://raw.githubusercontent.com/nzlosh/err-stackstorm/master/version.json"
@@ -162,6 +160,10 @@ class St2(BotPlugin):
         """
         super(St2, self).activate()
         LOG.info("Activate St2 plugin")
+
+        self.dynamic_commands()
+        self.check_latest_version()
+
         self.start_poller(self.cfg.timer_update, self.validate_bot_credentials)
         self.st2events_listener = threading.Thread(
             target=self.st2api.st2stream_listener,
@@ -172,6 +174,7 @@ class St2(BotPlugin):
 
     def deactivate(self):
         super(St2, self).deactivate()
+        self.destroy_dynamic_plugin('St2')
         self.st2listener(stop=True)
         LOG.info("st2stream listener wait for thread to exit.")
         self.st2events_listener.join()
