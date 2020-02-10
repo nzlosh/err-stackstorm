@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+##  [2.1.3] 2020-01-10
+### Added
+  - Added err-stackstorm version in the st2help display.
+
+### Changed
+  - Fixed st2help function to have to correct number of positional arguments.
+
+##  [2.1.2] 2019-11-24
+### Added
+  - Added CircleCI build badge to README.
+  - Added route key to be defined by user to allow mutliple bots attached to a single StackStorm instance.
+  - Added version check on start-up to log if newer version of the plugin are available.
+
+### Changed
+  - Updated curl example in troubleshooting section.
+  - Changed all bot commands to be registered dynamically to allow user defined plugin prefix.
+
+##  [2.1.1] 2019-07-19
+### Added
+  - Added configuration for mattermost, rocketchat, discord, gitter and slack to docker build.
+
+### Changed
+  - Improved Discord Chat Adapter formatting.
+  - Corrected configuration name handling which caused exceptions to be raised.
+  - Updated documentation to direct readers to readthedocs.
+
+### Removed
+  - Removed old readme file.
+
 ## [2.1.0] 2019-07-08
 ### Added
   - Added `deactivate` method to correctly handle errbot reload and stop process.

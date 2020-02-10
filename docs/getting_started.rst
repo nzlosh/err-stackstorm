@@ -9,33 +9,34 @@ Getting Started
 Overview
 =========
 
-`err-stackstorm` is an unofficial community project to bring StackStorm ChatOps to Errbot. Using `err-stackstorm` you will be able to leverage `Errbot <http://errbot.io/en/latest/index.html>`_ as the `ChatOps <https://docs.stackstorm.com/chatops/index.html>`_ of your choice for controlling Stackstorm using **conversation-driven development** by using Stackstorm's `Action Aliases <https://docs.stackstorm.com/chatops/aliases.html>`_.
+`err-stackstorm` is a community project to bring StackStorm `ChatOps <https://docs.stackstorm.com/chatops/index.html>`_ to `Errbot <http://errbot.io/en/latest/index.html>`_.  No commercial support is provided by StackStorm.  `err-stackstorm` exposes Stackstorm's `Action Aliases <https://docs.stackstorm.com/chatops/aliases.html>`_ to your chat environment, where you and your team can manage aspects of infrastructure and code.
 
+The objectives for err-stackstorm project are:
  1. Emulate hubot-stackstorm features.
  2. Provide a Python friendly ChatOps solution.
  3. Respect StackStorm's enterprise offering.
  4. Maintain the same high quality as the StackStorm project.
  5. Collaborate with the StackStorm community to evolve ChatOps features.
 
-.. important:: `st2chatops` does not have to be running on your StackStorm instance. This plugin *replaces* `st2chatops`.
-
 Features
 ========
 
 err-stackstorm communicates directly with the StackStorm API from with an errbot instance.
 
-     - List action-alias help dynamically. When StackStorm action-aliases are updated, they are immediately available in the err-stackstorm output. Filtering by pack name and keyword can be used when look for help.
+     - List action-alias help dynamically.  When StackStorm action-aliases are updated, they are immediately available in the err-stackstorm output.  Filtering by pack name and keyword can be used when looking for help.
      - Access-Control Lists based on any combination of chat username, command and room. ACLs are defined in the errbot configuration file.
-     - Associate StackStorm user credentials with chat usernames.  Client-Side authenticate lets err-stackstorm dynamically map chat user accounts with StackStorm authenicated users via an authenticationn web page.
+     - Associate StackStorm user credentials with chat usernames.  Client-Side authenticate lets err-stackstorm dynamically map chat user accounts with StackStorm authenicated users.  Credentials are passed via an out of band authentication web page.
      - Trigger action-aliases directly from the bot.
      - Support for multiple chat backends, as provided by errbot.
+     - Customise plugin prefix.
+     - Customise StackStorm route key to allow more than one bot to be connected to a single StackStorm instance.
      - Docker image available to get up and running quickly and easily.
      - Python based using modern 3.6 features.
 
 Compatibility
 ==============
 
-The plugin has been developed and tested against the below software combinations. Because you might be running different Python or Errbot versions, we provide here the combinations to achieve optimal operation:
+The plugin has been developed and tested against the below software combinations. Because you might be running different Python or Errbot versions, the below are the optimal combinations:
 
 
    .. csv-table:: Ideal Combination of Versions

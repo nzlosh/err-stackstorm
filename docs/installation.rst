@@ -48,7 +48,8 @@ Paste the sample configuration below in Errbot's ``config.py`` file adjusting th
         'auth_url': 'https://your.stackstorm.com/auth/v1',
         'api_url': 'https://your.stackstorm.com/api/v1',
         'stream_url': 'https://your.stackstorm.com/stream/v1',
-
+        'route_key': 'errbot',
+        'plugin_prefix': 'st2',
         'verify_cert': True,
         'secrets_store': 'cleartext',
         'api_auth': {
@@ -62,8 +63,7 @@ Paste the sample configuration below in Errbot's ``config.py`` file adjusting th
         'rbac_auth': {
             'standalone': {},
         },
-        'timer_update': 900, #  Unit: second.  Interval to check the user token
-        is still valid.
+        'timer_update': 900, #  Unit: second.  Interval to check the user token is still valid.
     }
 
 

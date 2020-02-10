@@ -1,20 +1,12 @@
 # coding:utf-8
-import string
 import logging
-from random import SystemRandom
 
 from lib.session_manager import SessionManager
+from lib.session import generate_password
 from lib.errors import SessionInvalidError
 from errbot.backends.base import Identifier
 
 LOG = logging.getLogger("errbot.plugin.st2.auth_ctrl")
-
-
-def generate_password(length=8):
-    rnd = SystemRandom()
-    if length > 255:
-        length = 255
-    return "".join([rnd.choice(string.hexdigits) for _ in range(length)])
 
 
 class BotPluginIdentity(object):
@@ -138,7 +130,7 @@ class AuthenticationController(object):
         Handle an initial request to establish a session.  If a session already exists, return it.
         """
         user_id = self.to_userid(user)
-        return self.sessions.create(user_id, user_secret)
+        return self.sessions.create(user_id, user_secret, self.bot.cfg.session_ttl)
 
     def get_session(self, user):
         """
