@@ -5,7 +5,7 @@ from lib.session import Session
 from lib.errors import SessionExpiredError
 
 pytest_plugins = ["errbot.backends.test"]
-extra_plugin_dir = '.'
+extra_plugin_dir = "."
 
 
 def test_session():

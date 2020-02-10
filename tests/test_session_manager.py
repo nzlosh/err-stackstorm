@@ -9,7 +9,7 @@ from lib.errors import SessionInvalidError, SessionExistsError
 
 
 pytest_plugins = ["errbot.backends.test"]
-extra_plugin_dir = '.'
+extra_plugin_dir = "."
 
 
 def test_session_manager():
@@ -19,9 +19,9 @@ def test_session_manager():
     cfg = Mock()
     cfg.secrets_store = "cleartext"
 
-    user_id = 'test%user'
-    user_secret = 'secret_for_test'
-    user_token = '1234567890-0987654321'
+    user_id = "test%user"
+    user_secret = "secret_for_test"
+    user_token = "1234567890-0987654321"
 
     session_manager = SessionManager(cfg)
 

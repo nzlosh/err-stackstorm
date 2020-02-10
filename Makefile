@@ -1,5 +1,5 @@
 SHELL=/bin/sh
-LINE_MAX_CHARS=100
+MAX_LINE_LEN=100
 
 .PHONY: all
 all: lint_test unit_test
@@ -23,7 +23,7 @@ activate:
 .PHONY: auto_format
 auto_format:
 	echo "Formatting code"
-	echo black --line-numers=${LINE_MAX_CHARS} .
+	echo black --line-length=${MAX_LINE_LEN} *.py lib/*.py tests/*.py
 
 .PHONY: unit_test
 unit_test:
@@ -33,8 +33,8 @@ unit_test:
 .PHONY: lint_test
 lint_test:
 	echo -n "Running LINT tests [VirtualEnv:${VIRTUAL_ENV}]"
-	flake8 --max-line-length=${LINE_MAX_CHARS} st2.py lib/*.py
-	pycodestyle --max-line-length=${LINE_MAX_CHARS}  st2.py lib/*.py
+	flake8 --max-line-length=${MAX_LINE_LEN} st2.py lib/*.py
+	pycodestyle --max-line-length=${MAX_LINE_LEN}  st2.py lib/*.py
 	echo " ... OK"
 
 .PHONY: help
