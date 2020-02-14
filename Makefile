@@ -25,6 +25,11 @@ auto_format:
 	echo "Formatting code"
 	echo black --line-length=${MAX_LINE_LEN} *.py lib/*.py tests/*.py
 
+.PHONY: security_scan
+security_scan:
+	echo "Scanning for potential security issues"
+	echo bandit *.py lib/*.py
+
 .PHONY: unit_test
 unit_test:
 	echo "Running Python unit tests [VirtualEnv:${VIRTUAL_ENV}]"
