@@ -323,7 +323,7 @@ class ClientSideAuthHandler(BaseAuthHandler):
             self.cfg.auth_url,
             path="/tokens",
             headers=creds.requests(),
-            payload={"ttl": self.user_token_ttl}
+            payload={"ttl": self.cfg.user_token_ttl}
         )
         if response.status_code in [requests.codes.created]:
             return St2UserToken(response.json().get("token"))
