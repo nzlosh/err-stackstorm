@@ -140,12 +140,18 @@ In the case of multiple instances of a StackStorm and err-stackstorm pair, say 1
 Session TTL
 ^^^^^^^^^^^
 
-The session time to live is used to set the maximum lifetime an err-stackstorm sessoin is permitted to exist.  Once the session expires the user will need to re-authenticate before being able to execute action-alias commands.
+The session time to live is an internal timeout for err-stackstorm.  It is used to set the maximum lifetime an err-stackstorm session is permitted to exist.  Once the session expires the user will need to re-authenticate before being able to execute action-alias commands.  An err-stackstorm session ttl should be equal to or less than the user token ttl.
+
+When session time to live expires, err-stackstorm will report to the user that the session is no longer valid and they should reauthenticate.
 
 User Token TTL
 ^^^^^^^^^^^^^^
 
 The user token ttl is used to set the maximum life time a StackStorm User Token will be permitted to exist.  Once the user token has expired the user will need to re-authenticate before being able to execute action-alias commnds.
+
+When a user token time to live expires, err-stackstorm will report it as an error communicating with the StackStorm API.  It would be more user-friendly to ensure the session ttl expires before the user token ttl.
+
+.. note:: The user token ttl _must be_ equal to or lower than the StackStorm API https://docs.stackstorm.com/authentication.html?highlight=ttl#usage.  By default StackStorm's token ttl is set to 24 hours, but the value can be increased through `st2.conf`.  If user_token_ttl is greater than the StackStorm API token ttl value, err-stackstorm will fail to fetch a valid API token and not function correctly.
 
 Locale
 -------
