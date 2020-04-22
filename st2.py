@@ -422,7 +422,7 @@ class St2(BotPlugin):
             try:
                 self.accessctl.delete_session(uuid)
             except Exception as e:
-                LOG.debug("Failed to delete {}".format(uuid))
+                LOG.debug("Failed to delete {}. {}".format(uuid, e))
                 if LOG.level <= logging.DEBUG:
                     traceback.print_exc()
             LOG.warning(r.message)
