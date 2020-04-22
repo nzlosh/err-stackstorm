@@ -256,9 +256,9 @@ class St2(BotPlugin):
             err_msg = str(e)
 
         if st2token is False:
-            rejection = "Error: {}  Action-Alias execution is not allowed for chat user '{}'." \
+            rejection = "Error: '{}'.  Action-Alias execution is not allowed for chat user '{}'." \
                 "  Please authenticate using {}session_start or see your StackStorm" \
-                " administrator to grant access.".format(self.cfg.plugin_prefix, err_msg, user_id)
+                " administrator to grant access.".format(err_msg, user_id, self.cfg.plugin_prefix)
             LOG.warning(rejection)
             return rejection
 
