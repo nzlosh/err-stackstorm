@@ -2,6 +2,7 @@
 import json
 import logging
 import threading
+import traceback
 import requests
 from types import SimpleNamespace
 
@@ -77,15 +78,19 @@ class St2(BotPlugin):
 
     def check_latest_version(self):
         url = "https://raw.githubusercontent.com/nzlosh/err-stackstorm/master/version.json"
-        response = requests.get(url, timeout=5)
+        try:
+            response = requests.get(url, timeout=5)
 
-        if response.status_code != 200:
-            LOG.warning(
-                "Unable to fetch err-stackstorm version from {}. HTTP code: {}".format(
-                    url,
-                    response.status_code
+            if response.status_code != 200:
+                LOG.warning(
+                    "Unable to fetch err-stackstorm version from {}. HTTP code: {}".format(
+                        url,
+                        response.status_code
+                    )
                 )
-            )
+                return True
+        except Exception as e:
+            LOG.warning("Exception checking version from {}. {}".format(url, e))
             return True
 
         latest = response.json().get("version")
@@ -252,9 +257,9 @@ class St2(BotPlugin):
             err_msg = str(e)
 
         if st2token is False:
-            rejection = "Error: {}  Action-Alias execution is not allowed for chat user '{}'." \
+            rejection = "Error: '{}'.  Action-Alias execution is not allowed for chat user '{}'." \
                 "  Please authenticate using {}session_start or see your StackStorm" \
-                " administrator to grant access.".format(self.cfg.plugin_prefix, err_msg, user_id)
+                " administrator to grant access.".format(err_msg, user_id, self.cfg.plugin_prefix)
             LOG.warning(rejection)
             return rejection
 
@@ -414,6 +419,12 @@ class St2(BotPlugin):
                 r.message = "Invalid authentication payload"
 
         if r.authenticated is False:
+            try:
+                self.accessctl.delete_session(uuid)
+            except Exception as e:
+                LOG.debug("Failed to delete {}. {}".format(uuid, e))
+                if LOG.level <= logging.DEBUG:
+                    traceback.print_exc()
             LOG.warning(r.message)
 
         return json.dumps(vars(r))
