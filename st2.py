@@ -2,6 +2,7 @@
 import json
 import logging
 import threading
+import traceback
 import requests
 from types import SimpleNamespace
 
@@ -421,7 +422,9 @@ class St2(BotPlugin):
             try:
                 self.accessctl.delete_session(uuid)
             except Exception as e:
-                LOG.debug("**** FAILED TO DELETE {} **** {}".format(uuid, e))
+                LOG.debug("Failed to delete {}".format(uuid))
+                if LOG.level <= logging.DEBUG:
+                    traceback.print_exc()
             LOG.warning(r.message)
 
         return json.dumps(vars(r))
