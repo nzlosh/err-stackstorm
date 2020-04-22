@@ -418,6 +418,10 @@ class St2(BotPlugin):
                 r.message = "Invalid authentication payload"
 
         if r.authenticated is False:
+            try:
+                self.accessctl.delete_session(uuid)
+            except Exception as e:
+                LOG.debug("**** FAILED TO DELETE {} **** {}".format(uuid, e))
             LOG.warning(r.message)
 
         return json.dumps(vars(r))
