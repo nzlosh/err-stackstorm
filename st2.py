@@ -77,15 +77,19 @@ class St2(BotPlugin):
 
     def check_latest_version(self):
         url = "https://raw.githubusercontent.com/nzlosh/err-stackstorm/master/version.json"
-        response = requests.get(url, timeout=5)
+        try:
+            response = requests.get(url, timeout=5)
 
-        if response.status_code != 200:
-            LOG.warning(
-                "Unable to fetch err-stackstorm version from {}. HTTP code: {}".format(
-                    url,
-                    response.status_code
+            if response.status_code != 200:
+                LOG.warning(
+                    "Unable to fetch err-stackstorm version from {}. HTTP code: {}".format(
+                        url,
+                        response.status_code
+                    )
                 )
-            )
+                return True
+        except Exception as e:
+            LOG.warning("Exception checking version from {}. {}".format(url, e))
             return True
 
         latest = response.json().get("version")
