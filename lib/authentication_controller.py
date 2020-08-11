@@ -36,7 +36,7 @@ class AuthenticationController(object):
             user_id = self.bot.chatbackend.normalise_user_id(user)
         else:
             user_id = user
-        LOG.info("User ID is '{}'".format(user_id))
+        LOG.debug("Authentication User ID is '{}'".format(user_id))
         return user_id
 
     def pre_execution_authentication(self, chat_user):
