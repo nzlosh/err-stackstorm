@@ -15,9 +15,7 @@ class StoreAdapterFactory(AbstractStoreAdapterFactory):
     @staticmethod
     def instantiate(store_type):
         LOG.debug("Create secret store for '{}'".format(store_type))
-        return {
-            "cleartext": ClearTextStoreAdapter,
-        }.get(store_type, ClearTextStoreAdapter)
+        return {"cleartext": ClearTextStoreAdapter,}.get(store_type, ClearTextStoreAdapter)
 
 
 class AbstractStoreAdapter(metaclass=abc.ABCMeta):
@@ -43,6 +41,7 @@ class ClearTextStoreAdapter(AbstractStoreAdapter):
     The clear text store adapter doesn't encrypt data in memory, but doesn't persist it to disk
     either.  If more secure methods are required to operate, open an issue requesting a new feature.
     """
+
     def __init__(self):
         self.associations = {}
 

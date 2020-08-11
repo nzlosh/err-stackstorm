@@ -10,6 +10,7 @@ class BorgSingleton:
     """
     Borg Singleton pattern as described in Python Patterns, Idioms and Tests.
     """
+
     _shared_state = None
 
     def __init__(self):
@@ -20,6 +21,7 @@ class PluginConfiguration(BorgSingleton):
     """
     err-stackstorm shared configuration.
     """
+
     def __init__(self):
         super(BorgSingleton, self).__init__()
 
@@ -52,8 +54,7 @@ class PluginConfiguration(BorgSingleton):
         rbac_auth = bot_conf.STACKSTORM.get("rbac_auth", {"standalone": {}})
         for rbac_type in list(rbac_auth.keys()):
             self.auth_handler = AuthHandlerFactory.instantiate(rbac_type)(
-                self,
-                rbac_auth[rbac_type]
+                self, rbac_auth[rbac_type]
             )
         if self.auth_handler is None:
             LOG.warning(
@@ -79,8 +80,7 @@ class PluginConfiguration(BorgSingleton):
             if c:
                 if cred_type == "user":
                     self.bot_creds = CredentialsFactory.instantiate(cred_type)(
-                        c.get("name"),
-                        c.get("password")
+                        c.get("name"), c.get("password")
                     )
                     break
                 else:

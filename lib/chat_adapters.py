@@ -31,7 +31,7 @@ class ChatAdapterFactory(AbstractChatAdapterFactory):
             "mattermost": ChatAdapterFactory.mattermost_adapter,
             "xmpp": ChatAdapterFactory.xmpp_adapter,
             "irc": ChatAdapterFactory.irc_adapter,
-            "discord": ChatAdapterFactory.discord_adapter
+            "discord": ChatAdapterFactory.discord_adapter,
         }.get(chat_backend, ChatAdapterFactory.generic_adapter)
 
     @staticmethod
@@ -60,7 +60,6 @@ class ChatAdapterFactory(AbstractChatAdapterFactory):
 
 
 class AbstractChatAdapter(metaclass=abc.ABCMeta):
-
     @abc.abstractmethod
     def get_username(self, msg):
         pass
@@ -100,11 +99,11 @@ class GenericChatAdapter(AbstractChatAdapter):
                 help_text += "[{}]\n".format(help_obj["pack"])
                 pack = help_obj["pack"]
             help_text += "\t{}{} {} - {}\n".format(
-                    self.bot_plugin.cfg.bot_prefix,
-                    self.bot_plugin.cfg.plugin_prefix,
-                    help_obj["display"],
-                    help_obj["description"],
-                )
+                self.bot_plugin.cfg.bot_prefix,
+                self.bot_plugin.cfg.plugin_prefix,
+                help_obj["display"],
+                help_obj["description"],
+            )
         return help_text
 
     def post_message(self, whisper, message, user, channel, extra):
@@ -114,11 +113,7 @@ class GenericChatAdapter(AbstractChatAdapter):
         LOG.debug(
             "GenericChatAdapter posting message: whisper={},"
             " message={}, user={}, channel={}, extra={}".format(
-                whisper,
-                message,
-                user,
-                channel,
-                extra
+                whisper, message, user, channel, extra
             )
         )
         user_id = None
@@ -176,11 +171,7 @@ class DiscordChatAdapter(GenericChatAdapter):
         LOG.debug(
             "GenericChatAdapter posting message: whisper={},"
             " message={}, user={}, channel={}, extra={}".format(
-                whisper,
-                message,
-                user,
-                channel,
-                extra
+                whisper, message, user, channel, extra
             )
         )
         user_id = None
@@ -231,14 +222,9 @@ class IRCChatAdapter(GenericChatAdapter):
         super().__init__(bot_plugin)
 
     def normalise_user_id(self, user):
-        return "IRC normalise {}".format([
-            user.aclattr,
-            user.client,
-            user.fullname,
-            user.host,
-            user.nick,
-            user.person,
-            user.user])
+        return "IRC normalise {}".format(
+            [user.aclattr, user.client, user.fullname, user.host, user.nick, user.person, user.user]
+        )
 
 
 class MattermostChatAdapter(GenericChatAdapter):
@@ -295,13 +281,7 @@ class SlackChatAdapter(GenericChatAdapter):
         """
         LOG.debug(
             "Slack posting message: whisper={}, message={},"
-            " user={}, channel={}, extra={}".format(
-                whisper,
-                message,
-                user,
-                channel,
-                extra
-            )
+            " user={}, channel={}, extra={}".format(whisper, message, user, channel, extra)
         )
         user_id = None
         channel_id = None
@@ -336,12 +316,16 @@ class SlackChatAdapter(GenericChatAdapter):
             else:
                 LOG.debug("Send card using backend {}".format(self.bot_plugin.mode))
                 backend = extra.get(self.bot_plugin.mode, {})
-                LOG.debug("fields {}".format(
-                    tuple([
-                        (field.get("title"), field.get("value"))
-                        for field in backend.get("fields", [])
-                    ])
-                ))
+                LOG.debug(
+                    "fields {}".format(
+                        tuple(
+                            [
+                                (field.get("title"), field.get("value"))
+                                for field in backend.get("fields", [])
+                            ]
+                        )
+                    )
+                )
                 if backend is not {}:
                     kwargs = {
                         "body": message,
@@ -352,10 +336,12 @@ class SlackChatAdapter(GenericChatAdapter):
                         "image": backend.get("image_url"),
                         "thumbnail": backend.get("thumb_url"),
                         "color": backend.get("color"),
-                        "fields": tuple([
+                        "fields": tuple(
+                            [
                                 (field.get("title"), field.get("value"))
                                 for field in backend.get("fields", [])
-                            ])
+                            ]
+                        ),
                     }
                     LOG.debug("Type: {}, Args: {}".format(type(kwargs), kwargs))
                     self.bot_plugin.send_card(**kwargs)
