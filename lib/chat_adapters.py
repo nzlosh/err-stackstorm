@@ -253,6 +253,13 @@ class MattermostChatAdapter(GenericChatAdapter):
         LOG.debug("MattermostChatAdapter username={}".format(username))
         return username
 
+    def normalise_user_id(self, user):
+        """
+        Mattermost backend uses a unique id which is stored as the <client> attribute in Errbot's
+        Identity object.
+        """
+        return user.client
+
 
 class SlackChatAdapter(AbstractChatAdapter):
     def __init__(self, bot_plugin):
