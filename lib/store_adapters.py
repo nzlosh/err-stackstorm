@@ -76,7 +76,10 @@ class SessionStore(object):
         self.id_to_user_map = {}
 
     def list(self):
-        return [k+str(self.memory[k]) for k in self.memory.keys()]
+        """
+        Return a list of string representation of session.
+        """
+        return [self.memory[k] for k in self.memory.keys()]
 
     def get_by_userid(self, user_id):
         """

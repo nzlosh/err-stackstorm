@@ -39,17 +39,29 @@ class Session(object):
             raise SessionExpiredError
         return False
 
+    def attributes(self):
+        return {
+            "UserID": self.user_id,
+            "IsSealed": self._is_sealed,
+            "SessionID": self.session_id,
+            "CreationDate": str(dt.fromtimestamp(self.create_date)),
+            "ModifiedDate": str(dt.fromtimestamp(self.modified_date)),
+            "ExpiryDate": str(dt.fromtimestamp(self.modified_date + self.ttl_in_seconds)),
+        }
+
     def __repr__(self):
-        return "".join([
-            "UserID: {}, ".format(str(self.user_id)),
-            "Is Sealed: {}, ".format(str(self._is_sealed)),
-            "SessionID: {}, ".format(str(self.session_id)),
-            "Creation Date: {}, ".format(str(dt.fromtimestamp(self.create_date))),
-            "Modified Date: {}, ".format(str(dt.fromtimestamp(self.modified_date))),
-            "Expiry Date: {}".format(
-                str(dt.fromtimestamp(self.modified_date + self.ttl_in_seconds))
-            )
-        ])
+        return " ".join(
+            [
+                "UserID: {},".format(str(self.user_id)),
+                "Is Sealed: {},".format(str(self._is_sealed)),
+                "SessionID: {},".format(str(self.session_id)),
+                "Creation Date: {},".format(str(dt.fromtimestamp(self.create_date))),
+                "Modified Date: {},".format(str(dt.fromtimestamp(self.modified_date))),
+                "Expiry Date: {}".format(
+                    str(dt.fromtimestamp(self.modified_date + self.ttl_in_seconds))
+                ),
+            ]
+        )
 
     def unseal(self):
         """

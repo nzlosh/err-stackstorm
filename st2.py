@@ -190,7 +190,7 @@ class St2(BotPlugin):
         """
         List any established sessions between the chat service and StackStorm API.
         """
-        return "Sessions: " + "\n\n".join(self.accessctl.list_sessions())
+        return self.chatbackend.present_sessions(self.accessctl.list_sessions())
 
     def st2sessiondelete(self, msg, args):
         """
