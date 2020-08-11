@@ -216,8 +216,8 @@ class St2(BotPlugin):
             return "Authentication is only available when Client side authentication is configured."
 
         if msg.is_direct is not True:
-            return "Requests for authentication in a public channel isn't possible." \
-                "  Request authentication in a private one-to-one message."
+            return "Requests for authentication in a public channel aren't supported for " \
+                "security reasons.  Request authentication in a private one-to-one message."
 
         if len(args) < 1:
             return "Please provide a shared word to use during the authenication process."
