@@ -114,7 +114,7 @@ To help understand the example below, the following conditions are assumed:
       }
     }
 
-After successfully setting up nginx, the client side authentication url would be ``https://my_host.my_fqdn:443``.
+After successfully setting up nginx, the client side authentication url would be ``https://my_host.my_fqdn:443/``.
 
 err-stackstorm configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
