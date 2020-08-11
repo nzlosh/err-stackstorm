@@ -234,7 +234,7 @@ class St2(BotPlugin):
                 session = self.accessctl.create_session(msg.frm, args)
 
         return "Your challenge response is {}".format(
-            self.accessctl.session_url(session.id(), "/index.html")
+            self.accessctl.session_url(session.id(), "index.html")
         )
 
     def st2_execute_actionalias(self, msg, match):
