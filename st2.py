@@ -248,18 +248,18 @@ class St2(BotPlugin):
             """
             return msg.replace(self.cfg.plugin_prefix, "", 1).strip()
 
-        user_id = self.chatbackend.normalise_user_id(msg.frm)
+        chat_user = msg.frm
         st2token = False
         err_msg = "Failed to fetch valid credentials."
         try:
-            st2token = self.accessctl.pre_execution_authentication(user_id)
+            st2token = self.accessctl.pre_execution_authentication(chat_user)
         except (SessionExpiredError, SessionInvalidError) as e:
             err_msg = str(e)
 
         if st2token is False:
             rejection = "Error: '{}'.  Action-Alias execution is not allowed for chat user '{}'." \
                 "  Please authenticate using {}session_start or see your StackStorm" \
-                " administrator to grant access.".format(err_msg, user_id, self.cfg.plugin_prefix)
+                " administrator to grant access.".format(err_msg, chat_user, self.cfg.plugin_prefix)
             LOG.warning(rejection)
             return rejection
 
