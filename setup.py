@@ -5,7 +5,7 @@ import setuptools
 
 setuptools.setup(
     name="err-stackstorm",
-    version="2.1.3",
+    version="2.1.4",
     author="Err-StackStorm Plugin contributors",
     author_email="nzlosh@yahoo.com",
     description="An Errbot plugin for StackStorm ChatOps.",
