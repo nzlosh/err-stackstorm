@@ -15,7 +15,7 @@ class StoreAdapterFactory(AbstractStoreAdapterFactory):
     @staticmethod
     def instantiate(store_type):
         LOG.debug("Create secret store for '{}'".format(store_type))
-        return {"cleartext": ClearTextStoreAdapter,}.get(store_type, ClearTextStoreAdapter)
+        return {"cleartext": ClearTextStoreAdapter}.get(store_type, ClearTextStoreAdapter)
 
 
 class AbstractStoreAdapter(metaclass=abc.ABCMeta):
