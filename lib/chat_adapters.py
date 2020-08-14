@@ -31,7 +31,7 @@ class ChatAdapterFactory(AbstractChatAdapterFactory):
             "mattermost": ChatAdapterFactory.mattermost_adapter,
             "xmpp": ChatAdapterFactory.xmpp_adapter,
             "irc": ChatAdapterFactory.irc_adapter,
-            "discord": ChatAdapterFactory.discord_adapter
+            "discord": ChatAdapterFactory.discord_adapter,
         }.get(chat_backend, ChatAdapterFactory.generic_adapter)
 
     @staticmethod
@@ -60,7 +60,6 @@ class ChatAdapterFactory(AbstractChatAdapterFactory):
 
 
 class AbstractChatAdapter(metaclass=abc.ABCMeta):
-
     @abc.abstractmethod
     def get_username(self, msg):
         pass
@@ -75,6 +74,10 @@ class AbstractChatAdapter(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def normalise_user_id(self, user):
+        pass
+
+    @abc.abstractmethod
+    def present_sessions(self, sessions):
         pass
 
 
@@ -96,11 +99,11 @@ class GenericChatAdapter(AbstractChatAdapter):
                 help_text += "[{}]\n".format(help_obj["pack"])
                 pack = help_obj["pack"]
             help_text += "\t{}{} {} - {}\n".format(
-                    self.bot_plugin.cfg.bot_prefix,
-                    self.bot_plugin.cfg.plugin_prefix,
-                    help_obj["display"],
-                    help_obj["description"],
-                )
+                self.bot_plugin.cfg.bot_prefix,
+                self.bot_plugin.cfg.plugin_prefix,
+                help_obj["display"],
+                help_obj["description"],
+            )
         return help_text
 
     def post_message(self, whisper, message, user, channel, extra):
@@ -110,11 +113,7 @@ class GenericChatAdapter(AbstractChatAdapter):
         LOG.debug(
             "GenericChatAdapter posting message: whisper={},"
             " message={}, user={}, channel={}, extra={}".format(
-                whisper,
-                message,
-                user,
-                channel,
-                extra
+                whisper, message, user, channel, extra
             )
         )
         user_id = None
@@ -150,12 +149,15 @@ class GenericChatAdapter(AbstractChatAdapter):
             self.bot_plugin.send(target_id, message)
 
     def normalise_user_id(self, user):
-        return "Generic normalise {}".format([
-            user.aclattr,
-            user.client,
-            user.fullname,
-            user.nick,
-            user.person])
+        return "Generic normalise {}".format(
+            [user.aclattr, user.client, user.fullname, user.nick, user.person]
+        )
+
+    def present_sessions(self, sessions):
+        res = "Session:\n"
+        for session in sessions:
+            res += " - {}\n".format(str(session))
+        return res
 
 
 class DiscordChatAdapter(GenericChatAdapter):
@@ -169,11 +171,7 @@ class DiscordChatAdapter(GenericChatAdapter):
         LOG.debug(
             "GenericChatAdapter posting message: whisper={},"
             " message={}, user={}, channel={}, extra={}".format(
-                whisper,
-                message,
-                user,
-                channel,
-                extra
+                whisper, message, user, channel, extra
             )
         )
         user_id = None
@@ -224,14 +222,9 @@ class IRCChatAdapter(GenericChatAdapter):
         super().__init__(bot_plugin)
 
     def normalise_user_id(self, user):
-        return "IRC normalise {}".format([
-            user.aclattr,
-            user.client,
-            user.fullname,
-            user.host,
-            user.nick,
-            user.person,
-            user.user])
+        return "IRC normalise {}".format(
+            [user.aclattr, user.client, user.fullname, user.host, user.nick, user.person, user.user]
+        )
 
 
 class MattermostChatAdapter(GenericChatAdapter):
@@ -253,18 +246,29 @@ class MattermostChatAdapter(GenericChatAdapter):
         LOG.debug("MattermostChatAdapter username={}".format(username))
         return username
 
+    def normalise_user_id(self, user):
+        """
+        Mattermost backend uses a unique id which is stored as the <client> attribute in Errbot's
+        Identity object.
+        """
+        return user.client
 
-class SlackChatAdapter(AbstractChatAdapter):
+
+class SlackChatAdapter(GenericChatAdapter):
     def __init__(self, bot_plugin):
-        self.bot_plugin = bot_plugin
+        super().__init__(bot_plugin)
 
     def get_username(self, msg):
         """
         Return the user name from an errbot message object.
         Slack identity tuple (username, userid, channelname, channelid)
         """
-        username, user_id, channel_name, channel_id = \
-            self.bot_plugin._bot.extract_identifiers_from_string(str(msg.frm))
+        (
+            username,
+            user_id,
+            channel_name,
+            channel_id,
+        ) = self.bot_plugin._bot.extract_identifiers_from_string(str(msg.frm))
         if username is None:
             name = "#{}".format(channel_name)
         else:
@@ -277,13 +281,7 @@ class SlackChatAdapter(AbstractChatAdapter):
         """
         LOG.debug(
             "Slack posting message: whisper={}, message={},"
-            " user={}, channel={}, extra={}".format(
-                whisper,
-                message,
-                user,
-                channel,
-                extra
-            )
+            " user={}, channel={}, extra={}".format(whisper, message, user, channel, extra)
         )
         user_id = None
         channel_id = None
@@ -318,12 +316,16 @@ class SlackChatAdapter(AbstractChatAdapter):
             else:
                 LOG.debug("Send card using backend {}".format(self.bot_plugin.mode))
                 backend = extra.get(self.bot_plugin.mode, {})
-                LOG.debug("fields {}".format(
-                    tuple([
-                        (field.get("title"), field.get("value"))
-                        for field in backend.get("fields", [])
-                    ])
-                ))
+                LOG.debug(
+                    "fields {}".format(
+                        tuple(
+                            [
+                                (field.get("title"), field.get("value"))
+                                for field in backend.get("fields", [])
+                            ]
+                        )
+                    )
+                )
                 if backend is not {}:
                     kwargs = {
                         "body": message,
@@ -334,10 +336,12 @@ class SlackChatAdapter(AbstractChatAdapter):
                         "image": backend.get("image_url"),
                         "thumbnail": backend.get("thumb_url"),
                         "color": backend.get("color"),
-                        "fields": tuple([
+                        "fields": tuple(
+                            [
                                 (field.get("title"), field.get("value"))
                                 for field in backend.get("fields", [])
-                            ])
+                            ]
+                        ),
                     }
                     LOG.debug("Type: {}, Args: {}".format(type(kwargs), kwargs))
                     self.bot_plugin.send_card(**kwargs)
@@ -353,12 +357,25 @@ class SlackChatAdapter(AbstractChatAdapter):
                 help_text += "\n**{}**\n".format(help_obj["pack"])
                 pack = help_obj["pack"]
             help_text += "\t{}{} {} - _{}_\n".format(
-                    self.bot_plugin.cfg.bot_prefix,
-                    self.bot_plugin.cfg.plugin_prefix,
-                    help_obj["display"],
-                    help_obj["description"],
-                )
+                self.bot_plugin.cfg.bot_prefix,
+                self.bot_plugin.cfg.plugin_prefix,
+                help_obj["display"],
+                help_obj["description"],
+            )
         return help_text
 
     def normalise_user_id(self, user):
         return str(user.userid)
+
+    def present_sessions(self, sessions):
+        res = "**Sessions**:\n"
+        for session in sessions:
+            LOG.debug("{}".format(session.attributes().get("UserID", "BAD!")))
+            if session.attributes().get("UserID") == "errbot%service":
+                res += "- {}\n".format(str(session))
+            else:
+                user = self.bot_plugin.build_identifier(
+                    "@{}".format(session.attributes().get("UserID"))
+                )
+                res += "- {} {}\n".format(user.person, str(session))
+        return res

@@ -39,7 +39,7 @@ from lib.authentication_handler import (
 )
 
 LOG = logging.getLogger("errbot.plugin.st2")
-ERR_STACKSTORM_VERSION = "2.1.3"
+ERR_STACKSTORM_VERSION = "2.1.4"
 
 
 class St2(BotPlugin):
@@ -190,7 +190,7 @@ class St2(BotPlugin):
         """
         List any established sessions between the chat service and StackStorm API.
         """
-        return "Sessions: " + "\n\n".join(self.accessctl.list_sessions())
+        return self.chatbackend.present_sessions(self.accessctl.list_sessions())
 
     def st2sessiondelete(self, msg, args):
         """
@@ -216,8 +216,8 @@ class St2(BotPlugin):
             return "Authentication is only available when Client side authentication is configured."
 
         if msg.is_direct is not True:
-            return "Requests for authentication in a public channel isn't possible." \
-                "  Request authentication in a private one-to-one message."
+            return "Requests for authentication in a public channel aren't supported for " \
+                "security reasons.  Request authentication in a private one-to-one message."
 
         if len(args) < 1:
             return "Please provide a shared word to use during the authenication process."
@@ -234,7 +234,7 @@ class St2(BotPlugin):
                 session = self.accessctl.create_session(msg.frm, args)
 
         return "Your challenge response is {}".format(
-            self.accessctl.session_url(session.id(), "/index.html")
+            self.accessctl.session_url(session.id(), "index.html")
         )
 
     def st2_execute_actionalias(self, msg, match):
@@ -248,18 +248,18 @@ class St2(BotPlugin):
             """
             return msg.replace(self.cfg.plugin_prefix, "", 1).strip()
 
-        user_id = self.chatbackend.normalise_user_id(msg.frm)
+        chat_user = msg.frm
         st2token = False
         err_msg = "Failed to fetch valid credentials."
         try:
-            st2token = self.accessctl.pre_execution_authentication(user_id)
+            st2token = self.accessctl.pre_execution_authentication(chat_user)
         except (SessionExpiredError, SessionInvalidError) as e:
             err_msg = str(e)
 
         if st2token is False:
             rejection = "Error: '{}'.  Action-Alias execution is not allowed for chat user '{}'." \
                 "  Please authenticate using {}session_start or see your StackStorm" \
-                " administrator to grant access.".format(err_msg, user_id, self.cfg.plugin_prefix)
+                " administrator to grant access.".format(err_msg, chat_user, self.cfg.plugin_prefix)
             LOG.warning(rejection)
             return rejection
 

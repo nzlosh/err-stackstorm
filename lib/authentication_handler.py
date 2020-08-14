@@ -25,7 +25,7 @@ class AuthHandlerFactory(AbstractAuthHandlerFactory):
         handler_types = {
             "serverside": ServerSideAuthHandler,
             "clientside": ClientSideAuthHandler,
-            "standalone": StandaloneAuthHandler
+            "standalone": StandaloneAuthHandler,
         }
         if handler_type not in handler_types:
             LOG.warning("Default to Standalone authentication, {} unspported.".format(handler_type))
@@ -49,26 +49,15 @@ class BaseAuthHandler(AbstractAuthHandler):
         self.bot_creds = bot_creds
 
     def _http_request(
-        self,
-        verb="GET",
-        base="",
-        path="/",
-        headers={},
-        payload=None,
-        auth=None,
-        timeout=5
+        self, verb="GET", base="", path="/", headers={}, payload=None, auth=None, timeout=5
     ):
         """
         Generic HTTP call.
         """
-        get_kwargs = {
-            'headers': headers,
-            'timeout': timeout,
-            'verify': self.cfg.verify_cert
-        }
+        get_kwargs = {"headers": headers, "timeout": timeout, "verify": self.cfg.verify_cert}
 
         if auth:
-            get_kwargs['auth'] = auth
+            get_kwargs["auth"] = auth
 
         if payload is not None:
             get_kwargs["json"] = payload
@@ -87,6 +76,7 @@ class StandaloneAuthHandler(BaseAuthHandler):
     Standalone authentication handler will only use the stackstorm authentication credentials
     provided in the errbot configuration for all stackstorm api calls.
     """
+
     def __init__(self, cfg, opts=""):
         self.cfg = cfg
 
@@ -105,16 +95,16 @@ class StandaloneAuthHandler(BaseAuthHandler):
         Returns a StackStorm token on successful authentication otherwise False.
         """
         response = self._http_request(
-            'POST',
+            "POST",
             self.cfg.auth_url,
             path="/tokens",
             headers=st2_creds.requests(),
-            payload={"ttl": self.cfg.user_token_ttl}
+            payload={"ttl": self.cfg.user_token_ttl},
         )
         if response.status_code in [requests.codes.created]:
             return St2UserToken(response.json().get("token"))
         else:
-            LOG.info('API response to token = {} {}'.format(response.status_code, response.reason))
+            LOG.info("API response to token = {} {}".format(response.status_code, response.reason))
         return False
 
     def authenticate_token(self, st2_creds):
@@ -125,10 +115,7 @@ class StandaloneAuthHandler(BaseAuthHandler):
         token = False
 
         response = self._http_request(
-            "GET",
-            self.cfg.auth_url,
-            path="/token/validate",
-            headers=st2_creds.requests()
+            "GET", self.cfg.auth_url, path="/token/validate", headers=st2_creds.requests()
         )
 
         if response.status_code in [requests.codes.created]:
@@ -138,7 +125,7 @@ class StandaloneAuthHandler(BaseAuthHandler):
             else:
                 LOG.warning("Token not found in reponse {}".format(response))
         else:
-            LOG.info('API response to token = {} {}'.format(response.status_code, response.reason))
+            LOG.info("API response to token = {} {}".format(response.status_code, response.reason))
 
         return token
 
@@ -149,10 +136,7 @@ class StandaloneAuthHandler(BaseAuthHandler):
         api_key = False
 
         response = self._http_request(
-            "GET",
-            self.cfg.api_url,
-            path="/",
-            headers=st2_creds.requests()
+            "GET", self.cfg.api_url, path="/", headers=st2_creds.requests()
         )
 
         if response.status_code in [requests.codes.ok]:
@@ -180,10 +164,7 @@ class StandaloneAuthHandler(BaseAuthHandler):
         if token is None:
             token = False
             LOG.warning(
-                "Unsupported st2 authentication object [{}] {}.".format(
-                    type(st2_creds),
-                    st2_creds
-                )
+                "Unsupported st2 authentication object [{}] {}.".format(type(st2_creds), st2_creds)
             )
         return token
 
@@ -199,6 +180,7 @@ class ServerSideAuthHandler(BaseAuthHandler):
     StackStorm will return a user token for a valid user and err-stackstorm will cache this token
     for subsequence action-alias executions by the corresponding chat user account.
     """
+
     def __init__(self, cfg, opts=""):
         self.cfg = cfg
 
@@ -260,7 +242,7 @@ class ServerSideAuthHandler(BaseAuthHandler):
             self.cfg.auth_url,
             path="/tokens/validate",
             headers=bot_creds.requests(),
-            payload={"user": chat_user}
+            payload={"user": chat_user},
         )
         if response == requests.codes.ok:
             token = response.json().get("token", False)
@@ -298,6 +280,7 @@ class ClientSideAuthHandler(BaseAuthHandler):
     be looked up in the session manager to fetch their StackStorm token with each call to the
     StackStorm API.
     """
+
     def __init__(self, cfg, opts):
         self.cfg = cfg
         self.url = opts.get("url", "")
@@ -319,16 +302,16 @@ class ClientSideAuthHandler(BaseAuthHandler):
         Validate supplied credetials with StackStorm
         """
         response = self._http_request(
-            'POST',
+            "POST",
             self.cfg.auth_url,
             path="/tokens",
             headers=creds.requests(),
-            payload={"ttl": self.cfg.user_token_ttl}
+            payload={"ttl": self.cfg.user_token_ttl},
         )
         if response.status_code in [requests.codes.created]:
             return St2UserToken(response.json().get("token"))
         else:
-            LOG.info('API response to token = {} {}'.format(response.status_code, response.reason))
+            LOG.info("API response to token = {} {}".format(response.status_code, response.reason))
         return False
 
     def authenticate_token(self, creds, bot_creds):
@@ -341,7 +324,7 @@ class ClientSideAuthHandler(BaseAuthHandler):
             self.cfg.auth_url,
             path="/tokens/validate",
             headers=bot_creds.requests(),
-            payload=creds.st2client()
+            payload=creds.st2client(),
         )
         if response == requests.codes.ok:
             token = response.json().get("token", False)
@@ -354,12 +337,7 @@ class ClientSideAuthHandler(BaseAuthHandler):
         Use StackStorm API to validate the API key is valid.
         """
         api_key = False
-        response = self._http_request(
-            "GET",
-            self.cfg.api_url,
-            path="/",
-            header=creds.requests()
-        )
+        response = self._http_request("GET", self.cfg.api_url, path="/", header=creds.requests())
         if response.status_code in [requests.codes.ok]:
             # Since the API Key is valid, return it to be used for requests.
             api_key = creds
@@ -370,7 +348,7 @@ class ClientSideAuthHandler(BaseAuthHandler):
         token = None
         if isinstance(st2_creds, St2UserCredentials):
             token = self.authenticate_user(st2_creds, bot_creds)
-        if isinstance(st2_creds,  St2UserToken):
+        if isinstance(st2_creds, St2UserToken):
             token = self.authenticate_token(st2_creds, bot_creds)
         if isinstance(st2_creds, St2ApiKey):
             token = self.authenticate_key(st2_creds, bot_creds)

@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+##  [2.1.4] 2020-08-14
+### Added
+  - Session are deleted automatically when a chat user fails to authenticate against St2 API.
+  - Include Slack users "display name" in session list for easier identification.
+
+### Changed
+  - Update documentation with corrections and improved examples.
+  - Corrected error of dynamic commands not registering correctly when the plugin was deactivated/activated.
+  - Improved robustness of version check code to gracefully handle github.com being unavailable.
+
 ##  [2.1.3] 2020-01-10
 ### Added
   - Added err-stackstorm version in the st2help display.
