@@ -112,7 +112,7 @@ class StackStormAPI(object):
 
         url = "/".join([self.cfg.api_url, "aliasexecution/match_and_execute"])
 
-        payload = {"command": msg.body, "user": chat_user, "notification_route": "errbot"}
+        payload = {"command": msg.body, "user": chat_user, "notification_route": self.cfg.route_key}
 
         if msg.is_direct is False:
             payload["source_channel"] = str(msg.to)
