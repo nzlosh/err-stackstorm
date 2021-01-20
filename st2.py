@@ -499,7 +499,7 @@ class St2(BotPlugin):
                 ),
                 Command(
                     lambda plugin, msg, args: self.st2_execute_actionalias(msg, args),
-                    name="{} <action-alias>".format(self.cfg.plugin_prefix),
+                    name="{}".format(self.cfg.plugin_prefix),
                     cmd_type=re_botcmd,
                     cmd_kwargs={"pattern": "^{} .*".format(self.cfg.plugin_prefix)},
                     doc="Run an arbitrary StackStorm command (action-alias).\n"
