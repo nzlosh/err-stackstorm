@@ -28,6 +28,7 @@ class ChatAdapterFactory(AbstractChatAdapterFactory):
     def instance(chat_backend):
         return {
             "slack": ChatAdapterFactory.slack_adapter,
+            "slackv3": ChatAdapterFactory.slack_adapter,
             "mattermost": ChatAdapterFactory.mattermost_adapter,
             "xmpp": ChatAdapterFactory.xmpp_adapter,
             "irc": ChatAdapterFactory.irc_adapter,
@@ -278,6 +279,20 @@ class SlackChatAdapter(GenericChatAdapter):
     def post_message(self, whisper, message, user, channel, extra):
         """
         Post messages to the chat backend.
+
+        https://api.slack.com/messaging/sending
+        Sending messages in Slack can be
+          - postMessage
+          - postEphemeral
+          - response_url (callback url to post reponses to a message interaction.)
+          - (RTM doesn't support blocks or attachments)
+
+        https://api.slack.com/messaging/composing
+        Message Type:
+          - plain-text (mrkdwn)
+          - attachment
+          - block
+
         """
         LOG.debug(
             "Slack posting message: whisper={}, message={},"
@@ -313,41 +328,76 @@ class SlackChatAdapter(GenericChatAdapter):
         else:
             if extra is None or extra == {}:
                 self.bot_plugin.send(target_id, message)
-            else:
-                LOG.debug("Send card using backend {}".format(self.bot_plugin.mode))
-                backend = extra.get(self.bot_plugin.mode, {})
-                LOG.debug(
-                    "fields {}".format(
-                        tuple(
-                            [
-                                (field.get("title"), field.get("value"))
-                                for field in backend.get("fields", [])
-                            ]
-                        )
-                    )
-                )
-                if backend is not {}:
-                    kwargs = {
-                        "body": message,
-                        "to": target_id,
-                        "summary": backend.get("pretext"),
-                        "title": backend.get("title"),
-                        "link": backend.get("title_link"),
-                        "image": backend.get("image_url"),
-                        "thumbnail": backend.get("thumb_url"),
-                        "color": backend.get("color"),
-                        "fields": tuple(
-                            [
-                                (field.get("title"), field.get("value"))
-                                for field in backend.get("fields", [])
-                            ]
-                        ),
-                    }
-                    LOG.debug("Type: {}, Args: {}".format(type(kwargs), kwargs))
-                    self.bot_plugin.send_card(**kwargs)
+            if "slack" in extra:
+                # https://api.slack.com/reference/messaging/attachments#legacy_fields
+                legacy_fields = set([
+                    "author_icon",
+                    "author_link",
+                    "author_name",
+                    "color",
+                    "fallback",
+                    "fields",
+                    "footer",
+                    "footer_icon",
+                    "image_url",
+                    "mrkdwn_in",
+                    "pretext",
+                    "text",
+                    "thumb_url",
+                    "title",
+                    "title_link",
+                    "ts",
+                ])
+                if legacy_fields.issuperset(extra["slack"]):
+                    self._post_legacy_attachment(whisper, message, target_id, extra)
                 else:
-                    LOG.warning("{} not found.".format(self.mode))
-                    self.bot_plugin.send(target_id, message)
+                    self._post_block_message(whisper, message, target_id, extra)
+
+    def _post_legacy_attachment(self, whisper, message, target_id, extra):
+        LOG.debug("Legacy attachment - Send card using backend {}".format(self.bot_plugin.mode))
+        backend = extra.get(self.bot_plugin.mode, {})
+        LOG.debug(
+            "fields {}".format(
+                tuple(
+                    [
+                        (field.get("title"), field.get("value"))
+                        for field in backend.get("fields", [])
+                    ]
+                )
+            )
+        )
+        if backend is not {}:
+            kwargs = {
+                "body": message,
+                "to": target_id,
+                "summary": backend.get("pretext"),
+                "title": backend.get("title"),
+                "link": backend.get("title_link"),
+                "image": backend.get("image_url"),
+                "thumbnail": backend.get("thumb_url"),
+                "color": backend.get("color"),
+                "fields": tuple(
+                    [
+                        (field.get("title"), field.get("value"))
+                        for field in backend.get("fields", [])
+                    ]
+                ),
+            }
+            LOG.debug("Type: {}, Args: {}".format(type(kwargs), kwargs))
+            self.bot_plugin.send_card(**kwargs)
+        else:
+            LOG.warning("{} not found.".format(self.mode))
+            self.bot_plugin.send(target_id, message)
+
+    def _post_block_message(self, whisper, message, target_id, extra):
+        if "blocks" in extra["slack"]:
+            extra["slack"]["text"] = message
+            extra["slack"]["channel"] = target_id
+
+            self.bot_plugin._bot.slack_web.api_call(
+                "chat.postMessage",
+                data=extra["slack"]
+            )
 
     def format_help(self, help_strings):
         help_text = ""
