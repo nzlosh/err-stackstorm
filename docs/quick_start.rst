@@ -4,7 +4,7 @@
 Quick Start
 ************
 
-If you are familiar with Errbot and Stackstorm, this guide will get you up and running in no time. For in-depth information, refer to :ref:`installation` and :ref:`configuration`
+If you are familiar with Errbot and StackStorm, this guide will get you up and running in no time. For in-depth information, refer to :ref:`installation` and :ref:`configuration`
 
 1. Enable Errbot's webserver::
 
