@@ -41,6 +41,29 @@ class StackStormAPI(object):
         LOG.warning("Bot credentials re-authentication required.")
         self.accessctl.bot.authenticate_bot_credentials()
 
+    def inquiry(self, inquiry_id):
+        """
+        Fetch the contents of an inquiry give it's id.
+        {
+            "id": "60a7c8876d573fae8028be34",
+            "route": "slack_query",
+            "ttl": 1440,
+            "users": [],
+            "roles": [],
+            "schema": {
+                "type" : "object",
+                "properties": {
+                    "password": {
+                        "type": "string",
+                        "description": "Enter your not so secret password",
+                        "required": true
+                    }
+                }
+            }
+        }
+        """
+        raise NotImplementedError
+
     def actionalias_help(self, pack=None, filter=None, limit=None, offset=None, st2_creds=None):
         """
         Call StackStorm API for action alias help.
@@ -167,14 +190,17 @@ class StackStormAPI(object):
                         )
                     )
                     data = json.loads(event.data)
-                    p = data["payload"]
-                    callback(
-                        p.get("whisper"),
-                        p.get("message"),
-                        p.get("user"),
-                        p.get("channel"),
-                        p.get("extra"),
-                    )
+                    if data.get("context") is not None:
+                        LOG.info("Inquiry payload detected, looking up inquery data.")
+                    else:
+                        p = data["payload"]
+                        callback(
+                            p.get("whisper"),
+                            p.get("message"),
+                            p.get("user"),
+                            p.get("channel"),
+                            p.get("extra"),
+                        )
                 # Test for shutdown after event to avoid losing messages.
                 if self.accessctl.bot.run_listener is False:
                     break

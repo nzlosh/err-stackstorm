@@ -204,3 +204,19 @@ _to [<class 'yapsy_loaded_plugin_Slack_0.SlackRoom'>] #ops
 ```
 
 
+## Microsoft Teams
+
+As of 30 April 2021, the official MS documentation suggests using Visual Studio with the MS Teams Toolkit.
+
+If that gets you there, perfect.  If you don't use or want Visual Studio there's an alternative process.
+
+Pre-requisites:
+  - A Microsoft account.
+  - A MS Teams environment.
+
+1. Log in to the Bot Framework website at https://dev.botframework.com/bots/new
+2. Fill in all the required fields.
+
+
+References:
+https://techcommunity.microsoft.com/t5/teams-developer/register-bot-without-azure-process/m-p/1490808
