@@ -16,10 +16,6 @@ setup:
 	pip install -r requirements.txt
 	pip install -r requirements-test.txt
 
-.PHONY: activate
-activate:
-	. ${VENVDIR}/bin/activate
-
 .PHONY: auto_format
 auto_format:
 	echo "Formatting code"
@@ -46,5 +42,4 @@ help:
 	echo "lint_test: Run flake and pycodestyle tests on source files."
 	echo "unit_test: Run pytest."
 	echo "auto_format: Run black formatting over source files."
-#	echo "setup: Install errbot and dependencies into virtual environment."
-#	echo "activate: Activate virtual environment."
+	echo "setup: Install errbot and dependencies into virtual environment."

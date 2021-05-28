@@ -268,44 +268,48 @@ class St2(BotPlugin):
         msg_debug = ""
         for attr, value in msg.__dict__.items():
             msg_debug += "\t\t{} [{}] {}\n".format(attr, type(value), value)
-        LOG.debug("Message received from chat backend.\n{}\n".format(msg_debug))
+        LOG.debug(f"Message received from chat backend.\n{msg_debug}\n")
 
         matched_result = self.st2api.match(msg.body, st2token)
         result = ""
         if matched_result.return_code == 0:
             action_alias = matched_result.message["actionalias"]
-            representation = matched_result.message["representation"]
             del matched_result
             if action_alias.get("enabled", True) is True:
                 res = self.st2api.execute_actionalias(
-                    action_alias,
-                    representation,
                     msg,
                     self.chatbackend.get_username(msg),
                     st2token
                 )
-                LOG.debug("action alias execution result: type={} {}".format(type(res), res))
-                if "ack" in action_alias:
-                    if action_alias["ack"].get("enabled", True) is True:
-                        result = res.get("results", [{}])[0].get("message", "")
-                        if res.get(
-                            "results", [{}]
-                        )[0].get(
-                            "actionalias", {}
-                        ).get(
-                            "ack", {}
-                        ).get(
-                            "append_url", False
-                        ):
-                            result = " ".join(
-                                [
-                                    result,
-                                    res.get("results", [{}])[0].get("execution").get("web_url", "")
-                                ]
-                            )
+
+                LOG.debug(f"action alias execution result: type={type(res)} {res}")
+                if isinstance(res, dict):
+                    result = res.get("faultstring")
+                    # If the response doesn't contain "faultstring", it's assumed the execution
+                    # submission was successful and command acknowledgement must be processed.
+                    if result is None:
+                        ack_action_alias = action_alias.get("ack", {"enabled": False})
+                        if ack_action_alias.get("enabled", True) is True:
+                            result = res.get("results", [{}])[0]
+                            if result.get(
+                                "actionalias", {}
+                            ).get(
+                                "ack", {}
+                            ).get(
+                                "append_url", False
+                            ):
+                                web_url = f' {result.get("execution", {}).get("web_url", "")}'
+                            else:
+                                web_url = ""
+                            result = f'{result.get("message", "")}{web_url}'
+                else:
+                    # The StackStorm API hasn't responded with a json parsable body or with the
+                    # expected 201/400 return code.  The http response text is reported.
+                    result = res
             else:
                 result = "The command '{}' is disabled.".format(msg.body)
         else:
+            # The action-alias wasn't found or an error was encounter and is reported.
             result = matched_result.message
         return result
 
