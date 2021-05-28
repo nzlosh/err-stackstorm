@@ -20,6 +20,19 @@ Features
     * Chat provider integration examples
 
 
+StackStorm ChatOps Examples
+
+The examples are arrange from simple use cases, such as setting up the first action-alias through
+to inquiry response, multiple bot routing across multiple chat providers.
+
+Send a notification from an action
+Execute a chatops command
+Executing a chatops command with arguments
+Executing a chatops command and returning a result
+Formatting a chatops command result using jinja templates
+Advanced formatting using chat provider features (Slack blocks)
+
+
 User provided content
 =====================
 
@@ -28,4 +41,4 @@ Some generous people have kindly taken the time to create content around using t
     * ChatOps level up with StackStorm by Michał Wcisło https://devopsspiral.com/video/chatops-stackstorm/
     * ChatOps chronicles - An exciting journey to a wonderland of conversation-driven DevOps by Denys Havrysh https://medium.com/chatops-chronicles
 
-Thank you to everyone who has contributed!
+Thank you to everyone who has contributed to the err-stackstorm project!

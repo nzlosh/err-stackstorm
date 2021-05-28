@@ -61,7 +61,25 @@ class StackStormAPI(object):
                 }
             }
         }
+        curl -X GET -H 'User-Agent: python-requests/2.25.1'
+        -H 'Accept-Encoding: gzip, deflate'
+        -H 'Accept: */*'
+        -H 'Connection: keep-alive'
+        -H 'X-Auth-Token: b678fac0557f4fc7893e82d31a615942'
+        http://127.0.0.1:9101/v1/inquiries/60a81cee6d573fae8028be84
+
+         {
+            "id": "60a81cee6d573fae8028be84",
+             "route": "slack_query",
+             "ttl": 1440,
+             "users": [],
+                 }
+             }
+         }
+
         """
+        url = f"{self.cfg.api_url}/inquiries/{inquiry_id}"
+        headers = st2_creds_requests() # to be completed.
         raise NotImplementedError
 
     def actionalias_help(self, pack=None, filter=None, limit=None, offset=None, st2_creds=None):
