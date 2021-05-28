@@ -2,6 +2,7 @@
 import json
 import logging
 import threading
+import traceback
 import requests
 from types import SimpleNamespace
 
@@ -38,7 +39,7 @@ from lib.authentication_handler import (
 )
 
 LOG = logging.getLogger("errbot.plugin.st2")
-ERR_STACKSTORM_VERSION = "2.1.3"
+ERR_STACKSTORM_VERSION = "2.1.4"
 
 
 class St2(BotPlugin):
@@ -77,15 +78,19 @@ class St2(BotPlugin):
 
     def check_latest_version(self):
         url = "https://raw.githubusercontent.com/nzlosh/err-stackstorm/master/version.json"
-        response = requests.get(url, timeout=5)
+        try:
+            response = requests.get(url, timeout=5)
 
-        if response.status_code != 200:
-            LOG.warning(
-                "Unable to fetch err-stackstorm version from {}. HTTP code: {}".format(
-                    url,
-                    response.status_code
+            if response.status_code != 200:
+                LOG.warning(
+                    "Unable to fetch err-stackstorm version from {}. HTTP code: {}".format(
+                        url,
+                        response.status_code
+                    )
                 )
-            )
+                return True
+        except Exception as e:
+            LOG.warning("Exception checking version from {}. {}".format(url, e))
             return True
 
         latest = response.json().get("version")
@@ -119,7 +124,7 @@ class St2(BotPlugin):
         standalone_auth = AuthHandlerFactory.instantiate("standalone")(self.cfg)
         bot_token = standalone_auth.authenticate(st2_creds=self.cfg.bot_creds)
         if bot_token:
-            LOG.debug("StackStorm authentication response {}".format(bot_token.requests()))
+            LOG.debug("StackStorm authentication succeeded.")
             self.accessctl.set_token_by_session(bot_session.id(), bot_token)
         else:
             LOG.critical("Failed to authenticate bot credentials with StackStorm API.")
@@ -185,7 +190,7 @@ class St2(BotPlugin):
         """
         List any established sessions between the chat service and StackStorm API.
         """
-        return "Sessions: " + "\n\n".join(self.accessctl.list_sessions())
+        return self.chatbackend.present_sessions(self.accessctl.list_sessions())
 
     def st2sessiondelete(self, msg, args):
         """
@@ -211,8 +216,8 @@ class St2(BotPlugin):
             return "Authentication is only available when Client side authentication is configured."
 
         if msg.is_direct is not True:
-            return "Requests for authentication in a public channel isn't possible." \
-                "  Request authentication in a private one-to-one message."
+            return "Requests for authentication in a public channel aren't supported for " \
+                "security reasons.  Request authentication in a private one-to-one message."
 
         if len(args) < 1:
             return "Please provide a shared word to use during the authenication process."
@@ -229,7 +234,7 @@ class St2(BotPlugin):
                 session = self.accessctl.create_session(msg.frm, args)
 
         return "Your challenge response is {}".format(
-            self.accessctl.session_url(session.id(), "/index.html")
+            self.accessctl.session_url(session.id(), "index.html")
         )
 
     def st2_execute_actionalias(self, msg, match):
@@ -243,18 +248,18 @@ class St2(BotPlugin):
             """
             return msg.replace(self.cfg.plugin_prefix, "", 1).strip()
 
-        user_id = self.chatbackend.normalise_user_id(msg.frm)
+        chat_user = msg.frm
         st2token = False
         err_msg = "Failed to fetch valid credentials."
         try:
-            st2token = self.accessctl.pre_execution_authentication(user_id)
+            st2token = self.accessctl.pre_execution_authentication(chat_user)
         except (SessionExpiredError, SessionInvalidError) as e:
             err_msg = str(e)
 
         if st2token is False:
-            rejection = "Error: {}  Action-Alias execution is not allowed for chat user '{}'." \
+            rejection = "Error: '{}'.  Action-Alias execution is not allowed for chat user '{}'." \
                 "  Please authenticate using {}session_start or see your StackStorm" \
-                " administrator to grant access.".format(self.cfg.plugin_prefix, err_msg, user_id)
+                " administrator to grant access.".format(err_msg, chat_user, self.cfg.plugin_prefix)
             LOG.warning(rejection)
             return rejection
 
@@ -414,6 +419,12 @@ class St2(BotPlugin):
                 r.message = "Invalid authentication payload"
 
         if r.authenticated is False:
+            try:
+                self.accessctl.delete_session(uuid)
+            except Exception as e:
+                LOG.debug("Failed to delete {}. {}".format(uuid, e))
+                if LOG.level <= logging.DEBUG:
+                    traceback.print_exc()
             LOG.warning(r.message)
 
         return json.dumps(vars(r))
@@ -488,7 +499,7 @@ class St2(BotPlugin):
                 ),
                 Command(
                     lambda plugin, msg, args: self.st2_execute_actionalias(msg, args),
-                    name="{} <action-alias>".format(self.cfg.plugin_prefix),
+                    name="{}".format(self.cfg.plugin_prefix),
                     cmd_type=re_botcmd,
                     cmd_kwargs={"pattern": "^{} .*".format(self.cfg.plugin_prefix)},
                     doc="Run an arbitrary StackStorm command (action-alias).\n"

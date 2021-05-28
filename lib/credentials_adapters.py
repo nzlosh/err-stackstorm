@@ -23,11 +23,9 @@ class CredentialsFactory(AbstractCredentialsFactory):
 
     @staticmethod
     def instantiate(credential_type="user"):
-        return {
-            "user": St2UserCredentials,
-            "token": St2UserToken,
-            "apikey": St2ApiKey
-        }.get(credential_type, St2UserCredentials)
+        return {"user": St2UserCredentials, "token": St2UserToken, "apikey": St2ApiKey}.get(
+            credential_type, St2UserCredentials
+        )
 
 
 class AbstractCredentials(metaclass=abc.ABCMeta):
@@ -50,17 +48,15 @@ class St2UserCredentials(AbstractCredentials):
         self.password = password
 
     def __repr__(self):
-        return "".join([
-            self.username,
-            " : ",
-            "".join(["*" for c in self.password])
-        ])
+        return "".join([self.username, " : ", "".join(["*" for c in self.password])])
 
     def requests(self, st2_x_auth=False):
         # TODO: FIX: Find a cleaner way for requests to produce the header.
-        headers = HTTPBasicAuth(self.username, self.password).__call__(
-            SimpleNamespace(**{"headers": {}})
-        ).headers
+        headers = (
+            HTTPBasicAuth(self.username, self.password)
+            .__call__(SimpleNamespace(**{"headers": {}}))
+            .headers
+        )
         if st2_x_auth:
             headers["X-Authenticate"] = headers["Authorization"]
             del headers["Authorization"]
@@ -96,7 +92,7 @@ class St2ApiKey(AbstractCredentials):
         return self.apikey
 
     def requests(self):
-        return {'St2-Api-Key': self.apikey}
+        return {"St2-Api-Key": self.apikey}
 
     def st2client(self):
-        return {'api_key': self.apikey}
+        return {"api_key": self.apikey}

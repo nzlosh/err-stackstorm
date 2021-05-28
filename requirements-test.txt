@@ -1,6 +1,5 @@
 pytest
 mock
-pycodestyle
 flake8
 black
 bandit

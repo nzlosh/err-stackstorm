@@ -80,10 +80,7 @@ class StackStormAPI(object):
         result = Result()
         try:
             response = requests.post(
-                url,
-                headers=headers,
-                data=payload,
-                verify=self.cfg.verify_cert
+                url, headers=headers, data=payload, verify=self.cfg.verify_cert
             )
             if response.status_code == 200:
                 result.OK(response.json())
@@ -92,7 +89,7 @@ class StackStormAPI(object):
                     1,
                     "st2 command '{}' not found.  View available commands with {}st2help.".format(
                         text, self.cfg.bot_prefix
-                    )
+                    ),
                 )
                 LOG.error(result.message)
             else:
@@ -115,11 +112,7 @@ class StackStormAPI(object):
 
         url = "/".join([self.cfg.api_url, "aliasexecution/match_and_execute"])
 
-        payload = {
-            "command": msg.body,
-            "user": chat_user,
-            "notification_route": 'errbot'
-        }
+        payload = {"command": msg.body, "user": chat_user, "notification_route": self.cfg.route_key}
 
         if msg.is_direct is False:
             payload["source_channel"] = str(msg.to)
@@ -131,10 +124,7 @@ class StackStormAPI(object):
         msg = ""
         try:
             response = requests.post(
-                url,
-                headers=headers,
-                json=payload,
-                verify=self.cfg.verify_cert
+                url, headers=headers, json=payload, verify=self.cfg.verify_cert
             )
 
             if response.status_code == 201:
@@ -164,10 +154,7 @@ class StackStormAPI(object):
                     )
                     raise ValueError("Bot token is not valid for Stream API.")
 
-            stream_kwargs = {
-                "headers": token.requests(),
-                "verify": self.cfg.verify_cert
-            }
+            stream_kwargs = {"headers": token.requests(), "verify": self.cfg.verify_cert}
 
             stream_url = "".join([self.cfg.stream_url, "/stream"])
 
@@ -176,18 +163,17 @@ class StackStormAPI(object):
                 if event.event == "st2.announcement__{}".format(self.cfg.route_key):
                     LOG.debug(
                         "*** Errbot announcement event detected! ***\n{}\n{}\n".format(
-                            event.dump(),
-                            stream
+                            event.dump(), stream
                         )
                     )
                     data = json.loads(event.data)
                     p = data["payload"]
                     callback(
-                        p.get('whisper'),
-                        p.get('message'),
-                        p.get('user'),
-                        p.get('channel'),
-                        p.get('extra')
+                        p.get("whisper"),
+                        p.get("message"),
+                        p.get("user"),
+                        p.get("channel"),
+                        p.get("extra"),
                     )
                 # Test for shutdown after event to avoid losing messages.
                 if self.accessctl.bot.run_listener is False:

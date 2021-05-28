@@ -14,9 +14,13 @@ class BotPluginIdentity(object):
     For internal use only by err-stackstorm.  The object is used by methods that will create a
     session and authenticate err-stackstorm credentials with StackStorm.
     """
+
     def __init__(self, name="errbot%service", secret=generate_password(16)):
         self.name = name
         self.secret = secret
+
+    def __repr__(self):
+        return str(self.secret)
 
 
 class AuthenticationController(object):
@@ -36,7 +40,7 @@ class AuthenticationController(object):
             user_id = self.bot.chatbackend.normalise_user_id(user)
         else:
             user_id = user
-        LOG.info("User ID is '{}'".format(user_id))
+        LOG.debug("Authentication User ID is '{}'".format(user_id))
         return user_id
 
     def pre_execution_authentication(self, chat_user):
@@ -69,9 +73,7 @@ class AuthenticationController(object):
         """
         Return a URL formatted with the UUID query string attached.
         """
-        return "{}{}?uuid={}".format(
-            self.bot.cfg.auth_handler.url, url_path, session_id
-        )
+        return "{}{}?uuid={}".format(self.bot.cfg.auth_handler.url, url_path, session_id)
 
     def delete_session(self, session_id):
         """
