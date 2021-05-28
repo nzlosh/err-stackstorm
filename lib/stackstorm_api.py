@@ -105,7 +105,8 @@ class StackStormAPI(object):
     def execute_actionalias(self, msg, chat_user, st2token):
         """
         @msg: errbot message.
-        @chat_user: the chat provider user/channel to pass to StackStorm for the execution result response.
+        @chat_user: the chat provider user/channel to pass to StackStorm for the execution
+                    result response.
         @st2token: The st2 api token/key to be used when submitting the action-alias execution.
         """
         headers = st2token.requests()
@@ -132,7 +133,7 @@ class StackStormAPI(object):
             else:
                 msg = response.text
         except Exception as e:
-            msg = "Error executing action-alias:  {} {}".format(str(e))
+            msg = "Error executing action-alias:  {}".format(str(e))
         return msg
 
     def st2stream_listener(self, callback=None, bot_identity=None):

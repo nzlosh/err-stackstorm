@@ -330,24 +330,26 @@ class SlackChatAdapter(GenericChatAdapter):
                 self.bot_plugin.send(target_id, message)
             if extra and "slack" in extra:
                 # https://api.slack.com/reference/messaging/attachments#legacy_fields
-                legacy_fields = set([
-                    "author_icon",
-                    "author_link",
-                    "author_name",
-                    "color",
-                    "fallback",
-                    "fields",
-                    "footer",
-                    "footer_icon",
-                    "image_url",
-                    "mrkdwn_in",
-                    "pretext",
-                    "text",
-                    "thumb_url",
-                    "title",
-                    "title_link",
-                    "ts",
-                ])
+                legacy_fields = set(
+                    [
+                        "author_icon",
+                        "author_link",
+                        "author_name",
+                        "color",
+                        "fallback",
+                        "fields",
+                        "footer",
+                        "footer_icon",
+                        "image_url",
+                        "mrkdwn_in",
+                        "pretext",
+                        "text",
+                        "thumb_url",
+                        "title",
+                        "title_link",
+                        "ts",
+                    ]
+                )
                 if legacy_fields.issuperset(extra["slack"]):
                     self._post_legacy_attachment(whisper, message, target_id, extra)
                 else:
@@ -394,10 +396,7 @@ class SlackChatAdapter(GenericChatAdapter):
             extra["slack"]["text"] = message
             extra["slack"]["channel"] = target_id
 
-            self.bot_plugin._bot.slack_web.api_call(
-                "chat.postMessage",
-                data=extra["slack"]
-            )
+            self.bot_plugin._bot.slack_web.api_call("chat.postMessage", data=extra["slack"])
 
     def format_help(self, help_strings):
         help_text = ""

@@ -16,18 +16,21 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install requirements
-        run: make setup
+        run: |
+          make -s setup
 
       - name: Linting
         run: |
-          make auto_format
-          make lint_test
+          make -s auto_format
+          make -s lint_test
 
       - name: Unit Tests
-        run: make unit_test
+        run: |
+          make -s unit_test
 
       - name: Security Scan
-        run: make security_scan
+        run: |
+          make -s security_scan
 
   build:
     runs-on: ubuntu-latest
