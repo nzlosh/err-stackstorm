@@ -328,7 +328,7 @@ class SlackChatAdapter(GenericChatAdapter):
         else:
             if extra is None or extra == {}:
                 self.bot_plugin.send(target_id, message)
-            if "slack" in extra:
+            if extra and "slack" in extra:
                 # https://api.slack.com/reference/messaging/attachments#legacy_fields
                 legacy_fields = set([
                     "author_icon",
