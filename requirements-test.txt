@@ -1,3 +1,5 @@
 pytest
 mock
 flake8
+black
+bandit

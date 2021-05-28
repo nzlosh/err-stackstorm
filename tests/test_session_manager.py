@@ -9,7 +9,7 @@ from lib.errors import SessionInvalidError, SessionExistsError
 
 
 pytest_plugins = ["errbot.backends.test"]
-extra_plugin_dir = '.'
+extra_plugin_dir = "."
 
 
 def test_session_manager():

@@ -1,10 +1,15 @@
 # coding:utf-8
 from mock import Mock
-from lib.chat_adapters import ChatAdapterFactory, GenericChatAdapter, XMPPChatAdapter, \
-    MattermostChatAdapter, SlackChatAdapter
+from lib.chat_adapters import (
+    ChatAdapterFactory,
+    GenericChatAdapter,
+    XMPPChatAdapter,
+    MattermostChatAdapter,
+    SlackChatAdapter,
+)
 
 pytest_plugins = ["errbot.backends.test"]
-extra_plugin_dir = '.'
+extra_plugin_dir = "."
 
 
 def test_chat_adapters():
