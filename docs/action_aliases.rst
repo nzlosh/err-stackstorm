@@ -56,12 +56,16 @@ The bot will answer your request using the ``result.format`` definition::
   operation completed {~} Sun Jul  7 02:08:58 PDT 2019
 
 
-Advanced Formatting
---------------------
+Formatting
+----------
+
+Jinja Template
+==============
 
 .. seealso:: Don't forget to check ST2's official documentation on `Action Aliases <https://docs.stackstorm.com/chatops/aliases.html>`_.
 
-Here's an example of an Alias that runs a command on a list of remote hosts and outputs the results nicely formatted on **Slack**.
+Here's an example of an action-alias that runs a command on a list of remote hosts and outputs the results nicely formatted on **Slack**.
+
 
 .. code-block:: yaml
 
@@ -85,6 +89,74 @@ The alias above will format the execution output per host once it gathers the re
 This is how the bot will answer you on Slack:
 
 .. image:: images/remote_shell.jpg
+
+Slack Attachments
+=================
+
+.. note:: Slack considers attachments as legacy formatting.  Use block formatting whenever possible.  Support for attachments in this form of dictionary may be removed from err-stackstrom in the future.
+
+Slack's Markdown can get you a long way, but there are some occassions a richer message format is preferable.
+
+Attachments were the first form of advanced message formatting provided by Slack.  StackStorm chatops pack allows you to
+supply a `slack` key inside the `extra` parameter.  The `slack` key can hold the set of attributes related to sending an attachment.
+Information on the available attachment fields can be found here.  https://api.slack.com/reference/messaging/attachments#legacy_fields
+
+.. code-block:: bash
+    st2 run chatops.post_message route=errbot_slack channel='<#CL8HNNTFY>' message='Attachments Tets' extra='
+    {
+        "slack": {
+            "color": "#f48527",
+            "pretext": "Hey <!channel>, Ready for ChatOps?",
+            "title": "SaltStack and ChatOps. Get started :rocket:",
+            "title_link": "https://stackstorm.com/2015/07/29/getting-started-with-stackstorm-and-saltstack/",
+            "author_name": "by Jurnell Cockhren, CTO and Founder of SophicWare",
+            "author_link": "http://sophicware.com/",
+            "author_icon": "https://stackstorm.com/wp/wp-content/uploads/2015/01/favicon.png",
+            "image_url": "https://i.imgur.com/vOU2SC0.png",
+            "fields": [{
+                "title": "Documentation",
+                "value": "https://docs.stackstorm.com/chatops/",
+                "short": true
+            }]
+        }
+    }'
+
+
+
+Slack Blocks
+============
+
+Blocks have replaced Attachments as Slack's preferred method of advanced message formatting.  Blocks allow interaction as well as formatting.
+Attachments can be used inside blocks to provide secondary information to the primary message but their display is not guaranteed by Slack.
+
+.. code-block:: bash
+    st2 run chatops.post_message route=errbot_slack channel='<#CL8HNNTFY>' message='Blocks' extra='{
+        "slack": {
+            "blocks": [{
+                "type": "section",
+                "text": {
+                    "type": "plain_text",
+                    "text": "This is a plain text section block with jinja template interpolation {{ execution.id }}.",
+                    "emoji": true
+                }
+            }, {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "This is a *section* block with an ~image~ text _formatting_."
+                }
+            }, {
+                "type": "image",
+                "title": {
+                    "type": "plain_text",
+                    "text": "Slack Errbot StackStorm Saltstack",
+                    "emoji": true
+                },
+                "image_url": "https://i.imgur.com/vOU2SC0.png",
+                "alt_text": "SESS"
+            }]
+        }
+    }'
 
 
 .. important:: Advanced formatting may not be available to all chat backends since each backend requires specific code to translate ST2's `extra` parameter.
