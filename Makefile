@@ -2,7 +2,7 @@ SHELL=/bin/sh
 MAX_LINE_LEN=100
 
 .PHONY: all
-all: lint_test unit_test
+all: auto_format lint_test unit_test security_scan
 
 .PHONY: clean
 clean:
@@ -23,12 +23,12 @@ activate:
 .PHONY: auto_format
 auto_format:
 	echo "Formatting code"
-	echo black --line-length=${MAX_LINE_LEN} *.py lib/*.py tests/*.py
+	black --check --line-length=${MAX_LINE_LEN} *.py lib/*.py tests/*.py
 
 .PHONY: security_scan
 security_scan:
 	echo "Scanning for potential security issues"
-	echo bandit *.py lib/*.py
+	bandit *.py lib/*.py
 
 .PHONY: unit_test
 unit_test:
