@@ -1,11 +1,9 @@
 import setuptools
-
-# with open("README.md", "r") as fh:
-#    long_description = fh.read()
+from lib.version import ERR_STACKSTORM_VERSION
 
 setuptools.setup(
     name="err-stackstorm",
-    version="2.1.4",
+    version=ERR_STACKSTORM_VERSION,
     author="Err-StackStorm Plugin contributors",
     author_email="nzlosh@yahoo.com",
     description="An Errbot plugin for StackStorm ChatOps.",

@@ -20,9 +20,9 @@ from lib.stackstorm_api import StackStormAPI
 from lib.authentication_controller import AuthenticationController, BotPluginIdentity
 from lib.credentials_adapters import St2ApiKey, St2UserToken, St2UserCredentials
 from lib.authentication_handler import AuthHandlerFactory, ClientSideAuthHandler
+from lib.version import ERR_STACKSTORM_VERSION
 
 LOG = logging.getLogger("errbot.plugin.st2")
-ERR_STACKSTORM_VERSION = "2.1.4"
 
 
 class St2(BotPlugin):

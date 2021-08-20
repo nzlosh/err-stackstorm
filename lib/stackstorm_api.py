@@ -39,7 +39,7 @@ class StackStormAPI(object):
 
     def refresh_bot_credentials(self):
         LOG.warning("Bot credentials re-authentication required.")
-        self.accessctl.bot.authenticate_bot_credentials()
+        self.accessctl.bot.reauthenticate_bot_credentials()
 
     def actionalias_help(self, pack=None, filter=None, limit=None, offset=None, st2_creds=None):
         """
