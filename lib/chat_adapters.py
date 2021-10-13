@@ -32,6 +32,7 @@ class ChatAdapterFactory(AbstractChatAdapterFactory):
             "mattermost": ChatAdapterFactory.mattermost_adapter,
             "xmpp": ChatAdapterFactory.xmpp_adapter,
             "irc": ChatAdapterFactory.irc_adapter,
+            "botframework": ChatAdapterFactory.botframework_adapter,
             "discord": ChatAdapterFactory.discord_adapter,
         }.get(chat_backend, ChatAdapterFactory.generic_adapter)
 
@@ -46,6 +47,10 @@ class ChatAdapterFactory(AbstractChatAdapterFactory):
     @staticmethod
     def slackv3_adapter(bot_plugin):
         return SlackChatV3Adapter(bot_plugin)
+
+    @staticmethod
+    def botframework_adapter(bot_plugin):
+        return BotFramework(bot_plugin)
 
     @staticmethod
     def irc_adapter(bot_plugin):
@@ -164,6 +169,56 @@ class GenericChatAdapter(AbstractChatAdapter):
             res += " - {}\n".format(str(session))
         return res
 
+
+class BotFramework(GenericChatAdapter):
+    """
+    BotFramework for Microsoft teams.
+    """
+    def __init__(self, bot_plugin):
+        super().__init__(bot_plugin)
+
+    def post_message(self, whisper, message, user, channel, extra):
+        """
+        MS Teams needs special handling when sending messages.  The conversation_id is required
+        when responding.
+        """
+        LOG.debug(
+            "GenericChatAdapter posting message: whisper={},"
+            " message={}, user={}, channel={}, extra={}".format(
+                whisper, message, user, channel, extra
+            )
+        )
+        user_id = None
+        channel_id = None
+
+        if user is not None:
+            try:
+                user_id = self.bot_plugin.build_identifier(user)
+                LOG.debug("UserID: {}".format(user_id))
+            except ValueError as err:
+                LOG.warning("Invalid user identifier '{}'.  {}".format(channel, err))
+
+        if channel is not None:
+            try:
+                LOG.debug("Channel {}".format(channel))
+                channel_id = self.bot_plugin.build_identifier(channel)
+            except ValueError as err:
+                LOG.warning("Invalid channel identifier '{}'.  {}".format(channel, err))
+
+        # Only whisper to users, not channels.
+        if whisper and user_id is not None:
+            target_id = user_id
+        else:
+            if channel_id is None:
+                # Fall back to user if no channel is set.
+                target_id = user_id
+            else:
+                target_id = channel_id
+
+        if target_id is None:
+            LOG.error("Unable to post message as there is no user or channel destination.")
+        else:
+            self.bot_plugin.send(target_id, message)
 
 class DiscordChatAdapter(GenericChatAdapter):
     def __init__(self, bot_plugin):
