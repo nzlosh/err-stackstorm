@@ -449,12 +449,14 @@ class SlackChatV3Adapter(SlackChatAdapter):
             channel_name,
             channel_id,
         ) = self.bot_plugin._bot.extract_identifiers_from_string(str(msg.frm))
-        LOG.warning(f"""
+        LOG.warning(
+            f"""
             username = {username}
             user_id = {user_id}
             channel_name = {channel_name}
             channel_id = {channel_id}
-        """)
+        """
+        )
         if channel_id:
             name = f"#{channel_id}"
         elif channel_name:
