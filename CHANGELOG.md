@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+##  [Unreleased]
+### Added
+### Changed
+### Removed
+
+##  [2.2.0] 2021-11-27
+### Added
+  - support for slackv3 backend and passing action-alias extra parameters as Slack block or attachment.
+  - documentation to use Slack blocks or attachments.
+  - tests for Python from 3.6 to 3.10
+
+### Changed
+  -  hard coded notification_route to use user configured route when calling match_and_execute.
+
+### Removed
+  - logging sensitive api tokens in debug logs.
+  - "<action-alias>" for action execution help text.
+
 ##  [2.1.4] 2020-08-14
 ### Added
   - Session are deleted automatically when a chat user fails to authenticate against St2 API.

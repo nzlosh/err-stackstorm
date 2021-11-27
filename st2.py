@@ -22,7 +22,7 @@ from lib.credentials_adapters import St2ApiKey, St2UserToken, St2UserCredentials
 from lib.authentication_handler import AuthHandlerFactory, ClientSideAuthHandler
 
 LOG = logging.getLogger("errbot.plugin.st2")
-ERR_STACKSTORM_VERSION = "2.1.4"
+ERR_STACKSTORM_VERSION = "2.2.0"
 
 
 class St2(BotPlugin):
