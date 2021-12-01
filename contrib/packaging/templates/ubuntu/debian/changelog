@@ -1,0 +1,6 @@
+err-stackstorm ({{ _common.version }}-{{ _common.pkg_version }}) UNRELEASED; urgency=low
+
+  * Virtual environment of errbot and err-stackstorm.
+
+ -- {{ _common.maintainer.name }} <{{ _common.maintainer.email }}>  {{ _runtime.rfc2822_datetime }}
+

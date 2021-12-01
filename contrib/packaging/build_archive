@@ -1,6 +1,8 @@
 #!/bin/bash
 
-set -e
+set -e +x 
+
+ERR_STACKSTORM_VERSION=2.2.0
 
 # Package contains the following software projects and their respective licence.
 #
@@ -33,6 +35,10 @@ function ubuntu_18.04_install
 {
     apt install ${PKGS[@]}
 }
+function debian_10_install
+{
+    apt install ${PKGS[@]}
+}
 
 function install_system_requirements
 {
@@ -43,8 +49,8 @@ function install_system_requirements
 function create_virtual_environment
 {
     echo CREATE VIRTUAL ENVIRONMENT
-    virtualenv -p $PYVER $ROOT
-    cd /$ROOT
+    $PYVER -m venv $ROOT
+    cd $ROOT
     mkdir $ROOT/{plugins,backends,data}
 }
 
@@ -61,7 +67,7 @@ function fetch_archives
 
     cd $ROOT/plugins
     export PLUGINS=("err-stackstorm")
-    wget https://github.com/nzlosh/err-stackstorm/archive/refs/tags/v2.2.0.tar.gz -O err-stackstorm-v2.2.0.tar.gz
+    wget https://github.com/nzlosh/err-stackstorm/archive/refs/tags/v${ERR_STACKSTORM_VERSION}.tar.gz -O err-stackstorm-v${ERR_STACKSTORM_VERSION}.tar.gz
 }
 
 function install_extensions
@@ -113,8 +119,9 @@ function clean_virtualenv
 
 function install_errbot
 {
-    echo INSTALL ERRBOT
+    echo "INSTALL ERRBOT ($($ROOT/bin/pip --version))"
     source $ROOT/bin/activate
+    pip install --upgrade pip
     pip install errbot
     fetch_archives
     install_extensions
@@ -126,7 +133,7 @@ function build_archive
     install_system_requirements
     create_virtual_environment
     install_errbot
-    tar czvf /opt/err-stackstorm_2.2.0_${DISTRO_COMBO}_x86_64.tar.gz $ROOT
+    tar czvf /opt/err-stackstorm_${ERR_STACKSTORM_VERSION}_${DISTRO_COMBO}_x86_64.tar.gz $ROOT
 }
 
 export DISTRO=$(awk -F= '/^ID=/ {print $2}' /etc/*release* | tr -d '"')
@@ -140,7 +147,11 @@ case "${DISTRO}_${DISTRO_VERSION}" in
         export PYVER=python3.8
         ;;
     ubuntu_18.04)
-        export PKGS=(python3.7-minimal virtualenv git)
+        export PKGS=(python3.7-minimal git)
+        export PYVER=python3.7
+        ;;
+    debian_10)
+        export PKGS=(python3.7-minimal git wget)
         export PYVER=python3.7
         ;;
     *)

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -e
+
+/usr/bin/getent passwd errbot || export RET=$?
+
+if [[ $RET -eq 2 ]]; then
+	adduser --system --home /opt/errbot --shell /bin/false errbot --group
+elif [[ $RET -ne 0 ]]; then
+	echo "Error getting entity information for errbot." > /dev/stderr
+	exit $RET
+fi
+
+if [[ -d /opt/errbot ]]; then
+	chown -R errbot:errbot /opt/errbot
+fi
+
