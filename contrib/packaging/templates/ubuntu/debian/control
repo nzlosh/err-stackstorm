@@ -1,0 +1,13 @@
+Source: err-stackstorm
+Section: unknown
+Priority: extra
+Maintainer: Carlos <nzlosh@yahoo.com>
+Build-Depends: debhelper (>=10)
+Standards-Version: 3.9.4
+Homepage: https://err-stackstorm.readthedocs.io/en/latest/
+Vcs-Git: git://github.com/nzlosh/err-stackstorm.git
+
+Package: err-stackstorm
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, {{ ",".join(runtime_deps) }}
+Description: err-stackstorm brings StackStorm ChatOps to Errbot.

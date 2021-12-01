@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+#export DH_VERBOSE = 1
+
+DESTDIR=$(CURDIR)/debian/err-stackstorm
+
+%:
+	dh $@
+
+override_dh_installdeb:
+	dh_installdeb
+	echo BUILD DIRECTORY IS $(DESTDIR)
+	mkdir -p $(DESTDIR)
+	tar xvf $(CURDIR)/{{ _common.archive.filename }} --directory $(DESTDIR)

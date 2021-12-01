@@ -95,7 +95,11 @@ function install_errbot
         install_plugin $plugin
     done
 
-    for backend in 'https://github.com/nzlosh/err-backend-rocketchat.git@maint_nzlosh' 'https://github.com/nzlosh/err-backend-gitter.git@maint_nzlosh' 'https://github.com/nzlosh/err-backend-discord.git@development' 'https://github.com/nzlosh/err-backend-mattermost.git@maint_nzlosh'
+    for backend in  'https://github.com/nzlosh/err-backend-rocketchat.git@maint_nzlosh' \
+                    'https://github.com/nzlosh/err-backend-gitter.git@maint_nzlosh' \
+                    'https://github.com/errbotio/err-backend-discord' \
+                    'https://github.com/errbotio/err-backend-mattermost' \
+                    'https://github.com/errbotio/err-backend-slackv3'
     do
         install_backend $backend
     done

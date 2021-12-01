@@ -77,4 +77,5 @@ pip-selfcheck.json
 
 .idea
 
-
+### Package building directory
+pkg-build/
