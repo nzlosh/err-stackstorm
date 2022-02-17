@@ -170,7 +170,7 @@ class AuthenticationController(object):
         # get the configured authentication handler.
         token = self.bot.cfg.auth_handler.authenticate(user, creds, bot_creds)
 
-        # WARNING: Sensitive security information will be loggged, uncomment only when necessary.
+        # WARNING: Sensitive security information will be logged, uncomment only when necessary.
         # LOG.debug("Token for {} was {}".format(user, token))
 
         # pass credentials to authentication handler verify credentials
