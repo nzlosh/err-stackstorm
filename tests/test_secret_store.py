@@ -2,7 +2,7 @@
 from lib.store_adapters import ClearTextStoreAdapter, StoreAdapterFactory
 
 pytest_plugins = ["errbot.backends.test"]
-extra_plugin_dir = '.'
+extra_plugin_dir = "."
 
 
 def test_secret_store():

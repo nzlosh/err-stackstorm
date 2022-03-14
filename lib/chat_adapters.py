@@ -28,7 +28,7 @@ class ChatAdapterFactory(AbstractChatAdapterFactory):
     def instance(chat_backend):
         return {
             "slack": ChatAdapterFactory.slack_adapter,
-            "slackv3": ChatAdapterFactory.slack_adapter,
+            "slackv3": ChatAdapterFactory.slackv3_adapter,
             "mattermost": ChatAdapterFactory.mattermost_adapter,
             "xmpp": ChatAdapterFactory.xmpp_adapter,
             "irc": ChatAdapterFactory.irc_adapter,
@@ -42,6 +42,10 @@ class ChatAdapterFactory(AbstractChatAdapterFactory):
     @staticmethod
     def slack_adapter(bot_plugin):
         return SlackChatAdapter(bot_plugin)
+
+    @staticmethod
+    def slackv3_adapter(bot_plugin):
+        return SlackChatV3Adapter(bot_plugin)
 
     @staticmethod
     def irc_adapter(bot_plugin):
@@ -328,26 +332,28 @@ class SlackChatAdapter(GenericChatAdapter):
         else:
             if extra is None or extra == {}:
                 self.bot_plugin.send(target_id, message)
-            if "slack" in extra:
+            if extra and "slack" in extra:
                 # https://api.slack.com/reference/messaging/attachments#legacy_fields
-                legacy_fields = set([
-                    "author_icon",
-                    "author_link",
-                    "author_name",
-                    "color",
-                    "fallback",
-                    "fields",
-                    "footer",
-                    "footer_icon",
-                    "image_url",
-                    "mrkdwn_in",
-                    "pretext",
-                    "text",
-                    "thumb_url",
-                    "title",
-                    "title_link",
-                    "ts",
-                ])
+                legacy_fields = set(
+                    [
+                        "author_icon",
+                        "author_link",
+                        "author_name",
+                        "color",
+                        "fallback",
+                        "fields",
+                        "footer",
+                        "footer_icon",
+                        "image_url",
+                        "mrkdwn_in",
+                        "pretext",
+                        "text",
+                        "thumb_url",
+                        "title",
+                        "title_link",
+                        "ts",
+                    ]
+                )
                 if legacy_fields.issuperset(extra["slack"]):
                     self._post_legacy_attachment(whisper, message, target_id, extra)
                 else:
@@ -434,3 +440,37 @@ class SlackChatAdapter(GenericChatAdapter):
                 )
                 res += "- {} {}\n".format(user.person, str(session))
         return res
+
+
+class SlackChatV3Adapter(SlackChatAdapter):
+    def __init__(self, bot_plugin):
+        super().__init__(bot_plugin)
+
+    def get_username(self, msg):
+        """
+        Return the user name from an errbot message object.
+        Slack identity tuple (username, userid, channelname, channelid)
+        """
+        (
+            username,
+            user_id,
+            channel_name,
+            channel_id,
+        ) = self.bot_plugin._bot.extract_identifiers_from_string(str(msg.frm))
+        LOG.warning(
+            f"""
+            username = {username}
+            user_id = {user_id}
+            channel_name = {channel_name}
+            channel_id = {channel_id}
+        """
+        )
+        if channel_id:
+            name = f"#{channel_id}"
+        elif channel_name:
+            name = f"#{channel_name}"
+        elif user_id:
+            name = f"<@{user_id}>"
+        else:
+            name = f"@{username}"
+        return name

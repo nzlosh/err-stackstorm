@@ -39,7 +39,7 @@ class StackStormAPI(object):
 
     def refresh_bot_credentials(self):
         LOG.warning("Bot credentials re-authentication required.")
-        self.accessctl.bot.authenticate_bot_credentials()
+        self.accessctl.bot.reauthenticate_bot_credentials()
 
     def inquiry(self, inquiry_id):
         """
@@ -143,11 +143,12 @@ class StackStormAPI(object):
             LOG.error(result.message)
         return result
 
-    def execute_actionalias(self, action_alias, representation, msg, chat_user, st2token):
+    def execute_actionalias(self, msg, chat_user, st2token):
         """
-        @action_alias: the st2client action_alias object.
-        @representation: the st2client representation for the action_alias.
         @msg: errbot message.
+        @chat_user: the chat provider user/channel to pass to StackStorm for the execution
+                    result response.
+        @st2token: The st2 api token/key to be used when submitting the action-alias execution.
         """
         headers = st2token.requests()
 
@@ -168,12 +169,12 @@ class StackStormAPI(object):
                 url, headers=headers, json=payload, verify=self.cfg.verify_cert
             )
 
-            if response.status_code == 201:
+            if response.status_code in [201, 400]:
                 msg = response.json()
             else:
-                msg = response.body
+                msg = response.text
         except Exception as e:
-            msg = "Error getting execution and match:  {}".format(str(e))
+            msg = "Error executing action-alias:  {}".format(str(e))
         return msg
 
     def st2stream_listener(self, callback=None, bot_identity=None):

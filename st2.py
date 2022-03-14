@@ -6,14 +6,7 @@ import traceback
 import requests
 from types import SimpleNamespace
 
-from errbot import (
-    BotPlugin,
-    Command,
-    re_botcmd,
-    botcmd,
-    arg_botcmd,
-    webhook
-)
+from errbot import BotPlugin, Command, re_botcmd, botcmd, arg_botcmd, webhook
 
 from lib.config import PluginConfiguration
 from lib.chat_adapters import ChatAdapterFactory
@@ -21,25 +14,15 @@ from lib.errors import (
     SessionConsumedError,
     SessionExpiredError,
     SessionInvalidError,
-    SessionExistsError
+    SessionExistsError,
 )
 from lib.stackstorm_api import StackStormAPI
-from lib.authentication_controller import (
-    AuthenticationController,
-    BotPluginIdentity
-)
-from lib.credentials_adapters import (
-    St2ApiKey,
-    St2UserToken,
-    St2UserCredentials
-)
-from lib.authentication_handler import (
-    AuthHandlerFactory,
-    ClientSideAuthHandler
-)
+from lib.authentication_controller import AuthenticationController, BotPluginIdentity
+from lib.credentials_adapters import St2ApiKey, St2UserToken, St2UserCredentials
+from lib.authentication_handler import AuthHandlerFactory, ClientSideAuthHandler
+from lib.version import ERR_STACKSTORM_VERSION
 
 LOG = logging.getLogger("errbot.plugin.st2")
-ERR_STACKSTORM_VERSION = "2.1.4"
 
 
 class St2(BotPlugin):
@@ -47,6 +30,7 @@ class St2(BotPlugin):
     StackStorm plugin for authentication and Action Alias execution.
     Try !st2help for action alias help.
     """
+
     def __init__(self, bot, name):
         super(St2, self).__init__(bot, name)
 
@@ -84,8 +68,7 @@ class St2(BotPlugin):
             if response.status_code != 200:
                 LOG.warning(
                     "Unable to fetch err-stackstorm version from {}. HTTP code: {}".format(
-                        url,
-                        response.status_code
+                        url, response.status_code
                     )
                 )
                 return True
@@ -111,8 +94,7 @@ class St2(BotPlugin):
         # Create a session for internal use by err-stackstorm
         try:
             bot_session = self.accessctl.create_session(
-                self.internal_identity,
-                self.internal_identity.secret
+                self.internal_identity, self.internal_identity.secret
             )
             self.accessctl.consume_session(bot_session.id())
         except SessionExistsError:
@@ -173,13 +155,13 @@ class St2(BotPlugin):
         self.st2events_listener = threading.Thread(
             target=self.st2api.st2stream_listener,
             name="st2stream_listener",
-            args=[self.chatbackend.post_message, self.internal_identity]
+            args=[self.chatbackend.post_message, self.internal_identity],
         )
         self.st2listener(start=True)
 
     def deactivate(self):
         super(St2, self).deactivate()
-        self.destroy_dynamic_plugin('St2')
+        self.destroy_dynamic_plugin("St2")
         self.st2listener(stop=True)
         LOG.info("st2stream listener wait for thread to exit.")
         self.st2events_listener.join()
@@ -216,8 +198,10 @@ class St2(BotPlugin):
             return "Authentication is only available when Client side authentication is configured."
 
         if msg.is_direct is not True:
-            return "Requests for authentication in a public channel aren't supported for " \
+            return (
+                "Requests for authentication in a public channel aren't supported for "
                 "security reasons.  Request authentication in a private one-to-one message."
+            )
 
         if len(args) < 1:
             return "Please provide a shared word to use during the authenication process."
@@ -242,6 +226,7 @@ class St2(BotPlugin):
         Run an arbitrary stackstorm command.
         Available commands can be listed using !st2help
         """
+
         def remove_bot_prefix(msg):
             """
             Drop plugin prefix and any trailing white space from user supplied st2 command.
@@ -257,9 +242,11 @@ class St2(BotPlugin):
             err_msg = str(e)
 
         if st2token is False:
-            rejection = "Error: '{}'.  Action-Alias execution is not allowed for chat user '{}'." \
-                "  Please authenticate using {}session_start or see your StackStorm" \
+            rejection = (
+                "Error: '{}'.  Action-Alias execution is not allowed for chat user '{}'."
+                "  Please authenticate using {}session_start or see your StackStorm"
                 " administrator to grant access.".format(err_msg, chat_user, self.cfg.plugin_prefix)
+            )
             LOG.warning(rejection)
             return rejection
 
@@ -268,44 +255,44 @@ class St2(BotPlugin):
         msg_debug = ""
         for attr, value in msg.__dict__.items():
             msg_debug += "\t\t{} [{}] {}\n".format(attr, type(value), value)
-        LOG.debug("Message received from chat backend.\n{}\n".format(msg_debug))
+        LOG.debug(f"Message received from chat backend.\n{msg_debug}\n")
 
         matched_result = self.st2api.match(msg.body, st2token)
         result = ""
         if matched_result.return_code == 0:
             action_alias = matched_result.message["actionalias"]
-            representation = matched_result.message["representation"]
             del matched_result
             if action_alias.get("enabled", True) is True:
                 res = self.st2api.execute_actionalias(
-                    action_alias,
-                    representation,
-                    msg,
-                    self.chatbackend.get_username(msg),
-                    st2token
+                    msg, self.chatbackend.get_username(msg), st2token
                 )
-                LOG.debug("action alias execution result: type={} {}".format(type(res), res))
-                if "ack" in action_alias:
-                    if action_alias["ack"].get("enabled", True) is True:
-                        result = res.get("results", [{}])[0].get("message", "")
-                        if res.get(
-                            "results", [{}]
-                        )[0].get(
-                            "actionalias", {}
-                        ).get(
-                            "ack", {}
-                        ).get(
-                            "append_url", False
-                        ):
-                            result = " ".join(
-                                [
-                                    result,
-                                    res.get("results", [{}])[0].get("execution").get("web_url", "")
-                                ]
-                            )
+
+                LOG.debug(f"action alias execution result: type={type(res)} {res}")
+                if isinstance(res, dict):
+                    result = res.get("faultstring")
+                    # If the response doesn't contain "faultstring", it's assumed the execution
+                    # submission was successful and command acknowledgement must be processed.
+                    if result is None:
+                        ack_action_alias = action_alias.get("ack", {"enabled": False})
+                        if ack_action_alias.get("enabled", True) is True:
+                            result = res.get("results", [{}])[0]
+                            if (
+                                result.get("actionalias", {})
+                                .get("ack", {})
+                                .get("append_url", False)
+                            ):
+                                web_url = f' {result.get("execution", {}).get("web_url", "")}'
+                            else:
+                                web_url = ""
+                            result = f'{result.get("message", "")}{web_url}'
+                else:
+                    # The StackStorm API hasn't responded with a json parsable body or with the
+                    # expected 201/400 return code.  The http response text is reported.
+                    result = res
             else:
                 result = "The command '{}' is disabled.".format(msg.body)
         else:
+            # The action-alias wasn't found or an error was encounter and is reported.
             result = matched_result.message
         return result
 
@@ -327,34 +314,36 @@ class St2(BotPlugin):
         else:
             return self.chatbackend.format_help(help_result)
 
-    @webhook('/chatops/message')
+    @webhook("/chatops/message")
     def chatops_message(self, request):
         """
         Webhook entry point for stackstorm to post messages into
         errbot which will relay them into the chat backend.
         """
-        # WARNING: Sensitive security information will be loggged, uncomment only when necessary.
+        # WARNING: Sensitive security information will be logged, uncomment only when necessary.
         # LOG.debug("Webhook request: {}".format(request))
 
-        channel = request.get('channel')
-        message = request.get('message')
+        channel = request.get("channel")
+        message = request.get("message")
 
-        user = request.get('user')
-        whisper = request.get('whisper')
-        extra = request.get('extra', {})
+        user = request.get("user")
+        whisper = request.get("whisper")
+        extra = request.get("extra", {})
 
         self.chatbackend.post_message(whisper, message, user, channel, extra)
         return "Delivered to chat backend."
 
-    @webhook('/login/authenticate/<uuid>')
+    @webhook("/login/authenticate/<uuid>")
     def login_auth(self, request, uuid):
-        # WARNING: Sensitive security information will be loggged, uncomment only when necessary.
+        # WARNING: Sensitive security information will be logged, uncomment only when necessary.
         # LOG.debug("Request: {}".format(request))
-        r = SimpleNamespace(**{
-            "authenticated": False,
-            "return_code": 0,
-            "message": "Successfully associated StackStorm credentials"
-        })
+        r = SimpleNamespace(
+            **{
+                "authenticated": False,
+                "return_code": 0,
+                "message": "Successfully associated StackStorm credentials",
+            }
+        )
 
         try:
             self.accessctl.consume_session(uuid)
@@ -383,9 +372,7 @@ class St2(BotPlugin):
                 username = request.get("username", "")
                 password = request.get("password", "")
                 if self.accessctl.associate_credentials(
-                    user,
-                    St2UserCredentials(username, password),
-                    self.cfg.bot_creds
+                    user, St2UserCredentials(username, password), self.cfg.bot_creds
                 ):
                     r.authenticated = True
                 else:
@@ -394,9 +381,7 @@ class St2(BotPlugin):
             elif "user_token" in request:
                 user_token = request.get("user_token", None)
                 if self.accessctl.associate_credentials(
-                    user,
-                    St2UserToken(user_token),
-                    self.cfg.bot_creds
+                    user, St2UserToken(user_token), self.cfg.bot_creds
                 ):
                     r.authenticated = True
                 else:
@@ -405,9 +390,7 @@ class St2(BotPlugin):
             elif "api_key" in request:
                 api_key = request.get("api_key", None)
                 if self.accessctl.associate_credentials(
-                    user,
-                    St2ApiKey(api_key),
-                    self.cfg.bot_creds
+                    user, St2ApiKey(api_key), self.cfg.bot_creds
                 ):
                     r.authenticated = True
                 else:
@@ -443,7 +426,7 @@ class St2(BotPlugin):
             wrapper.__doc__ = wrapper._err_command_parser.format_help()
             fmt = wrapper._err_command_parser.format_usage()
             wrapper._err_command_syntax = fmt[
-                len('usage: ') + len(wrapper._err_command_parser.prog) + 1:-1
+                len("usage: ") + len(wrapper._err_command_parser.prog) + 1 : -1
             ]
 
         Help_Command = Command(
@@ -452,7 +435,7 @@ class St2(BotPlugin):
             cmd_type=arg_botcmd,
             cmd_args=("--pack",),
             cmd_kwargs={"dest": "pack", "type": str},
-            doc="Provide help for StackStorm action aliases."
+            doc="Provide help for StackStorm action aliases.",
         )
         append_args(Help_Command, ("--filter",), {"dest": "filter", "type": str})
         append_args(Help_Command, ("--limit",), {"dest": "limit", "type": int})
@@ -461,23 +444,24 @@ class St2(BotPlugin):
         self.create_dynamic_plugin(
             name="St2",
             doc="err-stackstorm v{} - A StackStorm plugin for authentication and Action Alias "
-                "execution.  Use {}{}help for action alias help.".format(
-                    ERR_STACKSTORM_VERSION, self.cfg.bot_prefix, self.cfg.plugin_prefix
-                ),
+            "execution.  Use {}{}help for action alias help.".format(
+                ERR_STACKSTORM_VERSION, self.cfg.bot_prefix, self.cfg.plugin_prefix
+            ),
             commands=(
                 Command(
                     lambda plugin, msg, args: self.st2sessionlist(msg, args),
                     name="{}session_list".format(self.cfg.plugin_prefix),
                     cmd_type=botcmd,
                     cmd_kwargs={"admin_only": True},
-                    doc="List any established sessions between the chat service and StackStorm API."
+                    doc="List any established sessions between the "
+                    "chat service and StackStorm API.",
                 ),
                 Command(
                     lambda plugin, msg, args: self.st2sessiondelete(msg, args),
                     name="{}session_cancel".format(self.cfg.plugin_prefix),
                     cmd_type=botcmd,
                     cmd_kwargs={"admin_only": True},
-                    doc="Allow an administrator to cancel a users session."
+                    doc="Allow an administrator to cancel a users session.",
                 ),
                 Command(
                     lambda plugin, msg, args: self.st2disconnect(msg, args),
@@ -485,7 +469,7 @@ class St2(BotPlugin):
                     cmd_type=botcmd,
                     cmd_kwargs={"admin_only": False},
                     doc="End a user session.  StackStorm credentials are "
-                        "purged when the session is closed."
+                    "purged when the session is closed.",
                 ),
                 Command(
                     lambda plugin, msg, args: self.st2authenticate(msg, args),
@@ -493,9 +477,9 @@ class St2(BotPlugin):
                     cmd_type=botcmd,
                     cmd_kwargs={"admin_only": False},
                     doc="Usage: {}session_start <shared_secret>.\n"
-                        "Authenticate with StackStorm API over an out of bands communication"
-                        " channel.  User Token or API Key are stored in a user session managed by"
-                        " err-stackstorm.".format(self.cfg.plugin_prefix)
+                    "Authenticate with StackStorm API over an out of bands communication"
+                    " channel.  User Token or API Key are stored in a user session managed by"
+                    " err-stackstorm.".format(self.cfg.plugin_prefix),
                 ),
                 Command(
                     lambda plugin, msg, args: self.st2_execute_actionalias(msg, args),
@@ -503,10 +487,10 @@ class St2(BotPlugin):
                     cmd_type=re_botcmd,
                     cmd_kwargs={"pattern": "^{} .*".format(self.cfg.plugin_prefix)},
                     doc="Run an arbitrary StackStorm command (action-alias).\n"
-                        "Available commands can be listed using {}{}help".format(
-                            self.cfg.bot_prefix,
-                            self.cfg.plugin_prefix
-                        )
+                    "Available commands can be listed using {}{}help".format(
+                        self.cfg.bot_prefix, self.cfg.plugin_prefix
+                    ),
                 ),
-                Help_Command)
+                Help_Command,
+            ),
         )
