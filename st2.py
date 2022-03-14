@@ -320,7 +320,7 @@ class St2(BotPlugin):
         Webhook entry point for stackstorm to post messages into
         errbot which will relay them into the chat backend.
         """
-        # WARNING: Sensitive security information will be loggged, uncomment only when necessary.
+        # WARNING: Sensitive security information will be logged, uncomment only when necessary.
         # LOG.debug("Webhook request: {}".format(request))
 
         channel = request.get("channel")
@@ -335,7 +335,7 @@ class St2(BotPlugin):
 
     @webhook("/login/authenticate/<uuid>")
     def login_auth(self, request, uuid):
-        # WARNING: Sensitive security information will be loggged, uncomment only when necessary.
+        # WARNING: Sensitive security information will be logged, uncomment only when necessary.
         # LOG.debug("Request: {}".format(request))
         r = SimpleNamespace(
             **{

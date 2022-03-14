@@ -18,11 +18,11 @@
 # -- Project information -----------------------------------------------------
 
 project = 'err-stackstorm'
-copyright = '2019, err-stackstorm contributors'
+copyright = '2019-2021, err-stackstorm contributors'
 author = 'err-stackstorm contributors'
 
 # The full version, including alpha/beta/rc tags
-release = '2.1.4'
+release = '2.2.0'
 
 
 # -- General configuration ---------------------------------------------------

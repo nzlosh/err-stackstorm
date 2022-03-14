@@ -66,7 +66,7 @@ class BaseAuthHandler(AbstractAuthHandler):
         new_path = "{}{}".format(o.path, path)
 
         url = urljoin(base, new_path)
-        # WARNING: Sensitive security information will be loggged, uncomment only when necessary.
+        # WARNING: Sensitive security information will be logged, uncomment only when necessary.
         # LOG.debug("HTTP Request: {} {} {}".format(verb, url, get_kwargs))
         return requests.request(verb, url, **get_kwargs)
 

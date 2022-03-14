@@ -20,6 +20,7 @@ jobs:
           - 3.7
           - 3.8
           - 3.9
+          - "3.10"
     steps:
       - name: Repository Checkout
         uses: actions/checkout@v2
@@ -53,10 +54,13 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install requirements
-        run: make setup
+        run: |
+          make setup
 
       - name: Build pypi
-        run: echo TO DO - make pypi package.
+        run: |
+          echo TO DO - make pypi package.
 
       - name: Build documentaiton
-        run: echo TO DO - make readthedocs documentation.
+        run: |
+          echo TO DO - make readthedocs documentation.
