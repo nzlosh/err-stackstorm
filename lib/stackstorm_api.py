@@ -41,8 +41,10 @@ class StackStormAPI(object):
         LOG.warning("Bot credentials re-authentication required.")
         self.accessctl.bot.reauthenticate_bot_credentials()
 
-    def inquiry(self, inquiry_id):
+    def enquiry(self, enquiry_id):
         """
+        StackStorm currently uses the draft4 jsonschema validator.
+
         Fetch the contents of an inquiry give it's id.
         {
             "id": "60a7c8876d573fae8028be34",
@@ -78,9 +80,25 @@ class StackStormAPI(object):
          }
 
         """
-        url = f"{self.cfg.api_url}/inquiries/{inquiry_id}"
-        headers = st2_creds_requests() # to be completed.
-        raise NotImplementedError
+        def get_enquiry(attempts=1):
+            url = f"{self.cfg.api_url}/inquiries/{inquiry_id}"
+            headers = st2_creds_requests()
+            response = requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
+
+            if response.status_code == requests.codes.ok:
+                return response
+
+            if response.status_code == 401:
+                self.refresh_bot_credentials()
+
+            if attempts > 0:
+                return get_enquiry(attempts - 1)
+
+        response = get_enquiry()
+        if response.status_code == requests.codes.ok:
+            return response
+        else:
+            response.raise_for_status()
 
     def actionalias_help(self, pack=None, filter=None, limit=None, offset=None, st2_creds=None):
         """

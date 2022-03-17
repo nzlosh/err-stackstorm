@@ -188,6 +188,19 @@ class St2(BotPlugin):
         """
         return "Not implemented yet."
 
+    def st2enquirylist(self, msg, args):
+        """
+        Usage: st2 <enquiry|inquiry> list
+        """
+        raise NotImplementedError
+
+    def st2enquiryrespond(self, msg, args):
+        """
+        Usage: st2 <enquiry|inquiry> respond <enquiry_id>
+        Respond to a stackstorm enquiry
+        """
+        raise NotImplementedError
+
     def st2authenticate(self, msg, args):
         """
         Usage: st2authenticate <secret>
