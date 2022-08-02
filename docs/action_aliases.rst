@@ -4,12 +4,12 @@
 Action Aliases
 ****************
 
-.. note:: This section assumes you have little to no familiarity with Stackstorm. If that's not the case, you may skip it.
+.. note:: This section assumes you have little to no familiarity with StackStorm. If that's not the case, you may skip it.
 
 Overview
 ---------
 
-`Action Aliases <https://docs.stackstorm.com/chatops/aliases.html>`_ is a Stackstorm feature that helps *exposing actions to the bot*. Their main purpose is to provide a *simple human readable* representation of actions, very useful in text-based interfaces, notable ChatOps.
+`Action Aliases <https://docs.stackstorm.com/chatops/aliases.html>`_ is a StackStorm feature that helps *exposing actions to the bot*. Their main purpose is to provide a *simple human readable* representation of actions, very useful in text-based interfaces, notable ChatOps.
 
 Generally speaking, you can expose any action to the bot. You can list them using `st2 action-alias list`.
 
@@ -34,11 +34,11 @@ Create a file inside the ``aliases`` folder named ``run_remote.yaml`` and paste 
     result:
       format: "operation completed {~} {{ execution.result }}"
 
-After that, ask Stackstorm to reload its configuration::
+After that, ask StackStorm to reload its configuration::
 
   st2ctl reload --register-all
 
-.. note:: Errbot will automatically refresh its action alias list when you add or remove aliases on Stackstorm. Type ``!st2help`` to your bot on the chat to list available StackStorm commands.
+.. note:: Errbot will automatically refresh its action alias list when you add or remove aliases on StackStorm. Type ``!st2help`` to your bot on the chat to list available StackStorm commands.
 
 In this example ``local_shell_cmd`` is an alias for the ``core.local`` action. If you want to run a command against a remote host, you could have used the ``core.remote`` action.
 
@@ -93,16 +93,16 @@ This is how the bot will answer you on Slack:
 Slack Attachments
 =================
 
-.. note:: Slack considers attachments as legacy formatting.  Use block formatting whenever possible.  Support for attachments in this form of dictionary may be removed from err-stackstrom in the future.
+.. note:: Slack considers attachments as legacy formatting.  Use block formatting whenever possible.  Support for attachments in this form of dictionary may be removed from err-stackstorm in the future.
 
-Slack's Markdown can get you a long way, but there are some occassions a richer message format is preferable.
+Slack's Markdown can get you a long way, but there are some occasions a richer message format is preferable.
 
-Attachments were the first form of advanced message formatting provided by Slack.  StackStorm chatops pack allows you to
+Attachments were the first form of advanced message formatting provided by Slack.  StackStorm ChatOps pack allows you to
 supply a `slack` key inside the `extra` parameter.  The `slack` key can hold the set of attributes related to sending an attachment.
 Information on the available attachment fields can be found here.  https://api.slack.com/reference/messaging/attachments#legacy_fields
 
 .. code-block:: bash
-    st2 run chatops.post_message route=errbot_slack channel='<#CL8HNNTFY>' message='Attachments Tets' extra='
+    st2 run chatops.post_message route=errbot_slack channel='<#CL8HNNTFY>' message='Attachments Test' extra='
     {
         "slack": {
             "color": "#f48527",
@@ -149,7 +149,7 @@ Attachments can be used inside blocks to provide secondary information to the pr
                 "type": "image",
                 "title": {
                     "type": "plain_text",
-                    "text": "Slack Errbot StackStorm Saltstack",
+                    "text": "Slack Errbot StackStorm SaltStack",
                     "emoji": true
                 },
                 "image_url": "https://i.imgur.com/vOU2SC0.png",

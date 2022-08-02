@@ -38,7 +38,8 @@ User provided content
 
 Some generous people have kindly taken the time to create content around using the err-stackstorm project.  Links have been provided to help others find find the work:
 
-    * ChatOps level up with StackStorm by Michał Wcisło https://devopsspiral.com/video/chatops-stackstorm/
     * ChatOps chronicles - An exciting journey to a wonderland of conversation-driven DevOps by Denys Havrysh https://medium.com/chatops-chronicles
+    * Introduction to ChatOps. Errbot + Slack integration by Michał Wcisło. https://devopsspiral.com/video/chatops-intro/
+    * ChatOps level up with StackStorm by Michał Wcisło https://devopsspiral.com/video/chatops-stackstorm/
 
 Thank you to everyone who has contributed to the err-stackstorm project!

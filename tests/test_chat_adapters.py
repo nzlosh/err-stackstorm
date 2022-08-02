@@ -1,11 +1,12 @@
 # coding:utf-8
 from mock import Mock
+
 from lib.chat_adapters import (
     ChatAdapterFactory,
     GenericChatAdapter,
-    XMPPChatAdapter,
     MattermostChatAdapter,
     SlackChatAdapter,
+    XMPPChatAdapter,
 )
 
 pytest_plugins = ["errbot.backends.test"]

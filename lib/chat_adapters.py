@@ -405,10 +405,7 @@ class SlackChatAdapter(GenericChatAdapter):
 
             LOG.debug(f"Sending Slack Block {extra['slack']}")
 
-            self.bot_plugin._bot.slack_web.api_call(
-                "chat.postMessage",
-                data=extra["slack"]
-            )
+            self.bot_plugin._bot.slack_web.api_call("chat.postMessage", data=extra["slack"])
 
     def format_help(self, help_strings):
         help_text = ""

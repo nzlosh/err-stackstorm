@@ -1,12 +1,12 @@
 # coding:utf-8
 import json
-import time
-import urllib3
 import logging
-import requests
-import sseclient
+import time
 import traceback
 
+import requests
+import sseclient
+import urllib3
 from requests.exceptions import HTTPError
 
 LOG = logging.getLogger("errbot.plugin.st2.st2_api")
@@ -39,13 +39,24 @@ class StackStormAPI(object):
 
     def refresh_bot_credentials(self):
         LOG.warning("Bot credentials re-authentication required.")
-        self.accessctl.bot.reauthenticate_bot_credentials()
+        session_id = self.accessctl.get_session(self.accessctl.bot.internal_identity)
+        self.accessctl.bot.reauthenticate_bot_credentials(session_id)
 
-    def enquiry(self, enquiry_id):
+    def enquiry_list(self, st2_creds=None):
+        """
+        curl -X GET -H 'X-Auth-Token: X' 'http://127.0.0.1:9101/v1/inquiries/?limit=50'
+        """
+        url = f"{self.cfg.api_url}/inquiries/"
+        params = {}
+        headers = st2_creds.requests()
+        return requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
+
+    def enquiry_get(self, enquiry_id, st2_creds=None):
         """
         StackStorm currently uses the draft4 jsonschema validator.
 
-        Fetch the contents of an inquiry give it's id.
+        Fetch the contents of an inquiry given its id.
+
         {
             "id": "60a7c8876d573fae8028be34",
             "route": "slack_query",
@@ -78,27 +89,20 @@ class StackStormAPI(object):
                  }
              }
          }
-
         """
-        def get_enquiry(attempts=1):
-            url = f"{self.cfg.api_url}/inquiries/{inquiry_id}"
-            headers = st2_creds_requests()
-            response = requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
 
-            if response.status_code == requests.codes.ok:
-                return response
+        url = f"{self.cfg.api_url}/inquiries/{enquiry_id}"
+        params = {}
+        headers = st2_creds.requests()
+        response = requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
 
-            if response.status_code == 401:
-                self.refresh_bot_credentials()
-
-            if attempts > 0:
-                return get_enquiry(attempts - 1)
-
-        response = get_enquiry()
         if response.status_code == requests.codes.ok:
-            return response
+            return response.json()
+        elif response.status_code == 401:
+            self.refresh_bot_credentials()
+            return "Attempted to access API without authentication.  Try again or fix the bot authorisation."
         else:
-            response.raise_for_status()
+            return response.json()
 
     def actionalias_help(self, pack=None, filter=None, limit=None, offset=None, st2_creds=None):
         """

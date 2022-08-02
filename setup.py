@@ -1,4 +1,5 @@
 import setuptools
+
 from lib.version import ERR_STACKSTORM_VERSION
 
 setuptools.setup(

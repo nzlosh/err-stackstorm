@@ -40,7 +40,7 @@ The variables must be adjusted to match the operating environment in which Errbo
 Update Errbot's config.py
 --------------------------
 
-Paste the sample configuration below in Errbot's ``config.py`` file adjusting the URLs to match your Stackstorm instance and set up one of the authentication methods.
+Paste the sample configuration below in Errbot's ``config.py`` file adjusting the URLs to match your StackStorm instance and set up one of the authentication methods.
 
 .. code-block:: python
 

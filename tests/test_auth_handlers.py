@@ -2,7 +2,7 @@
 from lib.credentials_adapters import ClientSideAuthHandler, StandaloneAuthHandler
 
 pytest_plugins = ["errbot.backends.test"]
-extra_plugin_dir = '.'
+extra_plugin_dir = "."
 
 
 def test_credentials_manager():
@@ -17,17 +17,17 @@ def test_credentials_manager():
     # request user
     user_creds = CredentialsFactory.instantiate("user")(username, password)
     assert isinstance(user_creds, St2UserCredentials)
-    assert user_creds.requests() == {'Authorization': 'Basic cGV0ZXIucGFya2VyOnN0aWNreXdlYg=='}
+    assert user_creds.requests() == {"Authorization": "Basic cGV0ZXIucGFya2VyOnN0aWNreXdlYg=="}
 
     # requests token
     token_creds = CredentialsFactory.instantiate("token")(token)
     assert isinstance(token_creds, St2UserToken)
-    assert token_creds.requests() == {'X-Auth-Token': token}
+    assert token_creds.requests() == {"X-Auth-Token": token}
 
     # requests api key
     apikey_creds = CredentialsFactory.instantiate("apikey")(apikey)
     assert isinstance(apikey_creds, St2ApiKey)
-    assert apikey_creds.requests() == {'St2-Api-Key': apikey}
+    assert apikey_creds.requests() == {"St2-Api-Key": apikey}
 
 
 if __name__ == "__main__":

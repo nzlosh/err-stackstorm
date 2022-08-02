@@ -8,7 +8,7 @@ Authentication
 
 .. important:: Do not configure multiple authentication methods at the same time.
 
-Standalone
+Stand-alone
 ==========
 
 This is the default authentication method where `err-stackstorm` uses its own credentials for all calls to the StackStorm API.  All action-aliases issued by chat service users execute the underlying workflows with `err-stackstorm` credentials.
