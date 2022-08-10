@@ -1,0 +1,163 @@
+#!/bin/bash
+
+set -e +x 
+
+ERR_STACKSTORM_VERSION=2.2.0
+
+# Package contains the following software projects and their respective licence.
+#
+# errbot                      GPL3
+# err-backend-discord         GPL3
+# err-backend-slackv3         GPL3
+# err-backend-botframework    MIT License
+# err-backend-mattermost      GPL3
+#
+# err-stackstorm              Apache 2.0
+#
+# The build process is the following:
+#  1. Acquire the source code and install build time dependencies
+#  2. Create virtualenv and install dependencies.
+#  3. Prune virtualenv of git metadata and python compiled bytecode.
+#  4. Create tar.gz snapshot of virtualenv for OS/architecture
+#  5. Run package build processusing latest tar.gz
+#  6. Update repository with package.
+
+# References
+#
+# https://gist.github.com/fernandoaleman/1377211/d78d13bd8f134e7d9b9bc3da5895c859d7cbf294
+# https://gist.githubusercontent.com/fernandoaleman/1377169/raw/3e841ca1a887dd21f3fcb35a3e74b0cc2fc4977b/create-repo-metadata.sh
+
+function centos_8_install
+{
+    dnf install -y ${PKGS[@]}
+}
+function ubuntu_18.04_install
+{
+    apt install ${PKGS[@]}
+}
+function debian_10_install
+{
+    apt install ${PKGS[@]}
+}
+
+function install_system_requirements
+{
+    echo INSTALL SYSTEM REQUIREMENTS
+    ${DISTRO_COMBO}_install $pkg
+}
+
+function create_virtual_environment
+{
+    echo CREATE VIRTUAL ENVIRONMENT
+    $PYVER -m venv $ROOT
+    cd $ROOT
+    mkdir $ROOT/{plugins,backends,data}
+}
+
+function fetch_archives
+{
+    echo DOWNLOAD ARCHIVES
+    export BACKENDS=("err-backend-discord" "err-backend-slackv3" "err-backend-gitter" "err-backend-mattermost" "err-backend-botframework")
+    cd $ROOT/backends
+    wget https://github.com/gbin/err-backend-discord/archive/refs/tags/v2.1.0.tar.gz -O err-backend-discord-v2.1.0.tar.gz
+    wget https://github.com/errbotio/err-backend-slackv3/archive/refs/tags/v0.1.0.tar.gz -O err-backend-slackv3-v0.1.0.tar.gz
+    wget https://github.com/nzlosh/err-backend-gitter/archive/refs/tags/v0.1.0.tar.gz -O err-backend-gitter-v0.1.0.tar.gz
+    wget https://github.com/nzlosh/err-backend-mattermost/archive/refs/tags/2.1.0.tar.gz -O err-backend-mattermost-v2.1.0.tar.gz
+    wget https://github.com/nzlosh/err-backend-botframework/archive/refs/tags/v0.1.0.tar.gz -O err-backend-botframework-v0.1.0.tar.gz
+
+    cd $ROOT/plugins
+    export PLUGINS=("err-stackstorm")
+    wget https://github.com/nzlosh/err-stackstorm/archive/refs/tags/v${ERR_STACKSTORM_VERSION}.tar.gz -O err-stackstorm-v${ERR_STACKSTORM_VERSION}.tar.gz
+}
+
+function install_extensions
+{
+    echo INSTALL ERRBOT EXTENSIONS
+    for location in $ROOT/backends $ROOT/plugins
+    do
+        # extract
+        for targz in ${location}/*.tar.gz
+        do
+            cd "$location"
+            tar xvf "$targz" && rm "$targz"
+        done
+        # install dependencies
+        for proj in ${location}/*
+        do
+            pip install -r "${proj}/requirements.txt"
+        done
+    done
+
+    for location in $ROOT/backends
+    do
+        cd $location
+        for backend in ${BACKENDS[@]}
+        do
+            mv -f *${backend}* "$backend"
+        done
+    done
+
+    for location in $ROOT/plugins
+    do
+        cd $location
+        for plugin in ${PLUGINS[@]}
+        do
+            mv -f *${plugin}* "$plugin"
+        done
+    done
+}
+
+function clean_virtualenv
+{
+    echo CLEAN VIRTUALENV
+    find $ROOT -iname '*.pyc' -delete
+    for pycache in $(find $ROOT -iname '__pycache__' -type d)
+    do
+        test -d "${pycache}" && rm -rf "${pycache}"
+    done
+}
+
+function install_errbot
+{
+    echo "INSTALL ERRBOT ($($ROOT/bin/pip --version))"
+    source $ROOT/bin/activate
+    pip install --upgrade pip
+    pip install errbot
+    fetch_archives
+    install_extensions
+    clean_virtualenv
+}
+
+function build_archive
+{
+    install_system_requirements
+    create_virtual_environment
+    install_errbot
+    tar czvf /opt/err-stackstorm_${ERR_STACKSTORM_VERSION}_${DISTRO_COMBO}_x86_64.tar.gz $ROOT
+}
+
+export DISTRO=$(awk -F= '/^ID=/ {print $2}' /etc/*release* | tr -d '"')
+export DISTRO_VERSION=$(awk -F= '/^VERSION_ID=/ {print $2}' /etc/*release*  | tr -d '"')
+export DISTRO_COMBO="${DISTRO}_${DISTRO_VERSION}"
+export ROOT=/opt/errbot
+
+case "${DISTRO}_${DISTRO_VERSION}" in
+    centos_8)
+        export PKGS=(python38 virtualenv git wget)
+        export PYVER=python3.8
+        ;;
+    ubuntu_18.04)
+        export PKGS=(python3.7-minimal git)
+        export PYVER=python3.7
+        ;;
+    debian_10)
+        export PKGS=(python3.7-minimal git wget)
+        export PYVER=python3.7
+        ;;
+    *)
+        echo "Distribution ${DISTRO} version ${DISTRO_VERSION} isn't supported."
+        exit 1
+        ;;
+esac
+
+build_archive

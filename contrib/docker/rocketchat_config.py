@@ -42,7 +42,7 @@ class ROCKETCHAT_CONFIG(object):
         )
     HEARTBEAT_FUNC = _heartbeat_func
 
-BOT_ADMINS = (['<DISCORD_NAME>'])
+BOT_ADMINS = (['<ROCKETCHAT_NAME>'])
 CHATROOM_PRESENCE = (["<CHAT_ROOM_NAME>"])
 CHATROOM_FN = '<BOT_NAME>'
 BOT_PREFIX = '!'

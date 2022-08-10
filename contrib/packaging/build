@@ -1,0 +1,235 @@
+#!/usr/bin/env python3
+import email.utils  # email.utils.formatdate() for debian changelog entries.
+import json
+import os
+import random
+import shlex
+import shutil
+import string
+import sys
+from subprocess import run
+
+from jinja2 import FileSystemLoader
+from jinja2.sandbox import SandboxedEnvironment as Environment
+
+# Run after the err-stackstorm virtualenv archive has been created.
+# 1. install build dependencies.
+# 2. cp archive into build tree.
+# 3. run build process.
+# 4. push artifact to repository
+
+release_files = ["/etc/os-release"]
+
+
+def title(text):
+    """
+    Display ANSI colour text as an execution section title.
+    """
+    print("\N{ESC}[96m{}\u001b[0m".format(text))
+
+
+class BuildTarget:
+    def __init__(self, build_cfg, distro):
+        # Runtime context contains information passed through to the templating process
+        # in a generic way across all platforms.
+        self.build_cfg = {
+            "_runtime": {
+                "rfc2822_datetime": email.utils.formatdate(),
+                "distro": distro
+            },
+            "_common": build_cfg["_common"]
+        }
+        self.build_cfg.update(build_cfg[distro])
+        self.build_cfg["_common"]["archive"]["filename"] = build_cfg["_common"]["archive"]["filename"].format(
+            version=self.build_cfg["_common"]["version"], distro=distro
+        )
+
+
+    def setup_environment(self):
+        title("Setup build directory")
+
+        build_dir = self.build_cfg["_common"]["build_dir"]
+        if not os.path.isdir(build_dir):
+            os.mkdir(build_dir)
+
+        self.tmp_build_dir = build_dir + "/" + temp_filename()
+        print(f"temp dir is {self.tmp_build_dir}")
+
+        title("Setup build environment")
+        shutil.copytree(self.build_cfg["template_dir"], self.tmp_build_dir)
+
+    def copy_archives(self):
+        src = os.path.join(self.build_cfg["_common"]["archive"]["path"], self.build_cfg["_common"]["archive"]["filename"])
+        dst = os.path.join(self.tmp_build_dir, os.path.basename(src))
+        print(f"Copy archive file {src} {dst}")
+        shutil.copyfile(src, dst)
+
+    def populate_templates(self):
+        title("Populate build templates")
+
+        for tmpl in self.build_cfg["templates"]:
+            print(tmpl)
+            file_loader = FileSystemLoader(self.tmp_build_dir)
+            env = Environment(loader=file_loader)
+            template = env.get_template(tmpl["src"])
+            with open(os.path.join(self.tmp_build_dir, tmpl["src"]), "w") as template_file:
+                template_file.write(template.render(self.build_cfg))
+
+        print("Installing required packages for build")
+        # The build time dependencies are managed in the package specification.
+        # run([build_cfg[distro]["pkg_bin"], "-y", "install"] + build_cfg[distro]["pkg_deps"])
+
+    def build_package(self):
+        title("Build package")
+
+    def retrieve_assets(self):
+        title("Retrieve assets")
+
+    def teardown_environment(self):
+        title("Clean build environment")
+
+    def run(self):
+        """
+        The sequence for the build process
+        """
+        self.setup_environment()
+        self.copy_archives()
+        self.populate_templates()
+        self.build_package()
+        self.retrieve_assets()
+        self.teardown_environment()
+
+
+class Ubuntu1804(BuildTarget):
+    def __init__(self, build_cfg, distro):
+        super().__init__(build_cfg, distro)
+
+    def setup_environment(self):
+        super().setup_environment()
+
+    def copy_archives(self):
+        super().copy_archives()
+
+    def populate_templates(self):
+        super().populate_templates()
+
+        # Parse changelog for errors
+        run(["dpkg-parsechangelog"], cwd=self.tmp_build_dir, check=True)
+
+    def build_package(self):
+        super().build_package()
+        cmd = [self.build_cfg["pkg_build"]["bin"]]
+        cmd += self.build_cfg["pkg_build"]["args"]
+        run(cmd, cwd=self.tmp_build_dir, check=True)
+
+    def retrieve_assets(self):
+        super().retrieve_assets()
+
+    def teardown_environment(self):
+        super().teardown_environment()
+
+
+class Debian10(BuildTarget):
+    def __init__(self, build_cfg, distro):
+        super().__init__(build_cfg, distro)
+
+    def setup_environment(self):
+        super().setup_environment()
+
+    def copy_archives(self):
+        super().copy_archives()
+
+    def populate_templates(self):
+        super().populate_templates()
+
+        # Parse changelog for errors
+        run(["dpkg-parsechangelog"], cwd=self.tmp_build_dir, check=True)
+
+    def build_package(self):
+        super().build_package()
+        cmd = [self.build_cfg["pkg_build"]["bin"]]
+        cmd += self.build_cfg["pkg_build"]["args"]
+        run(cmd, cwd=self.tmp_build_dir, check=True)
+
+    def retrieve_assets(self):
+        super().retrieve_assets()
+
+    def teardown_environment(self):
+        super().teardown_environment()
+
+
+def load_config(cfg_file="build.cfg"):
+    with open(cfg_file, "r") as f:
+        return json.load(f)
+
+
+def temp_filename():
+    return "tmp{}".format(
+        "".join(random.choices(string.ascii_lowercase + string.ascii_uppercase, k=10))
+    )
+
+
+def release_info(release_files):
+    """
+    release_files: A list of filenames to attempt to process for rel information.
+    Returns are dictionary of key/value pairs in lower case.
+    """
+
+    def rel_to_dict(text):
+        rel = {}
+        for l in shlex.split(text):
+            if len(l):
+                k, v = l.lower().split("=", 1)
+                rel[k] = v
+        return rel
+
+    # Find rel release
+    for release_file in release_files:
+        if os.path.isfile(release_file):
+            with open(release_file, "r") as f:
+                rel = f.read()
+            break
+    else:
+        raise "Failed to find rel release information."
+
+    return rel_to_dict(rel)
+
+
+class CentOS8(BuildTarget):
+    def setup_environment(self):
+        super().setup_environment()
+        run(["rpmdev-setuptree"])
+
+    def copy_archives(self):
+        super().copy_archives()
+        # ~ cp /opt/err-stackstorm*.tar.gz /root/rpmbuild/SOURCES
+        pass
+
+    def build_package(self):
+        super().build_package()
+        run(["rpmbuild", "-ba", "${BUILD_PATH}/err-stackstorm.spec"], check=True)
+
+
+rel = release_info(release_files)
+distro = "{}_{}".format(rel["id"], rel["version_id"])
+build_cfg = load_config()
+
+targets = {
+    "ubuntu_18.04": Ubuntu1804,
+    "debian_10": Debian10
+}
+
+if distro not in build_cfg:
+    print(f"{distro} missing configuration.  Release information for host is:")
+    for k, v in rel.items():
+        print(f"\t{k}: {v}")
+    sys.exit(1)
+
+build_type = targets.get(distro)
+
+if not build_type:
+    print(f"Build target {distro} is unsupported.")
+    sys.exit(2)
+
+builder = build_type(build_cfg, distro)
+builder.run()

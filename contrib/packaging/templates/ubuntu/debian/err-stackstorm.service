@@ -1,0 +1,13 @@
+[Unit]
+Description=Errbot with err-stackstorm
+After=network.target
+
+[Service]
+User=errbot
+Environment="CONFIGFILE=/opt/errbot/config.py"
+ExecStart=/opt/errbot/bin/python /opt/errbot/bin/errbot --config $CONFIGFILE
+ExecStop=/bin/kill -SIGINT $MAINPID
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
