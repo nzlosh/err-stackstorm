@@ -35,6 +35,10 @@ function ubuntu_18.04_install
 {
     apt install ${PKGS[@]}
 }
+function ubuntu_20.04_install
+{
+    apt install ${PKGS[@]}
+}
 function debian_10_install
 {
     apt install ${PKGS[@]}
@@ -149,6 +153,10 @@ case "${DISTRO}_${DISTRO_VERSION}" in
     ubuntu_18.04)
         export PKGS=(python3.7-minimal git)
         export PYVER=python3.7
+        ;;
+    ubuntu_20.04)
+        export PKGS=(python3.8-minimal git)
+        export PYVER=python3.8
         ;;
     debian_10)
         export PKGS=(python3.7-minimal git wget)
