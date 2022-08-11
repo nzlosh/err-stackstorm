@@ -9,5 +9,5 @@ Vcs-Git: git://github.com/nzlosh/err-stackstorm.git
 
 Package: err-stackstorm
 Architecture: amd64
-Depends: ${shlibs:Depends}, ${misc:Depends}, {{ ",".join(runtime_deps) }}
+Depends: ${misc:Depends}, {{ ", ".join(runtime_deps) }}
 Description: err-stackstorm brings StackStorm ChatOps to Errbot.
