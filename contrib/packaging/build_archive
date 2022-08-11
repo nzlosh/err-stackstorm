@@ -39,6 +39,10 @@ function ubuntu_20.04_install
 {
     apt install ${PKGS[@]}
 }
+function ubuntu_22.04_install
+{
+    apt install ${PKGS[@]}
+}
 function debian_10_install
 {
     apt install ${PKGS[@]}
@@ -53,7 +57,7 @@ function install_system_requirements
 function create_virtual_environment
 {
     echo CREATE VIRTUAL ENVIRONMENT
-    $PYVER -m venv $ROOT
+    $PYBIN -m venv $ROOT
     cd $ROOT
     mkdir $ROOT/{plugins,backends,data}
 }
@@ -148,19 +152,23 @@ export ROOT=/opt/errbot
 case "${DISTRO}_${DISTRO_VERSION}" in
     centos_8)
         export PKGS=(python38 virtualenv git wget)
-        export PYVER=python3.8
+        export PYBIN=/usr/bin/python3.8
         ;;
     ubuntu_18.04)
         export PKGS=(python3.7-minimal git)
-        export PYVER=python3.7
+        export PYBIN=/usr/bin/python3.7
         ;;
     ubuntu_20.04)
         export PKGS=(python3.8-minimal git)
-        export PYVER=python3.8
+        export PYBIN=/usr/bin/python3.7
+        ;;
+    ubuntu_22.04)
+        export PKGS=(python3.10-minimal git)
+        export PYVER=python3.10
         ;;
     debian_10)
         export PKGS=(python3.7-minimal git wget)
-        export PYVER=python3.7
+        export PYBIN=/usr/bin/python3.7
         ;;
     *)
         echo "Distribution ${DISTRO} version ${DISTRO_VERSION} isn't supported."

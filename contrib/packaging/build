@@ -131,6 +131,9 @@ class Ubuntu1804(BuildTarget):
 class Ubuntu2004(Ubuntu1804):
     pass
 
+class Ubuntu2204(Ubuntu1804):
+    pass
+
 class Debian10(BuildTarget):
     def __init__(self, build_cfg, distro):
         super().__init__(build_cfg, distro)
@@ -219,6 +222,7 @@ build_cfg = load_config()
 targets = {
     "ubuntu_18.04": Ubuntu1804,
     "ubuntu_20.04": Ubuntu2004,
+    "ubuntu_22.04": Ubuntu2204,
     "debian_10": Debian10
 }
 
