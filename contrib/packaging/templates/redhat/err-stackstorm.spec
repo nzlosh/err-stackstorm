@@ -1,15 +1,19 @@
 Name:       err-stackstorm
-Version:    2.2.0
-Release:    1
+Version:    {{ _common.version }}
+Release:    {{ _common.pkg_version }}
 Summary:    Bringing StackStorm ChatOps to errbot.
 License:    GPL3, MIT and Apache 2.0
+Packager:   {{ _common.maintainer.name }} <{{ _common.maintainer.email }}>
+BuildRoot:  {{ _runtime.buildroot }}
 
 #URL
-Source0: /opt/err-stackstorm_2.2.0_centos_8_x86_64.tar.gz
+Source0: {{ _common.archive.filename }}
 BuildArch: x86_64
 
 #BuildRequires:
 #Requires:
+
+
 
 %description
 A python virtual environment with the following software installed:
@@ -23,20 +27,19 @@ A python virtual environment with the following software installed:
   - err-stackstorm              Apache 2.0
 
 %prep
-echo "Extract tar.gz here?"
-tree
+echo No prep
 
 %build
-cat > hello-world.sh <<EOF
-#!/usr/bin/bash
-echo Hello world
-EOF
+echo Creating archive extraction directory
+mkdir -p %{buildroot}
 
 %install
-mkdir -p %{buildroot}/usr/bin/
-install -m 755 hello-world.sh %{buildroot}/usr/bin/hello-world.sh
+echo Extract archive into rpm buildroot.
+tar xvf /root/rpmbuild/SOURCES/{{ _common.archive.filename }} --directory %{buildroot}
 
 %files
-/usr/bin/hello-world.sh
+/opt/errbot
 
 %changelog
+* {{ _runtime.dyslexic_datetime }} {{ _common.maintainer.name }} <{{ _common.maintainer.email }}>
+- Virtual environment of errbot and err-stackstorm.

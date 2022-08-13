@@ -1,4 +1,4 @@
-err-stackstorm ({{ _common.version }}-{{ _common.pkg_version }}) UNRELEASED; urgency=low
+err-stackstorm ({{ _common.version }}+{{ _common.pkg_version }}) UNRELEASED; urgency=low
 
   * Virtual environment of errbot and err-stackstorm.
 
