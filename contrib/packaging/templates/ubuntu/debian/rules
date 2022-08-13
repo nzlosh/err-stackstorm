@@ -10,4 +10,5 @@ override_dh_installdeb:
 	dh_installdeb
 	echo BUILD DIRECTORY IS $(DESTDIR)
 	mkdir -p $(DESTDIR)
-	tar xvf $(CURDIR)/{{ _common.archive.filename }} --directory $(DESTDIR)
+	echo Extracting {{ _common.archive.filename }} to $(DESTDIR)
+	tar xf $(CURDIR)/{{ _common.archive.filename }} --directory $(DESTDIR)

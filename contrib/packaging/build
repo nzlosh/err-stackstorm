@@ -2,9 +2,11 @@
 import email.utils  # email.utils.formatdate() for debian changelog entries.
 import json
 import os
+import datetime
 import random
 import shlex
 import shutil
+import pathlib
 import string
 import sys
 from subprocess import run
@@ -35,7 +37,8 @@ class BuildTarget:
         self.build_cfg = {
             "_runtime": {
                 "rfc2822_datetime": email.utils.formatdate(),
-                "distro": distro
+                "distro": distro,
+                "dyslexic_datetime": datetime.datetime.now().strftime("%a %h %d %Y")
             },
             "_common": build_cfg["_common"]
         }
@@ -49,10 +52,7 @@ class BuildTarget:
         title("Setup build directory")
 
         build_dir = self.build_cfg["_common"]["build_dir"]
-        if not os.path.isdir(build_dir):
-            os.mkdir(build_dir)
-
-        self.tmp_build_dir = build_dir + "/" + temp_filename()
+        self.tmp_build_dir = pathlib.Path(build_dir, temp_filename())
         print(f"temp dir is {self.tmp_build_dir}")
 
         title("Setup build environment")
@@ -81,6 +81,9 @@ class BuildTarget:
 
     def build_package(self):
         title("Build package")
+        cmd = [self.build_cfg["pkg_build"]["bin"]]
+        cmd += self.build_cfg["pkg_build"]["args"]
+        run(cmd, cwd=self.tmp_build_dir, check=True)
 
     def retrieve_assets(self):
         title("Retrieve assets")
@@ -99,6 +102,45 @@ class BuildTarget:
         self.retrieve_assets()
         self.teardown_environment()
 
+class CentOS8(BuildTarget):
+    def setup_environment(self):
+        super().setup_environment()
+        # rpmdev-setuptree creates the RPM build directory in the home env directory, so a symlink
+        # is set to the package build directory and reverted in teardown_environment.
+        build_rpm_path = pathlib.Path(self.tmp_build_dir, "rpmbuild")
+        build_rpm_path.mkdir()
+        self.build_cfg["_runtime"]["buildroot"] = build_rpm_path.resolve()
+
+        home_rpm_path = pathlib.Path(pathlib.Path().home(), "rpmbuild")
+        if home_rpm_path.is_symlink():
+            print("Unlink existing symlink")
+            home_rpm_path.unlink()
+        else:
+            if home_rpm_path.exists():
+                raise EnvironmentError(f"{home_rpm_path} exists and is not a symlink.  Refusing to alter filesystem state that wasn't created by the build script.")
+        print(f"Creating symlink from {home_rpm_path} to {build_rpm_path.resolve()}")
+        home_rpm_path.symlink_to(build_rpm_path.resolve())
+
+        print("Setting up RPM build tree")
+        run(["rpmdev-setuptree"], cwd=self.tmp_build_dir, check=True)
+
+    def copy_archives(self):
+        # CentOS needs the archive in a different location for Ubuntu and Debian so it's overridden here.
+        src = os.path.join(self.build_cfg["_common"]["archive"]["path"], self.build_cfg["_common"]["archive"]["filename"])
+        dst = os.path.join(self.tmp_build_dir, "rpmbuild", "SOURCES", os.path.basename(src))
+        print(f"Copy archive file {src} {dst}")
+        shutil.copyfile(src, dst)
+
+    def build_package(self):
+        super().build_package()
+
+    def teardown_environment(self):
+        super().teardown_environment()
+        print("Removing symlink")
+        home_rpm_path = pathlib.Path(pathlib.Path().home(), "rpmbuild")
+        home_rpm_path.unlink()
+
+
 
 class Ubuntu1804(BuildTarget):
     def __init__(self, build_cfg, distro):
@@ -112,15 +154,11 @@ class Ubuntu1804(BuildTarget):
 
     def populate_templates(self):
         super().populate_templates()
-
         # Parse changelog for errors
         run(["dpkg-parsechangelog"], cwd=self.tmp_build_dir, check=True)
 
     def build_package(self):
         super().build_package()
-        cmd = [self.build_cfg["pkg_build"]["bin"]]
-        cmd += self.build_cfg["pkg_build"]["args"]
-        run(cmd, cwd=self.tmp_build_dir, check=True)
 
     def retrieve_assets(self):
         super().retrieve_assets()
@@ -129,9 +167,15 @@ class Ubuntu1804(BuildTarget):
         super().teardown_environment()
 
 class Ubuntu2004(Ubuntu1804):
+    """
+    Ubuntu 18.04 steps are sufficient to build for 20.04
+    """
     pass
 
 class Ubuntu2204(Ubuntu1804):
+    """
+    Ubuntu 18.04 steps are sufficient to build for 22.04
+    """
     pass
 
 class Debian10(BuildTarget):
@@ -162,6 +206,11 @@ class Debian10(BuildTarget):
     def teardown_environment(self):
         super().teardown_environment()
 
+class Debian11(Debian10):
+    """
+    Build for Debian 11
+    """
+    pass
 
 def load_config(cfg_file="build.cfg"):
     with open(cfg_file, "r") as f:
@@ -199,22 +248,6 @@ def release_info(release_files):
 
     return rel_to_dict(rel)
 
-
-class CentOS8(BuildTarget):
-    def setup_environment(self):
-        super().setup_environment()
-        run(["rpmdev-setuptree"])
-
-    def copy_archives(self):
-        super().copy_archives()
-        # ~ cp /opt/err-stackstorm*.tar.gz /root/rpmbuild/SOURCES
-        pass
-
-    def build_package(self):
-        super().build_package()
-        run(["rpmbuild", "-ba", "${BUILD_PATH}/err-stackstorm.spec"], check=True)
-
-
 rel = release_info(release_files)
 distro = "{}_{}".format(rel["id"], rel["version_id"])
 build_cfg = load_config()
@@ -223,7 +256,9 @@ targets = {
     "ubuntu_18.04": Ubuntu1804,
     "ubuntu_20.04": Ubuntu2004,
     "ubuntu_22.04": Ubuntu2204,
-    "debian_10": Debian10
+    "debian_10": Debian10,
+    "debian_11": Debian11,
+    "centos_8": CentOS8,
 }
 
 if distro not in build_cfg:

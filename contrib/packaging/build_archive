@@ -47,6 +47,10 @@ function debian_10_install
 {
     apt install ${PKGS[@]}
 }
+function debian_11_install
+{
+    apt install ${PKGS[@]}
+}
 
 function install_system_requirements
 {
@@ -151,7 +155,7 @@ export ROOT=/opt/errbot
 
 case "${DISTRO}_${DISTRO_VERSION}" in
     centos_8)
-        export PKGS=(python38 virtualenv git wget)
+        export PKGS=(python38 virtualenv python38-devel git wget)
         export PYBIN=/usr/bin/python3.8
         ;;
     ubuntu_18.04)
@@ -169,6 +173,10 @@ case "${DISTRO}_${DISTRO_VERSION}" in
     debian_10)
         export PKGS=(python3.7-minimal git wget)
         export PYBIN=/usr/bin/python3.7
+        ;;
+    debian_11)
+        export PKGS=(python3.9-minimal git wget)
+        export PYBIN=/usr/bin/python3.9
         ;;
     *)
         echo "Distribution ${DISTRO} version ${DISTRO_VERSION} isn't supported."
