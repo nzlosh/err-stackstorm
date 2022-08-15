@@ -168,7 +168,7 @@ case "${DISTRO}_${DISTRO_VERSION}" in
         ;;
     ubuntu_22.04)
         export PKGS=(python3.10-minimal git)
-        export PYVER=python3.10
+        export PYBIN=/usr/bin/python3.10
         ;;
     debian_10)
         export PKGS=(python3.7-minimal git wget)
