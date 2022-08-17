@@ -51,4 +51,4 @@ If you are familiar with Errbot and StackStorm, this guide will get you up and r
 
 8. Aliases can be run like this: ``!st2 run date on 192.168.5.1``
 
-.. important:: `st2chatops` does not have to be running on your StackStorm instance. This plugin *replaces* `st2chatops`.
+.. important:: When restarting StackStorm, a warning may be produced to inform you `st2chatops` is not running.   This warning can be ignored because `err-stackstorm` will be managing StackStorm ChatOps.
