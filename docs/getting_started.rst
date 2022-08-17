@@ -9,7 +9,7 @@ Getting Started
 Overview
 =========
 
-`err-stackstorm` is a community project to bring StackStorm `ChatOps <https://docs.stackstorm.com/chatops/index.html>`_ to `Errbot <http://errbot.io/en/latest/index.html>`_.  `err-stackstorm` exposes StackStorm's `Action Aliases <https://docs.stackstorm.com/chatops/aliases.html>`_ to your chat environment, where you and your team can manage aspects of infrastructure and code.
+`err-stackstorm` is a community project to bring StackStorm `ChatOps <https://docs.stackstorm.com/chatops/index.html>`_ to `Errbot <http://errbot.io/en/latest/index.html>`_.  `err-stackstorm` enables StackStorm's `Action Aliases <https://docs.stackstorm.com/chatops/aliases.html>`_ in your chat environment, where you and your team can manage aspects of infrastructure, code and 3rd party services.
 
 The objectives for err-stackstorm project are:
  1. Provide a Python friendly ChatOps solution.
@@ -37,24 +37,39 @@ Compatibility
 err-stackstorm v2.2 is compatible with Python 3.7+ and operates with StackStorm v3.0.0 and newer
 
 
+Platforms
+=========
+
+``err-stackstorm`` is developed and testing on the x86_64 platform for Linux.  No other platforms or operating systems have been tested.
+
+    .. important:: ``err-stackstorm`` has  been reported by users to have issue running on Mac OSX.
+
 Supported Chat Backends
 =========================
 
-Errbot provides official support for most major chat back-ends and many more chat back-ends are available through unofficial plugins.
+Errbot provides official support for most major chat back-ends and many more chat back-ends are available through unofficial community plugins.
 
 
-   .. csv-table:: Supported Chat Backends
+   .. csv-table:: Available Chat Backends
          :header: "Backend", "Mode value", "Support Type"
          :widths: 10, 10, 10
 
-         "Slack", "slackv3", "https://github.com/errbotio/err-backend-slackv3"
+         "Slack", "slackv3", "`Plugin <https://github.com/errbotio/err-backend-slackv3`_"
          "Mattermost", "mattermost", "`Plugin <https://github.com/errbotio/err-backend-mattermost>`_"
          "Discord", "discord", "`Plugin <https://github.com/errbotio/err-backend-discord>`_"
          "Rocket Chat", "aoikrocketchaterrbot", "`Plugin <https://github.com/AoiKuiyuyou/AoikRocketChatErrbot>`_"
          "Gitter", "gitter", "`Plugin <https://github.com/errbotio/err-backend-gitter>`_"
-         "MS Teams", "BotFramework", "`Unsupported by err-stackstorm` <https://github.com/vasilcovsky/errbot-backend-botframework>`_"
          "XMPP", "xmpp", "Integrated"
          "IRC", "irc", "Integrated"
+
+    .. csv-table:: Unsupported Chat Backends
+        :header: "Backend", "Mode value", "Support Type"
+        :widths: 10, 10, 10
+
+        "MSTeam", "BotFramework", "`Plugin <https://github.com/vasilcovsky/errbot-backend-botframework>`_"
+
+.. important:: ``err-stackstorm`` doesn't support MSTeams due to lack of access by the developer.  If you're intersted in adding and maintaining MSTeams support please contact nzlosh on slack/gitter or github.
+
 
 Backend support provides a minimum set of operations such as `connect` and `authentication` methods along with ways to `identify` and `send messages` to users/rooms.
 
@@ -66,4 +81,3 @@ Backends that currently support nice (extra) formatting:
 
    * Slack
    * XMPP
-
