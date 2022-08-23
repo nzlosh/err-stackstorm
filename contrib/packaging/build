@@ -58,6 +58,10 @@ class BuildTarget:
         title("Setup build environment")
         shutil.copytree(self.build_cfg["template_dir"], self.tmp_build_dir)
 
+        print("Installing required packages for build")
+        # The build time dependencies are managed in the package specification.
+        run([build_cfg[distro]["pkg_bin"], "-y", "install"] + build_cfg[distro]["build_deps"])
+
     def copy_archives(self):
         src = os.path.join(self.build_cfg["_common"]["archive"]["path"], self.build_cfg["_common"]["archive"]["filename"])
         dst = os.path.join(self.tmp_build_dir, os.path.basename(src))
@@ -75,9 +79,6 @@ class BuildTarget:
             with open(os.path.join(self.tmp_build_dir, tmpl["src"]), "w") as template_file:
                 template_file.write(template.render(self.build_cfg))
 
-        print("Installing required packages for build")
-        # The build time dependencies are managed in the package specification.
-        run([build_cfg[distro]["pkg_bin"], "-y", "install"] + build_cfg[distro]["build_deps"])
 
     def build_package(self):
         title("Build package")
@@ -140,7 +141,11 @@ class CentOS8(BuildTarget):
         home_rpm_path = pathlib.Path(pathlib.Path().home(), "rpmbuild")
         home_rpm_path.unlink()
 
-
+class Rocky9(CentOS8):
+    """
+    Rocky 9.0 steps _might_ be the same as CentOS8.
+    """
+    pass
 
 class Ubuntu1804(BuildTarget):
     def __init__(self, build_cfg, distro):
@@ -259,6 +264,7 @@ targets = {
     "debian_10": Debian10,
     "debian_11": Debian11,
     "centos_8": CentOS8,
+    "rocky_9.0": Rocky9,
 }
 
 if distro not in build_cfg:
