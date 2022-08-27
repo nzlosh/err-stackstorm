@@ -11,7 +11,7 @@ General
 
 `err-stackstorm` configuration is found in Errbot's `config.py` file.
 
-.. note:: If you followed the Errbot setup documentation this file will have been created by downloading a template. If this file has not already been created, please create it following the `Errbot's instructions <http://errbot.io/en/latest/user_guide/setup.html#id1>`_.
+.. note:: If you followed the Errbot setup documentation this file will have been created by downloading a template.  If this file has not already been created, please create it following the `Errbot's instructions <http://errbot.io/en/latest/user_guide/setup.html#id1>`_.
 
 Here's a sample err-stackstorm configuration:
 
@@ -46,7 +46,7 @@ ST2 ChatOps Configuration
 
 StackStorm's `ChatOps pack <https://github.com/StackStorm/st2/tree/master/contrib/chatops>`_ has to be installed and a notify rule file added to the pack.
 
-The notify rule must be placed in ``/<st2>/packs/chatops/rules``. You can find the rule file necessary for `err-stackstorm` `here <https://raw.githubusercontent.com/nzlosh/err-stackstorm/master/contrib/stackstorm-chatops/rules/notify_errbot.yaml>`_. Just copy-and-paste this file and save it as ``notify_errbot.yaml``.
+The notify rule must be placed in ``/<st2>/packs/chatops/rules``.  You can find the rule file necessary for `err-stackstorm` `here <https://raw.githubusercontent.com/nzlosh/err-stackstorm/master/contrib/stackstorm-chatops/rules/notify_errbot.yaml>`_.  Just copy-and-paste this file and save it as ``notify_errbot.yaml``.
 
 Edit the ``/<st2>/packs/chatops/actions/post_message.yaml`` file and replace `chatops` with ``errbot``:
 
@@ -83,7 +83,7 @@ To avoid using the username/password pair in a configuration file, it's possible
 
 If using an User Token `err-stackstorm` will no longer have access to the StackStorm's API once it expires.
 
-.. note:: When the token expires, a new one must be generated and updated in config.py which in turn requires Errbot to be restarted. This form of authentication is the least practical for production environments.
+.. note:: When the token expires, a new one must be generated and updated in config.py which in turn requires Errbot to be restarted.  This form of authentication is the least practical for production environments.
 
 API Key
 ^^^^^^^^
@@ -99,7 +99,7 @@ If using an API Key, `err-stackstorm` will no longer have access to the StackSto
 Secrets Store
 ^^^^^^^^^^^^^^
 
-The secrets store is used by `err-stackstorm` to cache StackStorm API credentials. The available backends are:
+The secrets store is used by `err-stackstorm` to cache StackStorm API credentials.  The available backends are:
 
 * cleartext
 
@@ -107,7 +107,7 @@ The secrets store is used by `err-stackstorm` to cache StackStorm API credential
 Cleartext
 """"""""""
 
-The cleartext store maintains the cache in memory and does not encrypt the contents to disk. It **does not** protect the stored secrets in memory.
+The cleartext store maintains the cache in memory and does not encrypt the contents to disk.  It **does not** protect the stored secrets in memory.
 
 Advanced Options
 ----------------
@@ -151,16 +151,16 @@ The user token ttl is used to set the maximum life time a StackStorm User Token 
 
 When a user token time to live expires, err-stackstorm will report it as an error communicating with the StackStorm API.  It would be more user-friendly to ensure the session ttl expires before the user token ttl.
 
-.. note:: The user token ttl _must be_ equal to or lower than the StackStorm API https://docs.stackstorm.com/authentication.html?highlight=ttl#usage.  By default StackStorm's token ttl is set to 24 hours, but the value can be increased through `st2.conf`.  If user_token_ttl is greater than the StackStorm API token ttl value, err-stackstorm will fail to fetch a valid API token and not function correctly.
+.. note:: The user token ``ttl`` *must be* equal to or lower than the StackStorm API https://docs.stackstorm.com/authentication.html?highlight=ttl#usage.  By default StackStorm's token ttl is set to 24 hours, but the value can be increased through ``st2.conf``.  If user_token_ttl is greater than the StackStorm API token ttl value, err-stackstorm will fail to fetch a valid API token and not function correctly.
 
 Locale
 -------
 
-Errbot uses the system's locale for handling text. If you're getting unicode errors like this::
+Errbot uses the system's locale for handling text.  If you're getting unicode errors like this::
 
   UnicodeEncodeError: 'ascii' codec can't encode character '\xe9' in position 83: ordinal not in range(128)
 
-Make sure the systems locale is configured for unicode encoding. In the example below, the machine has been set to English (en) New Zealand (NZ) with utf-8 encoding (.UTF8).
+Make sure the systems locale is configured for unicode encoding.  In the example below, the machine has been set to English (en) New Zealand (NZ) with utf-8 encoding (.UTF8).
 
 .. code-block:: bash
 
@@ -193,18 +193,18 @@ Reference
     "auth_url", "StackStorm's authentication url end point.  Used to authenticate credentials against StackStorm."
     "api_url", "StackStorm's API url end point.  Used to execute action aliases received from the chat back-end."
     "stream_url", "StackStorm's Stream url end point.  Used to received ChatOps notifications."
-    "verify_cert", "Default is *True*.  Verify the SSL certificate is valid when using https end points. Applies to all end points."
-    "route_key", "Default is *errbot*. The name of the route to bot will listen for and submit action-alias executions with."
-    "plugin_prefix", "Default is *st2*. Text used to prefix action-alias commands with to avoid name collisions between StackStorm Action-Aliases and Errbot plugin commands."
+    "verify_cert", "Default is *True*.  Verify the SSL certificate is valid when using https end points.  Applies to all end points."
+    "route_key", "Default is *errbot*.  The name of the route to bot will listen for and submit action-alias executions with."
+    "plugin_prefix", "Default is *st2*.  Text used to prefix action-alias commands with to avoid name collisions between StackStorm Action-Aliases and Errbot plugin commands."
     "api_auth.user.name", "Errbot's username to authenticate with StackStorm."
     "api_auth.user.password", "Errbot's password to authenticate with StackStorm."
-    "api_auth.token", "Errbot's user token to authenticate with StackStorm. Used instead of a username/password pair."
-    "api_auth.apikey", "Errbot API key to authenticate with StackStorm. Used instead of a username/password pair or user token."
-    "timer_update", "Unit: seconds. Default: 60.  Interval for err-stackstorm to the user token is valid."
+    "api_auth.token", "Errbot's user token to authenticate with StackStorm.  Used instead of a username/password pair."
+    "api_auth.apikey", "Errbot API key to authenticate with StackStorm.  Used instead of a username/password pair or user token."
+    "timer_update", "Unit: seconds.  Default: 60.  Interval for err-stackstorm to the user token is valid."
     "rbac_auth.standalone", "Standalone authentication."
     "rbac_auth.clientside", "Clientside authentication, a chat user will supply StackStorm credentials to err-stackstorm via an authentication page."
     "rbac_auth.clientside.url", "Url to the authentication web page."
     "session_ttl", "Unit: seconds.  Default: 3600.  The time to live for a authentication session."
-    "user_token_ttl", "Unit: seconds. Default: 86400.  The time to live for a StackStorm user token."
+    "user_token_ttl", "Unit: seconds.  Default: 86400.  The time to live for a StackStorm user token."
     "secrets_store.cleartext", "Use the in-memory store."
 

@@ -54,7 +54,7 @@ Errbot provides official support for most major chat back-ends and many more cha
          :header: "Backend", "Mode value", "Support Type"
          :widths: 10, 10, 10
 
-         "Slack", "slackv3", "`Plugin <https://github.com/errbotio/err-backend-slackv3`_"
+         "Slack", "slackv3", "`Plugin <https://github.com/errbotio/err-backend-slackv3>`_"
          "Mattermost", "mattermost", "`Plugin <https://github.com/errbotio/err-backend-mattermost>`_"
          "Discord", "discord", "`Plugin <https://github.com/errbotio/err-backend-discord>`_"
          "Rocket Chat", "aoikrocketchaterrbot", "`Plugin <https://github.com/AoiKuiyuyou/AoikRocketChatErrbot>`_"
@@ -62,20 +62,21 @@ Errbot provides official support for most major chat back-ends and many more cha
          "XMPP", "xmpp", "Integrated"
          "IRC", "irc", "Integrated"
 
+Despite errbot having support for some backend chat services, they are not directly supported by err-stackstorm.
+
+
     .. csv-table:: Unsupported Chat Backends
         :header: "Backend", "Mode value", "Support Type"
         :widths: 10, 10, 10
 
         "MSTeam", "BotFramework", "`Plugin <https://github.com/vasilcovsky/errbot-backend-botframework>`_"
 
-.. important:: ``err-stackstorm`` doesn't support MSTeams due to lack of access by the developer.  If you're intersted in adding and maintaining MSTeams support please contact nzlosh on slack/gitter or github.
+.. important:: Microsoft Teams is available in errbot but is not supported by err-stackstorm because the maintainer (nzlosh) has no access to this service.  If you wish to help maintain support for Microsoft Teams in err-stackstorm contact nzlosh.
 
 
 Backend support provides a minimum set of operations such as `connect` and `authentication` methods along with ways to `identify` and `send messages` to users/rooms.
 
-Advanced formatting may not be available on all backends since additional code would be required in `err-stackstorm` to translate StackStorm's Action Aliases `extra` parameter.
-
-.. warning:: Microsoft Teams is available in errbot but is not supported by err-stackstorm because the maintainer has no access to this service.  If you wish to help maintain support for Microsoft Teams in err-stackstorm contact nzlosh.
+Advanced formatting may not be available on all backends since additional code is required in `err-stackstorm` to translate StackStorm's Action Aliases `extra` parameter to advanced formatting in the backend.
 
 Backends that currently support nice (extra) formatting:
 

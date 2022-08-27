@@ -4,19 +4,19 @@
 Action Aliases
 ****************
 
-.. note:: This section assumes you have little to no familiarity with StackStorm. If that's not the case, you may skip it.
+.. note:: This section assumes you have little to no familiarity with StackStorm.  If that's not the case, you may skip it.
 
 Overview
 ---------
 
-`Action Aliases <https://docs.stackstorm.com/chatops/aliases.html>`_ is a StackStorm feature that helps *exposing actions to the bot*. Their main purpose is to provide a *simple human readable* representation of actions, very useful in text-based interfaces, notable ChatOps.
+`Action Aliases <https://docs.stackstorm.com/chatops/aliases.html>`_ are a StackStorm feature that helps *exposing actions to the bot*.  Their main purpose is to provide a *simple human readable* representation of actions, very useful in text-based interfaces, notable ChatOps.
 
-Generally speaking, you can expose any action to the bot. You can list them using `st2 action-alias list`.
+Generally speaking, you can expose any action to the bot.  You can list them using `st2 action-alias list`.
 
 Creating a simple action alias
 -------------------------------
 
-Let's create a simple action alias to demonstrate `err-stackstorm`. Aliases are deployed via packs so let's create one quickly::
+Let's create a simple action alias to demonstrate `err-stackstorm`.  Aliases are deployed via packs so let's create one quickly::
 
   mkdir -p /<st2path>/packs/errtest/aliases
 
@@ -38,11 +38,11 @@ After that, ask StackStorm to reload its configuration::
 
   st2ctl reload --register-all
 
-.. note:: Errbot will automatically refresh its action alias list when you add or remove aliases on StackStorm. Type ``!st2help`` to your bot on the chat to list available StackStorm commands.
+.. note:: Errbot will automatically refresh its action alias list when you add or remove aliases on StackStorm.  Type ``!st2help`` to your bot on the chat to list available StackStorm commands.
 
-In this example ``local_shell_cmd`` is an alias for the ``core.local`` action. If you want to run a command against a remote host, you could have used the ``core.remote`` action.
+In this example ``local_shell_cmd`` is an alias for the ``core.local`` action.  If you want to run a command against a remote host, you could have used the ``core.remote`` action.
 
-The supported format for the alias is specified in the formats field. A single alias can support multiple formats for the same action. The result will then be returned to `err-stackstorm` and Errbot will propagate that back to your chat backend.
+The supported format for the alias is specified in the formats field.  A single alias can support multiple formats for the same action.  The result will then be returned to `err-stackstorm` and Errbot will propagate that back to your chat backend.
 
 Usage
 ------
@@ -62,7 +62,7 @@ Formatting
 Jinja Template
 ==============
 
-.. seealso:: Don't forget to check ST2's official documentation on `Action Aliases <https://docs.stackstorm.com/chatops/aliases.html>`_.
+.. seealso:: Don't forget to check St2 official documentation on `Action Aliases <https://docs.stackstorm.com/chatops/aliases.html>`_.
 
 Here's an example of an action-alias that runs a command on a list of remote hosts and outputs the results nicely formatted on **Slack**.
 
@@ -84,7 +84,7 @@ Here's an example of an action-alias that runs a command on a list of remote hos
           \`\`\`{{ execution.result[host].stdout or execution.result[host].stderr or "No result"}}\`\`\`
           {% endfor %}
 
-The alias above will format the execution output per host once it gathers the results. The sheer amount backticks and escaping are due to particularities between Errbot and Slack - this may not work in another chat backend.
+The alias above will format the execution output per host once it gathers the results.  The sheer amount backticks and escaping are due to particularities between Errbot and Slack - this may not work in another chat backend.
 
 This is how the bot will answer you on Slack:
 
@@ -107,7 +107,7 @@ Information on the available attachment fields can be found here.  https://api.s
         "slack": {
             "color": "#f48527",
             "pretext": "Hey <!channel>, Ready for ChatOps?",
-            "title": "SaltStack and ChatOps. Get started :rocket:",
+            "title": "SaltStack and ChatOps.  Get started :rocket:",
             "title_link": "https://stackstorm.com/2015/07/29/getting-started-with-stackstorm-and-saltstack/",
             "author_name": "by Jurnell Cockhren, CTO and Founder of SophicWare",
             "author_link": "http://sophicware.com/",
@@ -159,4 +159,4 @@ Attachments can be used inside blocks to provide secondary information to the pr
     }'
 
 
-.. important:: Advanced formatting may not be available to all chat backends since each backend requires specific code to translate ST2's `extra` parameter.
+.. important:: Advanced formatting may not be available to all chat backends since each backend requires specific code to translate St2 `extra` parameter.

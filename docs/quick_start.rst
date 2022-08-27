@@ -22,9 +22,7 @@ If you are familiar with Errbot and StackStorm, this guide will get you up and r
 
 	!plugin activate Webserver
 
-2. Paste the sample configuration below in Errbot's ``config.py`` file adjusting the URLs to match your StackStorm instance and set up one of the authentication methods::
-
-.. code-block:: python
+2. Paste the sample configuration below in Errbot's ``config.py`` file adjusting the URLs to match your StackStorm instance and set up one of the authentication methods.::
 
     STACKSTORM = {
         'auth_url': 'https://your.stackstorm.com/auth/v1',
