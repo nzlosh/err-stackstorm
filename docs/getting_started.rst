@@ -16,6 +16,7 @@ The objectives for err-stackstorm project are:
  2. Maintain the same high quality as the StackStorm project.
  3. Collaborate with the StackStorm community to evolve ChatOps features.
 
+
 Features
 ========
 
@@ -32,20 +33,20 @@ err-stackstorm communicates directly with the StackStorm API from with an errbot
      - Python based using modern 3.x features.
 
 Compatibility
-==============
+========================================================================
 
 err-stackstorm v2.2 is compatible with Python 3.7+ and operates with StackStorm v3.0.0 and newer
 
 
 Platforms
-=========
+========================================================================
 
 ``err-stackstorm`` is developed and testing on the x86_64 platform for Linux.  No other platforms or operating systems have been tested.
 
     .. important:: ``err-stackstorm`` has  been reported by users to have issue running on Mac OSX.
 
 Supported Chat Backends
-=========================
+========================================================================
 
 Errbot provides official support for most major chat back-ends and many more chat back-ends are available through unofficial community plugins.
 
@@ -72,7 +73,6 @@ Despite errbot having support for some backend chat services, they are not direc
         "MSTeam", "BotFramework", "`Plugin <https://github.com/vasilcovsky/errbot-backend-botframework>`_"
 
 .. important:: Microsoft Teams is available in errbot but is not supported by err-stackstorm because the maintainer (nzlosh) has no access to this service.  If you wish to help maintain support for Microsoft Teams in err-stackstorm contact nzlosh.
-
 
 Backend support provides a minimum set of operations such as `connect` and `authentication` methods along with ways to `identify` and `send messages` to users/rooms.
 

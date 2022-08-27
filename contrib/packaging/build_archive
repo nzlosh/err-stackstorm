@@ -31,6 +31,10 @@ function centos_8_install
 {
     dnf install -y ${PKGS[@]}
 }
+function rocky_9.0_install
+{
+    dnf install -y ${PKGS[@]}
+}
 function ubuntu_18.04_install
 {
     apt install ${PKGS[@]}
@@ -157,6 +161,10 @@ case "${DISTRO}_${DISTRO_VERSION}" in
     centos_8)
         export PKGS=(python38 virtualenv python38-devel git wget)
         export PYBIN=/usr/bin/python3.8
+        ;;
+    rocky_9.0)
+        export PKGS=(python39 python3-devel tar gcc git wget)
+        export PYBIN=/usr/bin/python3.9
         ;;
     ubuntu_18.04)
         export PKGS=(python3.7-minimal git)
