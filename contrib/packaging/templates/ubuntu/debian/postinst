@@ -2,16 +2,37 @@
 
 set -e
 
-/usr/bin/getent passwd errbot || export RET=$?
+function create_system_account
+{
+	/usr/bin/getent passwd errbot || export RET=$?
+	test -z "$RET" || export RET=0
 
-if [[ $RET -eq 2 ]]; then
-	adduser --system --home /opt/errbot --shell /bin/false errbot --group
-elif [[ $RET -ne 0 ]]; then
-	echo "Error getting entity information for errbot." > /dev/stderr
-	exit $RET
-fi
+	if [[ $RET -eq 2 ]]; then
+		adduser --system --home /opt/errbot --shell /bin/false errbot --group
+	elif [[ $RET -ne 0 ]]; then
+		echo "Error getting entity information for errbot." > /dev/stderr
+		exit $RET
+	fi
 
-if [[ -d /opt/errbot ]]; then
-	chown -R errbot:errbot /opt/errbot
-fi
+	if [[ -d /opt/errbot ]]; then
+		chown -R errbot:errbot /opt/errbot
+	fi
+}
 
+
+case "$1" in
+	configure)
+		create_system_account
+	;;
+	abort-upgrade)
+		# new-version
+	;;
+	abort-remove)
+		# conflictor's-postinst abort-remove  in-favour package new-version
+	;;
+	abort-deconfigure)
+		# postinst abort-remove
+		# deconfigured's-postinst abort-deconfigure in-favour failed-install-package version [ removing conflicting-package version ]
+	;;
+	
+esac
