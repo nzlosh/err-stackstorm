@@ -100,7 +100,8 @@ class StackStormAPI(object):
             return response.json()
         elif response.status_code == 401:
             self.refresh_bot_credentials()
-            return "Attempted to access API without authentication.  Try again or fix the bot authorisation."
+            return "Attempted to access API without authentication.  "
+            "Try again or fix the bot authorisation."
         else:
             return response.json()
 

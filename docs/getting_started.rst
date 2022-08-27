@@ -52,27 +52,28 @@ Errbot provides official support for most major chat back-ends and many more cha
 
 
    .. csv-table:: Available Chat Backends
-         :header: "Backend", "Mode value", "Support Type"
+         :header: "Service (backend)", "Backend mode name", "Support Type"
          :widths: 10, 10, 10
 
-         "Slack", "slackv3", "`Plugin <https://github.com/errbotio/err-backend-slackv3>`_"
-         "Mattermost", "mattermost", "`Plugin <https://github.com/errbotio/err-backend-mattermost>`_"
-         "Discord", "discord", "`Plugin <https://github.com/errbotio/err-backend-discord>`_"
-         "Rocket Chat", "aoikrocketchaterrbot", "`Plugin <https://github.com/AoiKuiyuyou/AoikRocketChatErrbot>`_"
-         "Gitter", "gitter", "`Plugin <https://github.com/errbotio/err-backend-gitter>`_"
-         "XMPP", "xmpp", "Integrated"
-         "IRC", "irc", "Integrated"
+         "Slack", ``SlackV3``, "`slackv3 plugin <https://github.com/errbotio/err-backend-slackv3>`_"
+         "Mattermost", ``mattermost``, "`mattermost plugin <https://github.com/errbotio/err-backend-mattermost>`_"
+         "Discord", ``discord``, "`discord plugin <https://github.com/errbotio/err-backend-discord>`_"
+         "Rocket Chat", ``aoikrocketchaterrbot``, "`rocket chat plugin <https://github.com/AoiKuiyuyou/AoikRocketChatErrbot>`_"
+         "Gitter", ``gitter``, "`gitter plugin <https://github.com/errbotio/err-backend-gitter>`_"
+         "XMPP", ``xmpp``, "Included with errbot"
+         "IRC", ``irc``, "Included with errbot"
 
 Despite errbot having support for some backend chat services, they are not directly supported by err-stackstorm.
 
 
     .. csv-table:: Unsupported Chat Backends
-        :header: "Backend", "Mode value", "Support Type"
+        :header: "Service (backend)", "Backend mode name", "Support Type"
         :widths: 10, 10, 10
 
-        "MSTeam", "BotFramework", "`Plugin <https://github.com/vasilcovsky/errbot-backend-botframework>`_"
+        "MSTeam", ``BotFramework``, "`msteams plugin <https://github.com/vasilcovsky/errbot-backend-botframework>`_"
+        "Google Chat", ``Google_Hangouts_Chat``, "`google chat plugin <https://github.com/cloudflare/GHC-Errbot>`_"
 
-.. important:: Microsoft Teams is available in errbot but is not supported by err-stackstorm because the maintainer (nzlosh) has no access to this service.  If you wish to help maintain support for Microsoft Teams in err-stackstorm contact nzlosh.
+.. important:: Microsoft Teams and Google Chat are available in errbot but are not supported by err-stackstorm because the maintainer (nzlosh) has no access to these services.  If you wish to help maintain support for these backends in err-stackstorm contact nzlosh.
 
 Backend support provides a minimum set of operations such as `connect` and `authentication` methods along with ways to `identify` and `send messages` to users/rooms.
 

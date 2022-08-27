@@ -245,7 +245,10 @@ If Errbot was installed in a python virtual environment, make sure the virtual e
 st2chatops is not running
 --------------------------
 
-This is okay, ``err-stackstorm`` **replaces** ``st2chatops``.
+The `st2ctl` command is designed with the assumption that ``st2chatops`` is installed for St2 ChatOps.  Since ``err-stackstorm`` **replaces** ``st2chatops``, this
+error message can be safely ignored.  More over, ``err-stackstorm`` does not require to be restarted when new action aliases are added since they're read at runtime
+from the API.
+
 
 webserver configuration doesn't persist between bot restarts
 -------------------------------------------------------------

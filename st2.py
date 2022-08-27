@@ -203,9 +203,9 @@ class St2(BotPlugin):
         st2token, err_msg = self.get_token(chat_user)
         if st2token is False:
             rejection = (
-                f"Error: '{err_msg}'.  Listing enquiries is not allowed for chat user '{chat_user}'."
-                f"  Please authenticate using {self.cfg.plugin_prefix}session_start or see your StackStorm"
-                " administrator to grant access."
+                f"Error: '{err_msg}'.  Listing enquiries is not allowed for chat user "
+                f"'{chat_user}'.  Please authenticate using {self.cfg.plugin_prefix}session_start "
+                "or see your StackStorm administrator to grant access."
             )
             LOG.warning(rejection)
             return rejection
@@ -230,9 +230,9 @@ class St2(BotPlugin):
         st2token, err_msg = self.get_token(chat_user)
         if st2token is False:
             rejection = (
-                f"Error: '{err_msg}'.  Fetching enquiries is not allowed for chat user '{chat_user}'."
-                f"  Please authenticate using {self.cfg.plugin_prefix}session_start or see your StackStorm"
-                " administrator to grant access."
+                f"Error: '{err_msg}'.  Fetching enquiries is not allowed for chat user "
+                f"'{chat_user}'.  Please authenticate using {self.cfg.plugin_prefix}session_start "
+                "or see your StackStorm administrator to grant access."
             )
             LOG.warning(rejection)
             return rejection
@@ -568,8 +568,9 @@ class St2(BotPlugin):
 
         self.create_dynamic_plugin(
             name="St2",
-            doc=f"err-stackstorm v{ERR_STACKSTORM_VERSION} - A StackStorm plugin for authentication and Action Alias "
-            "execution.  Use {self.cfg.bot_prefix}{self.cfg.plugin_prefix}help for action alias help.",
+            doc=f"err-stackstorm v{ERR_STACKSTORM_VERSION} - A StackStorm plugin for "
+            "authentication and Action Alias execution.  Use "
+            "{self.cfg.bot_prefix}{self.cfg.plugin_prefix}help for action alias help.",
             commands=(
                 Command(
                     lambda plugin, msg, args: self.session_list(msg, args),

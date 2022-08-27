@@ -2,7 +2,7 @@ import json
 import logging
 import time
 
-from jsonschema import Draft3Validator # As of May 2022, st2 enquiry uses Draft3
+from jsonschema import Draft3Validator  # As of May 2022, st2 enquiry uses Draft3
 from errbot import BotFlow, BotPlugin, Command, FlowRoot, botcmd, botflow, re_botcmd
 
 log = logging.getLogger(__name__)

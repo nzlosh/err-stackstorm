@@ -1,11 +1,11 @@
 .. _show_case:
 
-*********
+************************************************************************
 Show case
-*********
+************************************************************************
 
 Features
-========
+========================================================================
 
     * A single StackStorm instance accessible from multiple chat providers
 
@@ -34,7 +34,7 @@ Advanced formatting using chat provider features (Slack blocks)
 
 
 User provided content
-=====================
+========================================================================
 
 Some generous people have kindly taken the time to create content around using the err-stackstorm project.  Links have been provided to help others find find the work:
 

@@ -24,7 +24,8 @@ err-stackstorm is a community project to bring StackStorm ChatOps to Errbot.
    troubleshooting.rst
    project.rst
    show_case.rst
-
+   linux_package_building.rst
+   dev_references.rst
 
 Indices and tables
 ==================

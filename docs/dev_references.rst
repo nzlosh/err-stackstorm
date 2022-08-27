@@ -1,14 +1,24 @@
-# Reference material
+************************************************************************
+Reference material
+************************************************************************
 
 Chatops commands must traverse multiple software stacks when being sent from the users chat device
 through to StackStorm's backend and back again.  The information here are based on observations of the
 interactions between the adjacent components.
 
-## Stackstorm client API
+This information on this page is very raw and may be out of date.  They're included as hints during
+exploration of functionality between StackStorm and Errbot.
 
-### ActionAlias match
+
+Stackstorm client API
+------------------------------------------------------------------------
+
+ActionAlias match
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 When st2client matches an actionalias, an object is returned with the following methods
-```
+::
+
     class 'st2client.models.action_alias.ActionAlias'>
     ral_display_name'
     'ack'
@@ -60,11 +70,13 @@ When st2client matches an actionalias, an object is returned with the following 
     to_dict=<bound method ActionAlias.to_dict of
     <ActionAlias name=state_overview,pack=livestatus,action_ref=livestatus.state_overview>>
     uid=action:livestatus:state_overview
-```
 
-### API call to alias_execution
 
-```
+API call to alias_execution
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
     curl -X POST
     -H  'Connection: keep-alive'
     -H  'Accept-Encoding: gzip, deflate'
@@ -84,39 +96,56 @@ When st2client matches an actionalias, an object is returned with the following 
         "user":                 "@ch"
     }'
     http://127.0.0.1:9101/v1/aliasexecution
-```
 
 
-## Errbot
 
-MESSAGE FROM SLACK CHANNEL TO BOT IN CHANNEL.
-```
-_from [<class 'yapsy_loaded_plugin_Slack_0.SlackRoomOccupant'>] #ops/ch
-_extras [<class 'dict'>] {'slack_event': {'text': '.st2 test notify test test', 'source_team': 'T0V6H6HCJ', 'ts': '1506953521.000382', 'user': 'U110FGZSQ', 'type': 'message', 'channel': 'C110T9SMT', 'team': 'T0V6H6HCJ'}, 'attachments': None, 'url': 'https://infradmtest.slack.com/archives/ops/p1506953521000382'}
-_flow [<class 'NoneType'>] None
-_body [<class 'str'>] test notify test test
-_parent [<class 'NoneType'>] None
-ctx [<class 'dict'>] {}
-_delayed [<class 'bool'>] False
-_to [<class 'yapsy_loaded_plugin_Slack_0.SlackRoom'>] #ops
+Errbot
+------------------------------------------------------------------------
+
+Message from slack channel to bot in channel.
+::
+
+    _from [<class 'yapsy_loaded_plugin_Slack_0.SlackRoomOccupant'>] #ops/ch
+    _extras [<class 'dict'>] {
+        'slack_event': {
+            'text': '.st2 test notify test test',
+            'source_team': 'T0V6H6HCJ',
+            'ts': '1506953521.000382',
+            'user': 'U110FGZSQ',
+            'type': 'message',
+            'channel': 'C110T9SMT',
+            'team': 'T0V6H6HCJ'
+        },
+        'attachments': None,
+        'url': 'https://infradmtest.slack.com/archives/ops/p1506953521000382'
+    }
+    _flow [<class 'NoneType'>] None
+    _body [<class 'str'>] test notify test test
+    _parent [<class 'NoneType'>] None
+    ctx [<class 'dict'>] {}
+    _delayed [<class 'bool'>] False
+    _to [<class 'yapsy_loaded_plugin_Slack_0.SlackRoom'>] #ops
 
 
-[
-  {
-    "name": "notify_errbot_test",
-    "notification_route": "errbot",
-    "command": "test notify test test",
-    "format": "test notify {{tag_key}} {{tag_value}}",
-    "user": "#ops/ch",
-    "source_channel": "#ops",
-    "notification_channel": "#ops"
-  }
-]
-```
+    [
+      {
+        "name": "notify_errbot_test",
+        "notification_route": "errbot",
+        "command": "test notify test test",
+        "format": "test notify {{tag_key}} {{tag_value}}",
+        "user": "#ops/ch",
+        "source_channel": "#ops",
+        "notification_channel": "#ops"
+      }
+    ]
 
 
-### Message received from Slack backend
-```
+
+Message received from Slack backend
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
     msg.body
     msg.ctx
     msg.delayed
@@ -126,10 +155,13 @@ _to [<class 'yapsy_loaded_plugin_Slack_0.SlackRoom'>] #ops
     msg.is_direct
     msg.is_group
     msg.to
-```
 
-#### Private chat to bot.
-```
+
+Private chat to bot.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
     msg.body =      shinken service overview
     msg.ctx =       {}
     msg.delayed =   False
@@ -139,10 +171,12 @@ _to [<class 'yapsy_loaded_plugin_Slack_0.SlackRoom'>] #ops
     msg.is_direct = True
     msg.is_group =  False
     msg.to =        @prime
-```
 
-#### Channel chat to bot.
-```
+
+Channel chat to bot.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+::
+
     msg.body =      shinken service overview
     msg.ctx =       {}
     msg.delayed =   False
@@ -152,11 +186,12 @@ _to [<class 'yapsy_loaded_plugin_Slack_0.SlackRoom'>] #ops
     msg.is_direct = False
     msg.is_group =  True
     msg.to =        #ops
-```
 
-### FROM CHANNEL
 
-```
+From channel
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
     msg=['.st2 shinken service overview',
     {},
     False,
@@ -167,10 +202,11 @@ _to [<class 'yapsy_loaded_plugin_Slack_0.SlackRoom'>] #ops
     False,
     <yapsy_loaded_plugin_Slack_0.SlackPerson object at 0x7fee8c48cef0>],
     match=<_sre.SRE_Match object; span=(0, 28), match='st2 shinken service overview'>
-```
 
-### SlackPerson
-```
+SlackPerson
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
     channelid=D11LRK2LF,
     channelname=D11LRK2LF,
     client=D11LRK2LF,
@@ -180,12 +216,15 @@ _to [<class 'yapsy_loaded_plugin_Slack_0.SlackRoom'>] #ops
     person=@ch,
     userid=U110FGZSQ,
     username=ch
-```
 
-## Stackstorm trigger
 
-### st2.generic.notifytrigger
-```
+Stackstorm trigger
+------------------------------------------------------------------------
+
+st2.generic.notifytrigger
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
     {
         "type": "object",
         "properties": {
@@ -201,10 +240,10 @@ _to [<class 'yapsy_loaded_plugin_Slack_0.SlackRoom'>] #ops
             "end_timestamp": {}
         }
     }
-```
 
 
-## Microsoft Teams
+Microsoft Teams
+------------------------------------------------------------------------
 
 As of 30 April 2021, the official MS documentation suggests using Visual Studio with the MS Teams Toolkit.
 
@@ -218,5 +257,7 @@ Pre-requisites:
 2. Fill in all the required fields.
 
 
-References:
+References
+------------------------------------------------------------------------
+
 https://techcommunity.microsoft.com/t5/teams-developer/register-bot-without-azure-process/m-p/1490808
