@@ -2,16 +2,82 @@
 
 set -e
 
-/usr/bin/getent passwd errbot || export RET=$?
+VERB="$1"
 
-if [[ $RET -eq 2 ]]; then
-	adduser --system --home /opt/errbot --shell /bin/false errbot --group
-elif [[ $RET -ne 0 ]]; then
-	echo "Error getting entity information for errbot." > /dev/stderr
-	exit $RET
-fi
+E_BAD_VERB=1
+E_BAD_VERSION=2
+E_BAD_ARGS=3
 
-if [[ -d /opt/errbot ]]; then
-	chown -R errbot:errbot /opt/errbot
-fi
+
+function check_version
+{
+    VERSION="$1"
+    if [[ -z "$VERSION" ]]; then
+        echo "Aborting! $0 $VERB called without providing a package version."
+        exit $E_BAD_VERSION
+    fi
+}
+
+function create_system_account
+{
+    /usr/bin/getent passwd errbot >/dev/null || export RET=$?
+    test -z "$RET" || export RET=0
+
+    if [[ $RET -eq 2 ]]; then
+        echo "Creating errbot system user."
+        adduser --system --home /opt/errbot --shell /bin/false errbot --group
+    elif [[ $RET -ne 0 ]]; then
+        echo "Error getting entity information for errbot." > /dev/stderr
+        exit $RET
+    fi
+
+    ERRBOT_PATH="/opt/errbot"
+    if [[ -d "$ERRBOT_PATH" ]]; then
+        echo "Setting ownership for $ERRBOT_PATH"
+        chown -R errbot:errbot "$ERRBOT_PATH"
+    fi
+}
+
+
+case "$VERB" in
+    configure)
+        VERSION="$2"
+        check_version "$VERSION"
+        echo "$0 $VERB most-recently-configured-version: $VERSION"
+        create_system_account
+    ;;
+    abort-upgrade)
+        VERSION="$2"
+        check_version "$VERSION"
+        echo "$0 $VERB new-version: ${VERSION}"
+    ;;
+    abort-remove)
+        if [[ -z "$2" ]]; then
+            echo "$0 $VERB"
+        elif [[ "$2" = "in-favour" ]]; then
+            PACKAGE="$3"
+            VERSION="$4"
+            check_version "$VERSION"
+            echo "$0 $VERB in-favour package:$PACKAGE new-version:$VERSION"
+        else
+            echo "$0 $VERB does support argument '$2'"
+            exit $E_BAD_ARGS
+        fi
+    ;;
+    abort-deconfigure)
+        if [[ "$2" = "in-favour" ]]; then
+            PACKAGE="$3"
+            VERSION="$4"
+            check_version "$VERSION"
+            echo "$0 $VERB in-favour failed-install-package: $PACKAGE version: $VERSION"
+        else
+            echo "$0 $VERB does support argument '$2'"
+            exit $E_BAD_ARGS
+        fi
+    ;;
+    *)
+        echo "$0 called with unexpected package action '$VERB'"
+        exit $E_BAD_VERB
+    ;;
+esac
 

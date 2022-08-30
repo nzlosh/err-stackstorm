@@ -1,3 +1,61 @@
 #!/bin/bash
 
-true
+set -e
+
+VERB="$1"
+VERSION="$2"
+
+E_BAD_VERB=1
+E_BAD_VERSION=2
+E_BAD_ARGS=3
+
+function check_version
+{
+    VERSION="$1"
+    if [[ -z "$VERSION" ]]; then
+        echo "Aborting! $0 $VERB called without providing a package version."
+        exit $E_BAD_VERSION
+    fi
+}
+
+case "$VERB" in
+    remove)
+        echo "$0 $VERB"
+    ;;
+    purge)
+        echo "$0 $VERB"
+    ;;
+    upgrade)
+        VERSION="$2"
+        check_version "$VERSION"
+        echo "$0 $VERB new-version: $VERSION"
+    ;;
+    disappear)
+        PACKAGE="$2"
+        VERSION="$3"
+        check_version "$VERSION"
+        echo "$0 $VERB overwriter: $PACKAGE, overwriter-version: $VERSION"
+    ;;
+    failed-upgrade)
+        VERSION="$2"
+        check_version "$VERSION"
+        echo "$0 $VERB old-version: $VERSION"
+    ;;
+    abort-install)
+        VERSION="$2"
+        if [[ -z "$VERSION" ]]; then
+            echo "$0 $VERB"
+        else
+            echo "$0 $VERB old-version: $VERSION"
+        fi
+    ;;
+    abort-upgrade)
+        VERSION="$2"
+        check_version "$VERSION"
+        echo "$0 $VERB old-version: $VERSION"
+    ;;
+    *)
+        echo "$0 called with unexpected package action '$VERB'"
+        exit $E_BAD_VERB
+    ;;
+esac
