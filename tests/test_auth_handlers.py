@@ -1,5 +1,12 @@
 # coding:utf-8
-from lib.credentials_adapters import ClientSideAuthHandler, StandaloneAuthHandler
+
+from errst2lib.authentication_handler import ClientSideAuthHandler, StandaloneAuthHandler
+from errst2lib.credentials_adapters import (
+    CredentialsFactory,
+    St2UserCredentials,
+    St2UserToken,
+    St2ApiKey,
+)
 
 pytest_plugins = ["errbot.backends.test"]
 extra_plugin_dir = "."

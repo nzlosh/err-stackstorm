@@ -1,3 +1,56 @@
 #!/bin/bash
 
-true
+set -e
+
+VERB="$1"
+
+E_BAD_VERB=1
+E_BAD_VERSION=2
+E_BAD_ARGS=3
+
+function check_version
+{
+    VERSION="$1"
+    if [[ -z "$VERSION" ]]; then
+        echo "Aborting! $0 $VERB called without providing a package version."
+        exit $E_BAD_VERSION
+    fi
+}
+
+case "$VERB" in
+    upgrade)
+        VERSION="$2"
+        check_version "$VERSION"
+        echo "$0 $VERB new-version: $VERSION"
+    ;;
+    remove)
+        if [[ "$2" = "in-favour" ]]; then
+            PACKAGE="$3"
+            VERSION="$4"
+            check_version "$VERSION"
+            echo "$0 $VERB in-favour package-being-installed: $PACKAGE, new-version: $VERSION"
+        else
+            echo "$0 $VERB"
+        fi
+    ;;
+    deconfigure)
+        if [[ "$2" = "in-favour" ]]; then
+            PACKAGE="$3"
+            VERSION="$4"
+            check_version "$VERSION"
+            echo "$0 $VERB in favour package-being-installed:$PACKAGE version: $VERSION"
+        else
+            echo "$0 $VERB called without correct arguments '$2'"
+            exit $E_BAD_ARGS
+        fi
+    ;;
+    failed-upgrade)
+        VERSION="$2"
+        check_version "$VERSION"
+        echo "$0 $VERB old-version: $VERSION"
+    ;;
+    *)
+        echo "$0 called with unexpected package action '$VERB'"
+        exit $E_BAD_VERB
+    ;;
+esac

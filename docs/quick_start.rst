@@ -53,8 +53,8 @@ If you are familiar with Errbot and StackStorm, this guide will get you up and r
 
 6.  Set up an `action alias <https://docs.stackstorm.com/chatops/aliases.html>`_ on StackStorm.  See :ref:`action_alias` for more details.
 
-7.  Sending ``!st2help`` to your bot will list the available StackStorm's aliases.
+7. Sending ``!st2help`` to your bot will list the available Stackstorms's aliases.
 
-8.  Aliases can be run like this: ``!st2 run date on 192.168.5.1``
+8. Aliases can be run like this: ``!st2 run date on 192.168.5.1``
 
-.. important:: When restarting StackStorm, a warning may be produced to inform you `st2chatops` is not running.   This warning can be ignored because `err-stackstorm` is used for StackStorm ChatOps.
+.. important:: When restarting StackStorm, a warning may be produced to inform you `st2chatops` is not running.   This warning can be ignored because `err-stackstorm` will be managing StackStorm ChatOps.

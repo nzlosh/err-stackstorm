@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e +x 
+set -eou pipefail +x
 
 ERR_STACKSTORM_VERSION=2.2.0
 
@@ -59,7 +59,7 @@ function debian_11_install
 function install_system_requirements
 {
     echo INSTALL SYSTEM REQUIREMENTS
-    ${DISTRO_COMBO}_install $pkg
+    ${DISTRO_COMBO}_install
 }
 
 function create_virtual_environment
@@ -75,10 +75,10 @@ function fetch_archives
     echo DOWNLOAD ARCHIVES
     export BACKENDS=("err-backend-discord" "err-backend-slackv3" "err-backend-gitter" "err-backend-mattermost" "err-backend-botframework")
     cd $ROOT/backends
-    wget https://github.com/gbin/err-backend-discord/archive/refs/tags/v2.1.0.tar.gz -O err-backend-discord-v2.1.0.tar.gz
-    wget https://github.com/errbotio/err-backend-slackv3/archive/refs/tags/v0.1.0.tar.gz -O err-backend-slackv3-v0.1.0.tar.gz
+    wget https://github.com/errbotio/err-backend-discord/archive/refs/tags/v2.1.0.tar.gz -O err-backend-discord-v2.1.0.tar.gz
+    wget https://github.com/errbotio/err-backend-slackv3/archive/refs/tags/v0.2.0.tar.gz -O err-backend-slackv3-v0.2.0.tar.gz
+    wget https://github.com/errbotio/err-backend-mattermost/archive/refs/tags/2.1.0.tar.gz -O err-backend-mattermost-v2.1.0.tar.gz
     wget https://github.com/nzlosh/err-backend-gitter/archive/refs/tags/v0.1.0.tar.gz -O err-backend-gitter-v0.1.0.tar.gz
-    wget https://github.com/nzlosh/err-backend-mattermost/archive/refs/tags/2.1.0.tar.gz -O err-backend-mattermost-v2.1.0.tar.gz
     wget https://github.com/nzlosh/err-backend-botframework/archive/refs/tags/v0.1.0.tar.gz -O err-backend-botframework-v0.1.0.tar.gz
 
     cd $ROOT/plugins
@@ -123,15 +123,21 @@ function install_extensions
     done
 }
 
-function clean_virtualenv
+function prune_installation
 {
-    echo CLEAN VIRTUALENV
+    echo PRUNE INSTALLATION
     find $ROOT -iname '*.pyc' -delete
     for pycache in $(find $ROOT -iname '__pycache__' -type d)
     do
         test -d "${pycache}" && rm -rf "${pycache}"
     done
+    for excess in contrib docs tests
+    do
+      rm -rf "$ROOT/plugins/err-stackstorm/${excess}"
+    done
 }
+
+
 
 function install_errbot
 {
@@ -141,8 +147,9 @@ function install_errbot
     pip install errbot
     fetch_archives
     install_extensions
-    clean_virtualenv
+    prune_installation
 }
+
 
 function build_archive
 {
@@ -152,8 +159,8 @@ function build_archive
     tar czvf /opt/err-stackstorm_${ERR_STACKSTORM_VERSION}_${DISTRO_COMBO}_x86_64.tar.gz $ROOT
 }
 
-export DISTRO=$(awk -F= '/^ID=/ {print $2}' /etc/*release* | tr -d '"')
-export DISTRO_VERSION=$(awk -F= '/^VERSION_ID=/ {print $2}' /etc/*release*  | tr -d '"')
+export DISTRO=$(source /etc/os-release; echo $ID)
+export DISTRO_VERSION=$(source /etc/os-release; echo $VERSION_ID)
 export DISTRO_COMBO="${DISTRO}_${DISTRO_VERSION}"
 export ROOT=/opt/errbot
 

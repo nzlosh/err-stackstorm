@@ -39,7 +39,7 @@ err-stackstorm v2.2 is compatible with Python 3.7+ and operates with StackStorm 
 
 
 Platforms
-========================================================================
+=========
 
 ``err-stackstorm`` is developed and testing on the x86_64 platform for Linux.  No other platforms or operating systems have been tested.
 
@@ -64,7 +64,6 @@ Errbot provides official support for most major chat back-ends and many more cha
          "IRC", ``irc``, "Included with errbot"
 
 Despite errbot having support for some backend chat services, they are not directly supported by err-stackstorm.
-
 
     .. csv-table:: Unsupported Chat Backends
         :header: "Service (backend)", "Backend mode name", "Support Type"
