@@ -1,22 +1,22 @@
 .. _authentication:
 
-***************
+************************************************************************
 Authentication
-***************
+************************************************************************
 
 .. contents:: :local:
 
 .. important:: Do not configure multiple authentication methods at the same time.
 
-Standalone
-==========
+Stand-alone
+========================================================================
 
 This is the default authentication method where `err-stackstorm` uses its own credentials for all calls to the StackStorm API.  All action-aliases issued by chat service users execute the underlying workflows with `err-stackstorm` credentials.
 
 Any Role Based Access Control policies can only be applied to the bot user which gives limited control.
 
 Configuration
---------------
+------------------------------------------------------------------------
 
 An empty dictionary in the `standalone` key is all that is required to maintain err-stackstorm's default authentication method.
 
@@ -27,7 +27,8 @@ An empty dictionary in the `standalone` key is all that is required to maintain 
     }
 
 Client-Side
-============
+========================================================================
+
 
 .. note::  This implementation is specific to err-stackstorm.
 
@@ -45,13 +46,13 @@ The user enters their StackStorm credentials via the login page which err-stacks
 
 
 Configuration
--------------
+------------------------------------------------------------------------
 
 To configure the Client-Side authentication method, one needs to take steps to setup both Nginx and Errbot. Nginx is used to serve static web content for the authentication web page and Errbot serves as the API backend for authentication calls.
 
 
 NGINX
-^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. note:: This example is provided as a guide only.  You are expected to know and understand how to configure nginx for your environment.  It is outside of the scope of this documentation to go over nginx's configuration and explain SSL certificates.
 
@@ -80,7 +81,12 @@ To help understand the example below, the following conditions are assumed:
       ssl_session_cache         shared:SSL:10m;
       ssl_session_timeout       5m;
       ssl_protocols             TLSv1 TLSv1.1 TLSv1.2;
-      ssl_ciphers               EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH:ECDHE-RSA-AES128-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA128:DHE-RSA-AES128-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-GCM-SHA128:ECDHE-RSA-AES128-SHA384:ECDHE-RSA-AES128-SHA128:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES128-SHA:DHE-RSA-AES128-SHA128:DHE-RSA-AES128-SHA128:DHE-RSA-AES128-SHA:DHE-RSA-AES128-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA384:AES128-GCM-SHA128:AES128-SHA128:AES128-SHA128:AES128-SHA:AES128-SHA:DES-CBC3-SHA:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4;
+      ssl_ciphers               EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH:ECDHE-RSA-AES128-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:
+                                ECDHE-RSA-AES128-GCM-SHA128:DHE-RSA-AES128-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-GCM-SHA128:
+                                ECDHE-RSA-AES128-SHA384:ECDHE-RSA-AES128-SHA128:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES128-SHA:DHE-RSA-AES128-SHA128:
+                                DHE-RSA-AES128-SHA128:DHE-RSA-AES128-SHA:DHE-RSA-AES128-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:
+                                AES128-GCM-SHA384:AES128-GCM-SHA128:AES128-SHA128:AES128-SHA128:AES128-SHA:AES128-SHA:DES-CBC3-SHA:HIGH:
+                                !aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4;
       ssl_prefer_server_ciphers on;
 
       index  index.html index.htm;
@@ -117,7 +123,7 @@ To help understand the example below, the following conditions are assumed:
 After successfully setting up nginx, the client side authentication url would be ``https://my_host.my_fqdn:443/``.
 
 err-stackstorm configuration
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A url is required to correctly configure client-side authentication for ChatOps. This URL is Errbot's authentication endpoint that you have just set up.
 
@@ -130,7 +136,7 @@ A url is required to correctly configure client-side authentication for ChatOps.
     },
 
 Authenticating
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Once the client side authentication is setup, you should be able to trigger the authentication process with ``!session_start my_secret_word`` which will return a url to complete the login processes. This is how the page looks like:
 

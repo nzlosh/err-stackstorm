@@ -1,10 +1,11 @@
 # coding:utf-8
 import logging
 
-from lib.session_manager import SessionManager
-from lib.session import generate_password
-from lib.errors import SessionInvalidError
 from errbot.backends.base import Identifier
+
+from errst2lib.errors import SessionInvalidError
+from errst2lib.session import generate_password
+from errst2lib.session_manager import SessionManager
 
 LOG = logging.getLogger("errbot.plugin.st2.auth_ctrl")
 

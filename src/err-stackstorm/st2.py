@@ -1,28 +1,30 @@
 # coding:utf-8
 import json
 import logging
+import shlex
 import threading
 import traceback
-import requests
 from types import SimpleNamespace
 
-from errbot import BotPlugin, Command, re_botcmd, botcmd, arg_botcmd, webhook
+import requests
+from errbot import BotPlugin, Command, arg_botcmd, botcmd, re_botcmd, webhook
 
-from lib.config import PluginConfiguration
-from lib.chat_adapters import ChatAdapterFactory
-from lib.errors import (
+from errst2lib.authentication_controller import AuthenticationController, BotPluginIdentity
+from errst2lib.authentication_handler import AuthHandlerFactory, ClientSideAuthHandler
+from errst2lib.chat_adapters import ChatAdapterFactory
+from errst2lib.config import PluginConfiguration
+from errst2lib.credentials_adapters import St2ApiKey, St2UserCredentials, St2UserToken
+from errst2lib.enquiry import Enquiry, EnquiryManager
+from errst2lib.errors import (
     SessionConsumedError,
+    SessionExistsError,
     SessionExpiredError,
     SessionInvalidError,
-    SessionExistsError,
 )
-from lib.stackstorm_api import StackStormAPI
-from lib.authentication_controller import AuthenticationController, BotPluginIdentity
-from lib.credentials_adapters import St2ApiKey, St2UserToken, St2UserCredentials
-from lib.authentication_handler import AuthHandlerFactory, ClientSideAuthHandler
+from errst2lib.stackstorm_api import StackStormAPI
+from errst2lib.version import ERR_STACKSTORM_VERSION
 
 LOG = logging.getLogger("errbot.plugin.st2")
-ERR_STACKSTORM_VERSION = "2.2.0"
 
 
 class St2(BotPlugin):
@@ -32,17 +34,17 @@ class St2(BotPlugin):
     """
 
     def __init__(self, bot, name):
-        super(St2, self).__init__(bot, name)
+        super().__init__(bot, name)
 
         # Initialised shared configuraiton with the bot's stackstorm settings.
         try:
             self.cfg = PluginConfiguration()
             self.cfg.setup(self.bot_config)
-        except Exception as e:
+        except Exception as err:
             LOG.critical(
                 "Errors were encountered processing the STACKSTORM configuration."
                 "Please correct the errors and restart the bot."
-                "{}".format(e)
+                "{}".format(err)
             )
 
         # The chat backend adapter mediates data format and api calls between
@@ -53,38 +55,14 @@ class St2(BotPlugin):
 
         self.st2api = StackStormAPI(self.cfg, self.accessctl)
 
+        self.responses = EnquiryManager()
+
         # Wrap err-stackstorm credentials to distinguish it from chat backend credentials.
         self.internal_identity = BotPluginIdentity()
         self.authenticate_bot_credentials()
 
         self.run_listener = True
         self.st2events_listener = None
-
-    def check_latest_version(self):
-        url = "https://raw.githubusercontent.com/nzlosh/err-stackstorm/master/version.json"
-        try:
-            response = requests.get(url, timeout=5)
-
-            if response.status_code != 200:
-                LOG.warning(
-                    "Unable to fetch err-stackstorm version from {}. HTTP code: {}".format(
-                        url, response.status_code
-                    )
-                )
-                return True
-        except Exception as e:
-            LOG.warning("Exception checking version from {}. {}".format(url, e))
-            return True
-
-        latest = response.json().get("version")
-        if latest is None:
-            LOG.warning("Failed to read err-stackstorm 'version' from {}.".format(url))
-            return True
-
-        if ERR_STACKSTORM_VERSION != latest:
-            LOG.info("err-stackstorm can be updated to {}.".format(latest))
-        else:
-            LOG.info("err-stackstorm {} is up to date.".format(ERR_STACKSTORM_VERSION))
 
     def authenticate_bot_credentials(self):
         """
@@ -122,11 +100,11 @@ class St2(BotPlugin):
         try:
             bot_session = self.accessctl.get_session(self.internal_identity)
             bot_session.is_expired()
-        except SessionExpiredError as e:
-            LOG.debug("{}".format(e))
+        except SessionExpiredError as err:
+            LOG.debug("{}".format(err))
             self.reauthenticate_bot_credentials(bot_session)
-        except SessionInvalidError as e:
-            LOG.debug("{}".format(e))
+        except SessionInvalidError as err:
+            LOG.debug("{}".format(err))
             self.authenticate_bot_credentials()
 
     def st2listener(self, start=False, stop=False):
@@ -145,11 +123,10 @@ class St2(BotPlugin):
         """
         Activate Errbot's poller to periodically validate st2 credentials.
         """
-        super(St2, self).activate()
+        super().activate()
         LOG.info("Activate St2 plugin")
 
         self.dynamic_commands()
-        self.check_latest_version()
 
         self.start_poller(self.cfg.timer_update, self.validate_bot_credentials)
         self.st2events_listener = threading.Thread(
@@ -160,7 +137,8 @@ class St2(BotPlugin):
         self.st2listener(start=True)
 
     def deactivate(self):
-        super(St2, self).deactivate()
+        super().deactivate()
+        self.stop_poller(self.validate_bot_credentials)
         self.destroy_dynamic_plugin("St2")
         self.st2listener(stop=True)
         LOG.info("st2stream listener wait for thread to exit.")
@@ -168,29 +146,127 @@ class St2(BotPlugin):
         LOG.info("st2stream listener exited.")
         del self.st2events_listener
 
-    def st2sessionlist(self, msg, args):
+    def session_list(self, msg, args):
         """
         List any established sessions between the chat service and StackStorm API.
         """
         return self.chatbackend.present_sessions(self.accessctl.list_sessions())
 
-    def st2sessiondelete(self, msg, args):
+    def session_delete(self, msg, args):
         """
         Delete an established session.
         """
         if len(args) > 0:
             self.accessctl.delete_session(args)
 
-    def st2disconnect(self, msg, args):
+    def session_disconnect(self, msg, args):
         """
-        Usage: st2disconnect
+        Usage: session_disconnect
         Closes the session.  StackStorm credentials are purged when the session is closed.
         """
+        # get user session
+        # delete user session
         return "Not implemented yet."
 
-    def st2authenticate(self, msg, args):
+    def enquiry_list(self, msg, args):
         """
-        Usage: st2authenticate <secret>
+        Usage: st2 <enquiry|inquiry> list
+        """
+        chat_user = msg.frm
+        st2token, err_msg = self.get_token(chat_user)
+        if st2token is False:
+            rejection = (
+                f"Error: '{err_msg}'.  Listing enquiries is not allowed for chat user "
+                f"'{chat_user}'.  Please authenticate using {self.cfg.plugin_prefix}session_start "
+                "or see your StackStorm administrator to grant access."
+            )
+            LOG.warning(rejection)
+            return rejection
+
+        res = self.st2api.enquiry_list(st2token).json()
+        yield f"Enquries awaiting response: {len(res)}"
+        for enquiry in res:
+            yield enquiry["id"]
+
+    def enquiry_set(self, msg, args):
+        """
+        Usage: st2 <enquiry|inquiry> set <enquiry_id>
+        """
+        self.responses.set(msg.frm.userid, args)
+        return f"setting current enquiry to {args}"
+
+    def enquiry_get(self, msg, args):
+        """
+        Usage: st2 <enquiry|inquiry> get <enquiry_id>
+        """
+        chat_user = msg.frm
+        st2token, err_msg = self.get_token(chat_user)
+        if st2token is False:
+            rejection = (
+                f"Error: '{err_msg}'.  Fetching enquiries is not allowed for chat user "
+                f"'{chat_user}'.  Please authenticate using {self.cfg.plugin_prefix}session_start "
+                "or see your StackStorm administrator to grant access."
+            )
+            LOG.warning(rejection)
+            return rejection
+
+        res = self.st2api.enquiry_get(args, st2token)
+        if res:
+            p = res["schema"]["properties"]
+            return "Enquiry ID: {} (★ indicates required responses)\n{}".format(
+                res["id"],
+                "\n".join(
+                    [
+                        "Q{question}. {desc}{req} [{resp_type}]".format(
+                            question=q[0] + 1,
+                            desc=p[q[1]]["description"],
+                            req="★" if p[q[1]]["required"] else "",
+                            resp_type=p[q[1]]["type"],
+                        )
+                        for q in enumerate(p)
+                    ]
+                ),
+            )
+        else:
+            return f"Error getting enquiry. {res}"
+
+    def enquiry_reply(self, msg, args_str):
+        """
+        Usage: st2 <enquiry|inquiry> respond <enquiry_id> <question_idx> <answer>
+        st2enquiry reply
+        st2enquiry full reply '<json>'
+        st2enquiry q1 reply <value>
+        """
+        args = shlex.split(args_str)
+
+        user_id = msg.frm.userid
+        enquiry_id = self.responses.get_current_enquiry(user_id)
+
+        if len(args) == 0:
+            yield "Respond to what?"
+            return
+        # TODO : Implement logic to use enquiry context to select next question.
+
+        # ~ chat_user = msg.frm
+        # ~ st2token, err_msg = self.get_token(chat_user)
+        # ~ if st2token is False:
+        # ~ rejection = (
+        # ~ "Error: '{}'.  Responding to enquiries is not allowed for chat user '{}'."
+        # ~ "  Please authenticate using {}session_start or see your StackStorm"
+        # ~ " administrator to grant access.".format(err_msg, chat_user, self.cfg.plugin_prefix)
+        # ~ )
+        # ~ LOG.warning(rejection)
+        # ~ yield rejection
+
+        # ~ res = self.st2api.enquiry_get(args, st2token)
+        # ~ self.responses.
+        # ~ enquiry = Enquiry(res)
+
+        # ~ yield f"{enquiry.response(1, 'a string')}"
+
+    def session_authenticate(self, msg, args):
+        """
+        Usage: session_authenticate <secret>
         Establish a link between the chat backend and StackStorm by authenticating over an out of
         bands communication channel.
         """
@@ -221,7 +297,22 @@ class St2(BotPlugin):
             self.accessctl.session_url(session.id(), "index.html")
         )
 
-    def st2_execute_actionalias(self, msg, match):
+    def get_token(self, chat_user):
+        """
+        Given a chat user, lookup the st2 token.
+
+        Returns tuple of st2token and error message.
+                Error message is only useful when st2token is false.
+        """
+        st2token = False
+        err_msg = "Failed to fetch valid credentials."
+        try:
+            st2token = self.accessctl.pre_execution_authentication(chat_user)
+        except (SessionExpiredError, SessionInvalidError) as err:
+            err_msg = str(err)
+        return (st2token, err_msg)
+
+    def execute_actionalias(self, msg, match):
         """
         Run an arbitrary stackstorm command.
         Available commands can be listed using !st2help
@@ -234,13 +325,7 @@ class St2(BotPlugin):
             return msg.replace(self.cfg.plugin_prefix, "", 1).strip()
 
         chat_user = msg.frm
-        st2token = False
-        err_msg = "Failed to fetch valid credentials."
-        try:
-            st2token = self.accessctl.pre_execution_authentication(chat_user)
-        except (SessionExpiredError, SessionInvalidError) as e:
-            err_msg = str(e)
-
+        st2token, err_msg = self.get_token(chat_user)
         if st2token is False:
             rejection = (
                 "Error: '{}'.  Action-Alias execution is not allowed for chat user '{}'."
@@ -347,12 +432,12 @@ class St2(BotPlugin):
 
         try:
             self.accessctl.consume_session(uuid)
-        except (SessionConsumedError, SessionExpiredError, SessionInvalidError) as e:
+        except (SessionConsumedError, SessionExpiredError, SessionInvalidError) as err:
             r.return_code = 2
-            r.message = "Session '{}' {}".format(uuid, str(e))
-        except Exception as e:
+            r.message = "Session '{}' {}".format(uuid, str(err))
+        except Exception as err:
             r.return_code = 90
-            r.message = "Session unexpected error: {}".format(str(e))
+            r.message = "Session unexpected error: {}".format(str(err))
 
         if r.return_code == 0:
             try:
@@ -360,9 +445,9 @@ class St2(BotPlugin):
                 if self.accessctl.match_secret(uuid, shared_word) is False:
                     r.return_code = 5
                     r.message = "Invalid credentials"
-            except Exception as e:
+            except Exception as err:
                 r.return_code = 91
-                r.message = "Credentials unexpected error: {}".format(str(e))
+                r.message = "Credentials unexpected error: {}".format(str(err))
 
         if r.return_code == 0:
             # Get the user associated with the session id.
@@ -420,51 +505,55 @@ class St2(BotPlugin):
         def st2help(plugin, msg, pack=None, filter=None, limit=None, offset=None):
             return self.st2help(msg, pack, filter, limit, offset)
 
-        def append_args(func, args, kwargs):
-            wrapper = func.definition
-            wrapper._err_command_parser.add_argument(*args, **kwargs)
-            wrapper.__doc__ = wrapper._err_command_parser.format_help()
-            fmt = wrapper._err_command_parser.format_usage()
-            wrapper._err_command_syntax = fmt[
-                len("usage: ") + len(wrapper._err_command_parser.prog) + 1 : -1
-            ]
+        def enquiry_list(plugin, msg, args):
+            """
+            Wrapped plugin method to be able to process generators.
+            """
+            for r in self.enquiry_list(msg, args):
+                yield r
+
+        def enquiry_reply(plugin, msg, args):
+            """
+            Wrapped plugin method to be able process generators.
+            """
+            for r in self.enquiry_reply(msg, args):
+                yield r
 
         Help_Command = Command(
             st2help,
-            name="{}help".format(self.cfg.plugin_prefix),
+            name=f"{self.cfg.plugin_prefix}help",
             cmd_type=arg_botcmd,
             cmd_args=("--pack",),
             cmd_kwargs={"dest": "pack", "type": str},
             doc="Provide help for StackStorm action aliases.",
         )
-        append_args(Help_Command, ("--filter",), {"dest": "filter", "type": str})
-        append_args(Help_Command, ("--limit",), {"dest": "limit", "type": int})
-        append_args(Help_Command, ("--offset",), {"dest": "offset", "type": int})
+        Help_Command.append_args(("--filter",), {"dest": "filter", "type": str})
+        Help_Command.append_args(("--limit",), {"dest": "limit", "type": int})
+        Help_Command.append_args(("--offset",), {"dest": "offset", "type": int})
 
         self.create_dynamic_plugin(
             name="St2",
-            doc="err-stackstorm v{} - A StackStorm plugin for authentication and Action Alias "
-            "execution.  Use {}{}help for action alias help.".format(
-                ERR_STACKSTORM_VERSION, self.cfg.bot_prefix, self.cfg.plugin_prefix
-            ),
+            doc=f"err-stackstorm v{ERR_STACKSTORM_VERSION} - A StackStorm plugin for "
+            "authentication and Action Alias execution.  Use "
+            "{self.cfg.bot_prefix}{self.cfg.plugin_prefix}help for action alias help.",
             commands=(
                 Command(
-                    lambda plugin, msg, args: self.st2sessionlist(msg, args),
-                    name="{}session_list".format(self.cfg.plugin_prefix),
+                    lambda plugin, msg, args: self.session_list(msg, args),
+                    name=f"{self.cfg.plugin_prefix}session_list",
                     cmd_type=botcmd,
                     cmd_kwargs={"admin_only": True},
                     doc="List any established sessions between the "
                     "chat service and StackStorm API.",
                 ),
                 Command(
-                    lambda plugin, msg, args: self.st2sessiondelete(msg, args),
-                    name="{}session_cancel".format(self.cfg.plugin_prefix),
+                    lambda plugin, msg, args: self.session_delete(msg, args),
+                    name=f"{self.cfg.plugin_prefix}session_cancel",
                     cmd_type=botcmd,
                     cmd_kwargs={"admin_only": True},
                     doc="Allow an administrator to cancel a users session.",
                 ),
                 Command(
-                    lambda plugin, msg, args: self.st2disconnect(msg, args),
+                    lambda plugin, msg, args: self.session_disconnect(msg, args),
                     name="{}session_end".format(self.cfg.plugin_prefix),
                     cmd_type=botcmd,
                     cmd_kwargs={"admin_only": False},
@@ -472,7 +561,7 @@ class St2(BotPlugin):
                     "purged when the session is closed.",
                 ),
                 Command(
-                    lambda plugin, msg, args: self.st2authenticate(msg, args),
+                    lambda plugin, msg, args: self.session_authenticate(msg, args),
                     name="{}session_start".format(self.cfg.plugin_prefix),
                     cmd_type=botcmd,
                     cmd_kwargs={"admin_only": False},
@@ -482,7 +571,7 @@ class St2(BotPlugin):
                     " err-stackstorm.".format(self.cfg.plugin_prefix),
                 ),
                 Command(
-                    lambda plugin, msg, args: self.st2_execute_actionalias(msg, args),
+                    lambda plugin, msg, args: self.execute_actionalias(msg, args),
                     name="{}".format(self.cfg.plugin_prefix),
                     cmd_type=re_botcmd,
                     cmd_kwargs={"pattern": "^{} .*".format(self.cfg.plugin_prefix)},
@@ -491,6 +580,36 @@ class St2(BotPlugin):
                         self.cfg.bot_prefix, self.cfg.plugin_prefix
                     ),
                 ),
+                Command(
+                    enquiry_list,
+                    name=f"{self.cfg.plugin_prefix}enquiry_list",
+                    cmd_type=botcmd,
+                    cmd_kwargs={"admin_only": False},
+                    doc=f"Usage: {self.cfg.plugin_prefix}enquiry_list\n"
+                    "List enquiries awaiting respond.",
+                ),
+                # TODO: Add the enquiry code when it's completed.
+                # ~ Command(
+                # ~ lambda plugin, msg, args: self.enquiry_get(msg, args),
+                # ~ name=f"{self.cfg.plugin_prefix}enquiry_get",
+                # ~ cmd_type=botcmd,
+                # ~ cmd_kwargs={"admin_only": False},
+                # ~ doc=f"Usage: {self.cfg.plugin_prefix}enquiry_get\n" "View an enquiry.",
+                # ~ ),
+                # ~ Command(
+                # ~ lambda plugin, msg, args: self.enquiry_set(msg, args),
+                # ~ name=f"{self.cfg.plugin_prefix}enquiry_set",
+                # ~ cmd_type=botcmd,
+                # ~ cmd_kwargs={"admin_only": False},
+                # ~ doc=f"Usage: {self.cfg.plugin_prefix}enquiry_set\n" "Set an active enquiry.",
+                # ~ ),
+                # ~ Command(
+                # ~ enquiry_reply,
+                # ~ name=f"{self.cfg.plugin_prefix}enquiry_reply",
+                # ~ cmd_type=botcmd,
+                # ~ cmd_kwargs={"admin_only": False},
+                # ~ doc=f"Usage: {self.cfg.plugin_prefix}enquiry_reply\n" "Respond to an enquiry.",
+                # ~ ),
                 Help_Command,
             ),
         )

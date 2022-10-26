@@ -1,11 +1,13 @@
 # coding:utf-8
 import abc
-import requests
 import logging
-from urllib.parse import urlparse, urljoin
-from lib.credentials_adapters import St2UserCredentials, St2UserToken, St2ApiKey
-from lib.authentication_controller import BotPluginIdentity
-from lib.errors import SessionInvalidError
+from urllib.parse import urljoin, urlparse
+
+import requests
+
+from errst2lib.authentication_controller import BotPluginIdentity
+from errst2lib.credentials_adapters import St2ApiKey, St2UserCredentials, St2UserToken
+from errst2lib.errors import SessionInvalidError
 
 LOG = logging.getLogger("errbot.plugin.st2.auth_handler")
 

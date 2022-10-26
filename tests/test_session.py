@@ -1,8 +1,10 @@
 # coding:utf-8
 import time
+
 import pytest
-from lib.session import Session
-from lib.errors import SessionExpiredError
+
+from errst2lib.errors import SessionExpiredError
+from errst2lib.session import Session
 
 pytest_plugins = ["errbot.backends.test"]
 extra_plugin_dir = "."

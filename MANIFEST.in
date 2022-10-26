@@ -1,0 +1,2 @@
+include src/err-stackstorm/*.plug
+include src/err-stackstorm/html/*

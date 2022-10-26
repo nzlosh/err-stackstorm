@@ -2,6 +2,7 @@
 import abc
 import logging
 from types import SimpleNamespace
+
 from requests.auth import HTTPBasicAuth
 
 LOG = logging.getLogger("errbot.plugin.st2.creds_adapter")

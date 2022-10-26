@@ -80,4 +80,3 @@ case "$VERB" in
         exit $E_BAD_VERB
     ;;
 esac
-

@@ -1,11 +1,12 @@
 # coding:utf-8
-import uuid
-import string
 import hashlib
 import logging
-from lib.errors import SessionExpiredError, SessionConsumedError
+import string
+import uuid
 from datetime import datetime as dt
 from random import SystemRandom
+
+from errst2lib.errors import SessionConsumedError, SessionExpiredError
 
 LOG = logging.getLogger("errbot.plugin.st2.session")
 

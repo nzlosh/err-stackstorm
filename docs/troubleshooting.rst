@@ -106,7 +106,7 @@ Is Errbot connected correctly to the chat back-end?
 
 How to test if the bot is connected to the chat back-end is dependant on the back-end. The simplest way is to send a message to the bot user account requesting the built-in help.
 
-For examepl, using a slack client the following command would be used ``/msg @bot_name !help``. The bot should respond with its help text::
+For example, using a slack client the following command would be used ``/msg @bot_name !help``. The bot should respond with its help text::
 
     bot [11:01 AM]
     _All commands_
@@ -245,5 +245,14 @@ If Errbot was installed in a python virtual environment, make sure the virtual e
 st2chatops is not running
 --------------------------
 
-This is okay, ``err-stackstorm`` **replaces** ``st2chatops``.
+The `st2ctl` command is designed with the assumption that ``st2chatops`` is installed for St2 ChatOps.  Since ``err-stackstorm`` **replaces** ``st2chatops``, this
+error message can be safely ignored.  More over, ``err-stackstorm`` does not require to be restarted when new action aliases are added since they're read at runtime
+from the API.
 
+
+webserver configuration doesn't persist between bot restarts
+-------------------------------------------------------------
+
+In some environments which have file system restrictions like containers, errbot can't save plugin configuration to the data store.  This in turn causes the web server configuration to be lost when the bot is restarted.  To work around this limitation, a plugin that loads the web servers configuration on bot startup can be used.  Install it with the following command:
+
+    !repos install https://github.com/tkit/errbot-plugin-webserverconfiguration

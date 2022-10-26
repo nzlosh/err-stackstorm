@@ -396,9 +396,14 @@ class SlackChatAdapter(GenericChatAdapter):
             self.bot_plugin.send(target_id, message)
 
     def _post_block_message(self, whisper, message, target_id, extra):
+        """
+        Reference: https://api.slack.com/methods/chat.postMessage
+        """
         if "blocks" in extra["slack"]:
             extra["slack"]["text"] = message
             extra["slack"]["channel"] = target_id
+
+            LOG.debug(f"Sending Slack Block {extra['slack']}")
 
             self.bot_plugin._bot.slack_web.api_call("chat.postMessage", data=extra["slack"])
 

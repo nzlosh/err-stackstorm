@@ -47,7 +47,6 @@ class BuildTarget:
             version=self.build_cfg["_common"]["version"], distro=distro
         )
 
-
     def setup_environment(self):
         title("Setup build directory")
 
@@ -78,7 +77,6 @@ class BuildTarget:
             template = env.get_template(tmpl["src"])
             with open(os.path.join(self.tmp_build_dir, tmpl["src"]), "w") as template_file:
                 template_file.write(template.render(self.build_cfg))
-
 
     def build_package(self):
         title("Build package")
@@ -140,6 +138,7 @@ class CentOS8(BuildTarget):
         print("Removing symlink")
         home_rpm_path = pathlib.Path(pathlib.Path().home(), "rpmbuild")
         home_rpm_path.unlink()
+
 
 class Rocky9(CentOS8):
     """

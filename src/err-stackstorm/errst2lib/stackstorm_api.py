@@ -1,12 +1,12 @@
 # coding:utf-8
 import json
-import time
-import urllib3
 import logging
-import requests
-import sseclient
+import time
 import traceback
 
+import requests
+import sseclient
+import urllib3
 from requests.exceptions import HTTPError
 
 LOG = logging.getLogger("errbot.plugin.st2.st2_api")
@@ -39,7 +39,71 @@ class StackStormAPI(object):
 
     def refresh_bot_credentials(self):
         LOG.warning("Bot credentials re-authentication required.")
-        self.accessctl.bot.authenticate_bot_credentials()
+        session_id = self.accessctl.get_session(self.accessctl.bot.internal_identity)
+        self.accessctl.bot.reauthenticate_bot_credentials(session_id)
+
+    def enquiry_list(self, st2_creds=None):
+        """
+        curl -X GET -H 'X-Auth-Token: X' 'http://127.0.0.1:9101/v1/inquiries/?limit=50'
+        """
+        url = f"{self.cfg.api_url}/inquiries/"
+        params = {}
+        headers = st2_creds.requests()
+        return requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
+
+    def enquiry_get(self, enquiry_id, st2_creds=None):
+        """
+        StackStorm currently uses the draft4 jsonschema validator.
+
+        Fetch the contents of an inquiry given its id.
+
+        {
+            "id": "60a7c8876d573fae8028be34",
+            "route": "slack_query",
+            "ttl": 1440,
+            "users": [],
+            "roles": [],
+            "schema": {
+                "type" : "object",
+                "properties": {
+                    "password": {
+                        "type": "string",
+                        "description": "Enter your not so secret password",
+                        "required": true
+                    }
+                }
+            }
+        }
+        curl -X GET -H 'User-Agent: python-requests/2.25.1'
+        -H 'Accept-Encoding: gzip, deflate'
+        -H 'Accept: */*'
+        -H 'Connection: keep-alive'
+        -H 'X-Auth-Token: b678fac0557f4fc7893e82d31a615942'
+        http://127.0.0.1:9101/v1/inquiries/60a81cee6d573fae8028be84
+
+         {
+            "id": "60a81cee6d573fae8028be84",
+             "route": "slack_query",
+             "ttl": 1440,
+             "users": [],
+                 }
+             }
+         }
+        """
+
+        url = f"{self.cfg.api_url}/inquiries/{enquiry_id}"
+        params = {}
+        headers = st2_creds.requests()
+        response = requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
+
+        if response.status_code == requests.codes.ok:
+            return response.json()
+        elif response.status_code == 401:
+            self.refresh_bot_credentials()
+            return "Attempted to access API without authentication.  "
+            "Try again or fix the bot authorisation."
+        else:
+            return response.json()
 
     def actionalias_help(self, pack=None, filter=None, limit=None, offset=None, st2_creds=None):
         """
@@ -168,14 +232,17 @@ class StackStormAPI(object):
                         )
                     )
                     data = json.loads(event.data)
-                    p = data["payload"]
-                    callback(
-                        p.get("whisper"),
-                        p.get("message"),
-                        p.get("user"),
-                        p.get("channel"),
-                        p.get("extra"),
-                    )
+                    if data.get("context") is not None:
+                        LOG.info("Inquiry payload detected, looking up inquery data.")
+                    else:
+                        p = data["payload"]
+                        callback(
+                            p.get("whisper"),
+                            p.get("message"),
+                            p.get("user"),
+                            p.get("channel"),
+                            p.get("extra"),
+                        )
                 # Test for shutdown after event to avoid losing messages.
                 if self.accessctl.bot.run_listener is False:
                     break

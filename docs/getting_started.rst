@@ -9,14 +9,13 @@ Getting Started
 Overview
 =========
 
-`err-stackstorm` is a community project to bring StackStorm `ChatOps <https://docs.stackstorm.com/chatops/index.html>`_ to `Errbot <http://errbot.io/en/latest/index.html>`_.  No commercial support is provided by StackStorm.  `err-stackstorm` exposes Stackstorm's `Action Aliases <https://docs.stackstorm.com/chatops/aliases.html>`_ to your chat environment, where you and your team can manage aspects of infrastructure and code.
+`err-stackstorm` is a community project to bring StackStorm `ChatOps <https://docs.stackstorm.com/chatops/index.html>`_ to `Errbot <http://errbot.io/en/latest/index.html>`_.  `err-stackstorm` enables StackStorm's `Action Aliases <https://docs.stackstorm.com/chatops/aliases.html>`_ in your chat environment, where you and your team can manage aspects of infrastructure, code and 3rd party services.
 
 The objectives for err-stackstorm project are:
- 1. Emulate hubot-stackstorm features.
- 2. Provide a Python friendly ChatOps solution.
- 3. Respect StackStorm's enterprise offering.
- 4. Maintain the same high quality as the StackStorm project.
- 5. Collaborate with the StackStorm community to evolve ChatOps features.
+ 1. Provide a Python friendly ChatOps solution.
+ 2. Maintain the same high quality as the StackStorm project.
+ 3. Collaborate with the StackStorm community to evolve ChatOps features.
+
 
 Features
 ========
@@ -24,59 +23,62 @@ Features
 err-stackstorm communicates directly with the StackStorm API from with an errbot instance.
 
      - List action-alias help dynamically.  When StackStorm action-aliases are updated, they are immediately available in the err-stackstorm output.  Filtering by pack name and keyword can be used when looking for help.
-     - Access-Control Lists based on any combination of chat username, command and room. ACLs are defined in the errbot configuration file.
-     - Associate StackStorm user credentials with chat usernames.  Client-Side authenticate lets err-stackstorm dynamically map chat user accounts with StackStorm authenicated users.  Credentials are passed via an out of band authentication web page.
+     - Access-Control Lists based on any combination of chat username, command and room.  ACLs are defined in the errbot configuration file.
+     - Associate StackStorm user credentials with chat usernames.  Client-Side authenticate lets err-stackstorm dynamically map chat user accounts with StackStorm authenticated users.  Credentials are passed via an out of band authentication web page.
      - Trigger action-aliases directly from the bot.
      - Support for multiple chat backends, as provided by errbot.
-     - Customise plugin prefix.
+     - Customise plugin prefix to allow more than one bot to occupy the same chat channel.
      - Customise StackStorm route key to allow more than one bot to be connected to a single StackStorm instance.
-     - Docker image available to get up and running quickly and easily.
-     - Python based using modern 3.6 features.
+     - Docker build file available to get up and running quickly and easily.
+     - Python based using modern 3.x features.
 
 Compatibility
-==============
+========================================================================
 
-The plugin has been developed and tested against the below software combinations. Because you might be running different Python or Errbot versions, the below are the optimal combinations:
+err-stackstorm v2.2 is compatible with Python 3.7+ and operates with StackStorm v3.0.0 and newer
 
 
-   .. csv-table:: Ideal Combination of Versions
-      :header: "err-stackstorm", "Python", "Errbot", "Stackstorm Client"
-      :widths: 15, 10, 10, 20
+Platforms
+=========
 
-      "2.1", "3.6+", "6.0.0", "not used"
-      "2.0", "3.4", "5.2.0", "2.10"
-      "1.4", "3.4", "5.1.2", "2.5"
-      "1.3", "3.4", "5.1.2", "2.5"
-      "1.2", "3.4", "5.0", "2.2"
-      "1.1", "3.4", "4.3", "2.2"
-      "1.0", "2.7", "3.x", "2.1"
+``err-stackstorm`` is developed and testing on the x86_64 platform for Linux.  No other platforms or operating systems have been tested.
 
+    .. important:: ``err-stackstorm`` has  been reported by users to have issue running on Mac OSX.
 
 Supported Chat Backends
-=========================
+========================================================================
 
-Errbot provides official support for most major chat back-ends and many more chat back-ends are available through unofficial plugins.
+Errbot provides official support for most major chat back-ends and many more chat back-ends are available through unofficial community plugins.
 
 
-   .. csv-table:: Supported Chat Backends
-         :header: "Backend", "Mode value", "Support Type"
+   .. csv-table:: Available Chat Backends
+         :header: "Service (backend)", "Backend mode name", "Support Type"
          :widths: 10, 10, 10
 
-         "Slack", "slack", "Integrated"
-         "Text", "text", "Integrated"
-         "XMPP", "xmpp", "Integrated"
-         "Mattermost", "mattermost", "`Plugin <https://github.com/Vaelor/errbot-mattermost-backend>`_"
-         "Rocket Chat", "aoikrocketchaterrbot", "`Plugin <https://github.com/AoiKuiyuyou/AoikRocketChatErrbot>`_"
-         "Gitter", "gitter", "`Plugin <https://github.com/errbotio/err-backend-gitter>`_"
-         "Discord", "discord", "`Plugin <https://github.com/gbin/err-backend-discord>`_"
+         "Slack", ``SlackV3``, "`slackv3 plugin <https://github.com/errbotio/err-backend-slackv3>`_"
+         "Mattermost", ``mattermost``, "`mattermost plugin <https://github.com/errbotio/err-backend-mattermost>`_"
+         "Discord", ``discord``, "`discord plugin <https://github.com/errbotio/err-backend-discord>`_"
+         "Rocket Chat", ``aoikrocketchaterrbot``, "`rocket chat plugin <https://github.com/AoiKuiyuyou/AoikRocketChatErrbot>`_"
+         "Gitter", ``gitter``, "`gitter plugin <https://github.com/errbotio/err-backend-gitter>`_"
+         "XMPP", ``xmpp``, "Included with errbot"
+         "IRC", ``irc``, "Included with errbot"
+
+Despite errbot having support for some backend chat services, they are not directly supported by err-stackstorm.
+
+    .. csv-table:: Unsupported Chat Backends
+        :header: "Service (backend)", "Backend mode name", "Support Type"
+        :widths: 10, 10, 10
+
+        "MSTeam", ``BotFramework``, "`msteams plugin <https://github.com/vasilcovsky/errbot-backend-botframework>`_"
+        "Google Chat", ``Google_Hangouts_Chat``, "`google chat plugin <https://github.com/cloudflare/GHC-Errbot>`_"
+
+.. important:: Microsoft Teams and Google Chat are available in errbot but are not supported by err-stackstorm because the maintainer (nzlosh) has no access to these services.  If you wish to help maintain support for these backends in err-stackstorm contact nzlosh.
 
 Backend support provides a minimum set of operations such as `connect` and `authentication` methods along with ways to `identify` and `send messages` to users/rooms.
 
-Advanced formatting may not be available on all backends since additional code would be required in `err-stackstorm` to translate Stackstorm's Action Aliases `extra` parameter.
-
+Advanced formatting may not be available on all backends since additional code is required in `err-stackstorm` to translate StackStorm's Action Aliases `extra` parameter to advanced formatting in the backend.
 
 Backends that currently support nice (extra) formatting:
 
    * Slack
    * XMPP
-

@@ -1,5 +1,10 @@
 # coding:utf-8
-from lib.credentials_adapters import CredentialsFactory, St2ApiKey, St2UserCredentials, St2UserToken
+from errst2lib.credentials_adapters import (
+    CredentialsFactory,
+    St2ApiKey,
+    St2UserCredentials,
+    St2UserToken,
+)
 
 pytest_plugins = ["errbot.backends.test"]
 extra_plugin_dir = "."
