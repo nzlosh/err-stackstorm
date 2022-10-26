@@ -4,10 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-##  [Unreleased]
+##  [2.3.0] Unreleased
 ### Added
+  - Proof of concept for enquiry support.
+
 ### Changed
+  - Restructured source layout for pypi packaging.
+  - Restructured and updated documentation.
+  - Switched from setup.py to pyproject.toml
+
 ### Removed
+  - Removed `check_latest_version` function.
 
 ##  [2.2.0] 2021-11-27
 ### Added

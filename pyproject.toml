@@ -1,0 +1,45 @@
+[build-system]
+requires = [
+    "setuptools>=61.0"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "err-stackstorm"
+version = "2.2.1"
+authors = [{ name="Err-stackstorm maintainers", email="nzlosh@yahoo.com" }]
+keywords = [
+    "errbot",
+    "stackstorm",
+]
+description = "StackStorm ChatOps for Errbot"
+readme = "README.md"
+requires-python = ">=3.7"
+
+license = {text = "Apache-2.0"}
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "requests>=2.20.0",
+    "sseclient",
+    "jsonschema",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/nzlosh/err-stackstorm"
+"Bug Tracker" = "https://github.com/nzlosh/err-stackstorm/issues"
+"Documentation" = "https://err-stackstorm.readthedocs.io/"
+
+[tool.setuptools]
+# available as beta since setuptools version 61.0.0
+include-package-data = true
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "src/err-stackstorm"
+]

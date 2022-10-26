@@ -1,9 +1,9 @@
 # coding:utf-8
 import logging
 
-from lib.errors import SessionExistsError, SessionInvalidError
-from lib.session import Session
-from lib.store_adapters import SessionStore, StoreAdapterFactory
+from errst2lib.errors import SessionExistsError, SessionInvalidError
+from errst2lib.session import Session
+from errst2lib.store_adapters import SessionStore, StoreAdapterFactory
 
 LOG = logging.getLogger("errbot.plugin.st2.session_mgr")
 

@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime as dt
 from random import SystemRandom
 
-from lib.errors import SessionConsumedError, SessionExpiredError
+from errst2lib.errors import SessionConsumedError, SessionExpiredError
 
 LOG = logging.getLogger("errbot.plugin.st2.session")
 

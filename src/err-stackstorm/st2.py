@@ -9,20 +9,20 @@ from types import SimpleNamespace
 import requests
 from errbot import BotPlugin, Command, arg_botcmd, botcmd, re_botcmd, webhook
 
-from lib.authentication_controller import AuthenticationController, BotPluginIdentity
-from lib.authentication_handler import AuthHandlerFactory, ClientSideAuthHandler
-from lib.chat_adapters import ChatAdapterFactory
-from lib.config import PluginConfiguration
-from lib.credentials_adapters import St2ApiKey, St2UserCredentials, St2UserToken
-from lib.enquiry import Enquiry, EnquiryManager
-from lib.errors import (
+from errst2lib.authentication_controller import AuthenticationController, BotPluginIdentity
+from errst2lib.authentication_handler import AuthHandlerFactory, ClientSideAuthHandler
+from errst2lib.chat_adapters import ChatAdapterFactory
+from errst2lib.config import PluginConfiguration
+from errst2lib.credentials_adapters import St2ApiKey, St2UserCredentials, St2UserToken
+from errst2lib.enquiry import Enquiry, EnquiryManager
+from errst2lib.errors import (
     SessionConsumedError,
     SessionExistsError,
     SessionExpiredError,
     SessionInvalidError,
 )
-from lib.stackstorm_api import StackStormAPI
-from lib.version import ERR_STACKSTORM_VERSION
+from errst2lib.stackstorm_api import StackStormAPI
+from errst2lib.version import ERR_STACKSTORM_VERSION
 
 LOG = logging.getLogger("errbot.plugin.st2")
 
@@ -63,32 +63,6 @@ class St2(BotPlugin):
 
         self.run_listener = True
         self.st2events_listener = None
-
-    def check_latest_version(self):
-        url = "https://raw.githubusercontent.com/nzlosh/err-stackstorm/master/version.json"
-        try:
-            response = requests.get(url, timeout=5)
-
-            if response.status_code != 200:
-                LOG.warning(
-                    "Unable to fetch err-stackstorm version from {}. HTTP code: {}".format(
-                        url, response.status_code
-                    )
-                )
-                return True
-        except Exception as err:
-            LOG.warning("Exception checking version from {}. {}".format(url, err))
-            return True
-
-        latest = response.json().get("version")
-        if latest is None:
-            LOG.warning("Failed to read err-stackstorm 'version' from {}.".format(url))
-            return True
-
-        if ERR_STACKSTORM_VERSION != latest:
-            LOG.info("err-stackstorm can be updated to {}.".format(latest))
-        else:
-            LOG.info("err-stackstorm {} is up to date.".format(ERR_STACKSTORM_VERSION))
 
     def authenticate_bot_credentials(self):
         """
@@ -153,7 +127,6 @@ class St2(BotPlugin):
         LOG.info("Activate St2 plugin")
 
         self.dynamic_commands()
-        self.check_latest_version()
 
         self.start_poller(self.cfg.timer_update, self.validate_bot_credentials)
         self.st2events_listener = threading.Thread(
@@ -272,16 +245,8 @@ class St2(BotPlugin):
         if len(args) == 0:
             yield "Respond to what?"
             return
+        # TODO : Implement logic to use enquiry context to select next question.
 
-        if args[0] == "reply":
-            yield "Let me get the current enquiry"
-            yield "Here's the next question ..."
-        elif args[0] == "full":
-            yield "Expect to be given a valid JSON object"
-        elif args[0].startswith("q"):
-            yield "Answering specific question"
-        else:
-            yield "Sorry, I don't know what you mean"
         # ~ chat_user = msg.frm
         # ~ st2token, err_msg = self.get_token(chat_user)
         # ~ if st2token is False:
@@ -623,27 +588,28 @@ class St2(BotPlugin):
                     doc=f"Usage: {self.cfg.plugin_prefix}enquiry_list\n"
                     "List enquiries awaiting respond.",
                 ),
-                Command(
-                    lambda plugin, msg, args: self.enquiry_get(msg, args),
-                    name=f"{self.cfg.plugin_prefix}enquiry_get",
-                    cmd_type=botcmd,
-                    cmd_kwargs={"admin_only": False},
-                    doc=f"Usage: {self.cfg.plugin_prefix}enquiry_get\n" "View an enquiry.",
-                ),
-                Command(
-                    lambda plugin, msg, args: self.enquiry_set(msg, args),
-                    name=f"{self.cfg.plugin_prefix}enquiry_set",
-                    cmd_type=botcmd,
-                    cmd_kwargs={"admin_only": False},
-                    doc=f"Usage: {self.cfg.plugin_prefix}enquiry_set\n" "Set an active enquiry.",
-                ),
-                Command(
-                    enquiry_reply,
-                    name=f"{self.cfg.plugin_prefix}enquiry_reply",
-                    cmd_type=botcmd,
-                    cmd_kwargs={"admin_only": False},
-                    doc=f"Usage: {self.cfg.plugin_prefix}enquiry_reply\n" "Respond to an enquiry.",
-                ),
+                # TODO: Add the enquiry code when it's completed.
+                # ~ Command(
+                # ~ lambda plugin, msg, args: self.enquiry_get(msg, args),
+                # ~ name=f"{self.cfg.plugin_prefix}enquiry_get",
+                # ~ cmd_type=botcmd,
+                # ~ cmd_kwargs={"admin_only": False},
+                # ~ doc=f"Usage: {self.cfg.plugin_prefix}enquiry_get\n" "View an enquiry.",
+                # ~ ),
+                # ~ Command(
+                # ~ lambda plugin, msg, args: self.enquiry_set(msg, args),
+                # ~ name=f"{self.cfg.plugin_prefix}enquiry_set",
+                # ~ cmd_type=botcmd,
+                # ~ cmd_kwargs={"admin_only": False},
+                # ~ doc=f"Usage: {self.cfg.plugin_prefix}enquiry_set\n" "Set an active enquiry.",
+                # ~ ),
+                # ~ Command(
+                # ~ enquiry_reply,
+                # ~ name=f"{self.cfg.plugin_prefix}enquiry_reply",
+                # ~ cmd_type=botcmd,
+                # ~ cmd_kwargs={"admin_only": False},
+                # ~ doc=f"Usage: {self.cfg.plugin_prefix}enquiry_reply\n" "Respond to an enquiry.",
+                # ~ ),
                 Help_Command,
             ),
         )
