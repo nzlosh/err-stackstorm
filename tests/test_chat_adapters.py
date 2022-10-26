@@ -1,7 +1,7 @@
 # coding:utf-8
 from mock import Mock
 
-from lib.chat_adapters import (
+from errst2lib.chat_adapters import (
     ChatAdapterFactory,
     GenericChatAdapter,
     MattermostChatAdapter,

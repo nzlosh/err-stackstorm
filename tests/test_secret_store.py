@@ -1,5 +1,5 @@
 # coding:utf-8
-from lib.store_adapters import ClearTextStoreAdapter, StoreAdapterFactory
+from errst2lib.store_adapters import ClearTextStoreAdapter, StoreAdapterFactory
 
 pytest_plugins = ["errbot.backends.test"]
 extra_plugin_dir = "."

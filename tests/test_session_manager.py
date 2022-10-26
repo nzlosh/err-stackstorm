@@ -2,9 +2,9 @@
 import pytest
 from mock import Mock
 
-from lib.errors import SessionExistsError, SessionInvalidError
-from lib.session_manager import SessionManager
-from lib.store_adapters import ClearTextStoreAdapter
+from errst2lib.errors import SessionExistsError, SessionInvalidError
+from errst2lib.session_manager import SessionManager
+from errst2lib.store_adapters import ClearTextStoreAdapter
 
 pytest_plugins = ["errbot.backends.test"]
 extra_plugin_dir = "."

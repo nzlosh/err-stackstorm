@@ -4,16 +4,16 @@ import time
 import pytest
 from mock import Mock
 
-from lib.credentials_adapters import CredentialsFactory
-from lib.errors import (
+from errst2lib.credentials_adapters import CredentialsFactory
+from errst2lib.errors import (
     SessionConsumedError,
     SessionExistsError,
     SessionExpiredError,
     SessionInvalidError,
 )
-from lib.session import Session
-from lib.session_manager import SessionManager
-from lib.store_adapters import ClearTextStoreAdapter, StoreAdapterFactory
+from errst2lib.session import Session
+from errst2lib.session_manager import SessionManager
+from errst2lib.store_adapters import ClearTextStoreAdapter, StoreAdapterFactory
 
 pytest_plugins = ["errbot.backends.test"]
 extra_plugin_dir = "."

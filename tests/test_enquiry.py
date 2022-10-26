@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from lib.enquiry import EnquiryManager, Enquiry
+from errst2lib.enquiry import EnquiryManager, Enquiry
 
 pytest_plugins = ["errbot.backends.test"]
 extra_plugin_dir = "."

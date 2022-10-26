@@ -43,3 +43,6 @@ include-package-data = true
 pythonpath = [
   "src/err-stackstorm"
 ]
+
+[tool.black]
+line-length = 100

@@ -1,5 +1,7 @@
 SHELL=/bin/sh
 MAX_LINE_LEN=100
+SOURCE_PATH=src/err-stackstorm
+LIB_PATH=${SOURCE_PATH}/errst2lib
 
 .PHONY: all
 all: auto_format lint_test unit_test security_scan
@@ -11,20 +13,21 @@ clean:
 .PHONY: setup
 setup:
 	test -n "${CI}" || ( test -n "${VIRTUAL_ENV}" || (echo "Not running in virtualenv/CI - abort setup"; exit 1 ) ) && echo "Running in virtual environment or CI pipeline"
+	pip install --upgrade pip
 	pip install errbot
 	errbot --init
-	pip install -r requirements.txt
+	pip install .
 	pip install -r requirements-test.txt
 
 .PHONY: auto_format
 auto_format:
 	echo "Formatting code\n"
-	black --check --line-length=${MAX_LINE_LEN} st2.py lib/*.py tests/*.py
+	black --check --line-length=${MAX_LINE_LEN} ${SOURCE_PATH}/st2.py ${LIB_PATH}/*.py tests/*.py
 
 .PHONY: security_scan
 security_scan:
 	echo "Scanning for potential security issues\n"
-	bandit *.py lib/*.py
+	bandit ${SOURCE_PATH}/*.py ${LIB_PATH}/*.py
 
 .PHONY: unit_test
 unit_test:
@@ -34,7 +37,7 @@ unit_test:
 .PHONY: lint_test
 lint_test:
 	echo -n "Running LINT tests\n"
-	pycodestyle --max-line-length=${MAX_LINE_LEN} st2.py lib/*.py
+	pycodestyle --max-line-length=${MAX_LINE_LEN} ${SOURCE_PATH}/st2.py ${LIB_PATH}/*.py
 
 .PHONY: help
 help:
