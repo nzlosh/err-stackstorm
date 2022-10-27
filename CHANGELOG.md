@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
   - Removed `check_latest_version` function.
+  - Removed CircleCI from project in favour of using Github Actions.
 
 ##  [2.2.0] 2021-11-27
 ### Added

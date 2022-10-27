@@ -59,8 +59,9 @@ jobs:
 
       - name: Build pypi
         run: |
-          echo TO DO - make pypi package.
+          make build_python_package
+          make publish_pypi
 
       - name: Build documentaiton
         run: |
-          echo TO DO - make readthedocs documentation.
+          make build_documentation

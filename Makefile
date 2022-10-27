@@ -2,6 +2,7 @@ SHELL=/bin/sh
 MAX_LINE_LEN=100
 SOURCE_PATH=src/err-stackstorm
 LIB_PATH=${SOURCE_PATH}/errst2lib
+TESTS_PATH=tests
 
 .PHONY: all
 all: auto_format lint_test unit_test security_scan
@@ -18,11 +19,32 @@ setup:
 	errbot --init
 	pip install .
 	pip install -r requirements-test.txt
+	pip install -r requirements-build.txt
+
+.PHONY: build_python_package
+build_python_package:
+	echo "Build python package"
+	python -m build
+
+.PHONY: publish_pypi
+publish_pypi:
+	echo "Publish python packages to pypi"
+	# TO DO: python -m twine upload err-stackstorm dist/*
+
+.PHONY: build_documentation
+build_documentation:
+	echo "Build documentation"
+	echo TO DO - trigger readthedocs.
+
+.PHONY: format_test
+format_test:
+	echo "Formatting code\n"
+	black --check --line-length=${MAX_LINE_LEN} ${SOURCE_PATH}/st2.py ${LIB_PATH}/*.py ${TESTS_PATH}/*.py
 
 .PHONY: auto_format
 auto_format:
 	echo "Formatting code\n"
-	black --check --line-length=${MAX_LINE_LEN} ${SOURCE_PATH}/st2.py ${LIB_PATH}/*.py tests/*.py
+	black --line-length=${MAX_LINE_LEN} ${SOURCE_PATH}/st2.py ${LIB_PATH}/*.py ${TESTS_PATH}/*.py
 
 .PHONY: security_scan
 security_scan:
@@ -43,5 +65,9 @@ lint_test:
 help:
 	echo "lint_test: Run flake and pycodestyle tests on source files."
 	echo "unit_test: Run pytest."
-	echo "auto_format: Run black formatting over source files."
+	echo "format_test: Run black formatting check over source files."
+	echo "auto_format: Apply black formatting over source files."
 	echo "setup: Install errbot and dependencies into virtual environment."
+	echo :build_python_package: Build a python package of err-stackstorm."
+	echo :publish_pypi: Upload python package in dist/ to pypi."
+	echo :build_documentation: Trigger build on the readthedocs site."
