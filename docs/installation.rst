@@ -7,7 +7,7 @@ Installation
 .. contents:: :local:
 
 ``err-stackstorm`` can be installed using system packages or by following installation instructions.
-It is recommended to use the system packages.   Manual installation instuctions are provided below.
+It is recommended to use the system packages.   Manual installation instructions are provided below.
 
 System Package
 ------------------------------------------------------------------------

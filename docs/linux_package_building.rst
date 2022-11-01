@@ -1,10 +1,10 @@
 Building Linux Packages
 =========================================================================================================================================================
-Two scripts are used to help ``err-stackstorm`` packages available on mulitple operating systems.  Each script represent a phase in the package build process
+Two scripts are used to help ``err-stackstorm`` packages available on multiple operating systems.  Each script represent a phase in the package build process
 
 ``contrib/packaging/build_archive`` is a BASH script that carries out the steps to create a Python virtual environment and install errbot, various backends and err-stackstorm using a supported operating systems native Python installation.
 
-``contrib/packaging/build`` is a Python script that depends on jinja2.  It should be setup using its own virtual environment and is executed after the err-stackstorm archive has been successfully created by ``build_archive``.  ``build`` reads the ``build.cfg`` configuration file, which is JSON format, to fill out jinja templates that are used by the operating systems package build system.  This allows for updating and build system packages in a similar maner for all supported operating systems.
+``contrib/packaging/build`` is a Python script that depends on jinja2.  It should be setup using its own virtual environment and is executed after the err-stackstorm archive has been successfully created by ``build_archive``.  ``build`` reads the ``build.cfg`` configuration file, which is JSON format, to fill out jinja templates that are used by the operating systems package build system.  This allows for updating and build system packages in a similar manner for all supported operating systems.
 
 Phase 1: Packaging Python 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------
