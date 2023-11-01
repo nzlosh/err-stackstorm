@@ -67,6 +67,10 @@ class EnquiryManager:
 class Enquiry:
     def __init__(self, enquiry, ttl=3600):
         """
+        The Enquiry class wraps the St2 API response in a Python Object.   The Python object
+        tracks the answers provided for the specific enquiry and maintains a time to live for
+        answers to be considered abandonned.
+        
         enquiry: the stackstorm enquiry API response object in JSON form.
         ttl: seconds to consider the enquiry should remain.
         """
@@ -76,6 +80,16 @@ class Enquiry:
         self.answers = {}
         self.expiration = time.time() + ttl
 
+    @classmethod
+    def get_associated_data(cls)
+    """
+    The enquiry data is insufficent to identify it's association with a specific workflow.
+    The get_associated_data queries the associated execution_id and then the associated workflow.
+    to collect descriptions
+    """
+    raise NotImplementedError
+    
+    
     @property
     def id(self):
         return self.enquiry_data["id"]

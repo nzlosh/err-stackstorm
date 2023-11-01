@@ -21,18 +21,18 @@ setup:
 	pip install -r requirements-test.txt
 	pip install -r requirements-build.txt
 
-.PHONY: build_python_package
-build_python_package:
+.PHONY: python_package
+python_package:
 	echo "Build python package"
 	python -m build
 
 .PHONY: publish_pypi
 publish_pypi:
 	echo "Publish python packages to pypi"
-	# TO DO: python -m twine upload err-stackstorm dist/*
+	echo TO DO: python -m twine upload err-stackstorm dist/*
 
-.PHONY: build_documentation
-build_documentation:
+.PHONY: documentation
+documentation:
 	echo "Build documentation"
 	echo TO DO - trigger readthedocs.
 
@@ -68,6 +68,6 @@ help:
 	echo "format_test: Run black formatting check over source files."
 	echo "auto_format: Apply black formatting over source files."
 	echo "setup: Install errbot and dependencies into virtual environment."
-	echo :build_python_package: Build a python package of err-stackstorm."
-	echo :publish_pypi: Upload python package in dist/ to pypi."
-	echo :build_documentation: Trigger build on the readthedocs site."
+	echo "python_package: Build a python package of err-stackstorm."
+	echo "publish_pypi: Upload python package in dist/ to pypi."
+	echo "documentation: Trigger build on the readthedocs site."

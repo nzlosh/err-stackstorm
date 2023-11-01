@@ -42,6 +42,13 @@ class StackStormAPI(object):
         session_id = self.accessctl.get_session(self.accessctl.bot.internal_identity)
         self.accessctl.bot.reauthenticate_bot_credentials(session_id)
 
+    def action_get(self, action_id):
+        raise NotImplementedError
+    
+    def workflow_get(self, action_id):
+        raise NotImplementedError
+
+
     def enquiry_list(self, st2_creds=None):
         """
         curl -X GET -H 'X-Auth-Token: X' 'http://127.0.0.1:9101/v1/inquiries/?limit=50'
