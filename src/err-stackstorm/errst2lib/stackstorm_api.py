@@ -5,9 +5,10 @@ import time
 import traceback
 
 import requests
-import sseclient
 import urllib3
 from requests.exceptions import HTTPError
+
+import sseclient
 
 LOG = logging.getLogger("errbot.plugin.st2.st2_api")
 

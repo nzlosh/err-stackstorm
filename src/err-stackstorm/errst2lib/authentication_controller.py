@@ -2,7 +2,6 @@
 import logging
 
 from errbot.backends.base import Identifier
-
 from errst2lib.errors import SessionInvalidError
 from errst2lib.session import generate_password
 from errst2lib.session_manager import SessionManager

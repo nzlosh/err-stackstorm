@@ -7,8 +7,8 @@ import traceback
 from types import SimpleNamespace
 
 import requests
-from errbot import BotPlugin, Command, arg_botcmd, botcmd, re_botcmd, webhook
 
+from errbot import BotPlugin, Command, arg_botcmd, botcmd, re_botcmd, webhook
 from errst2lib.authentication_controller import AuthenticationController, BotPluginIdentity
 from errst2lib.authentication_handler import AuthHandlerFactory, ClientSideAuthHandler
 from errst2lib.chat_adapters import ChatAdapterFactory
@@ -201,7 +201,7 @@ class St2(BotPlugin):
             enquiry = self.response.get(msg.frm, enquiry_id)
             return f"Next answer will be given {answer} for {enquiry}"
         elif answer_type == "raw":
-            # Create new method to handle this use case. i.e: .set_raw() 
+            # Create new method to handle this use case. i.e: .set_raw()
             return f"Raw response object will be {answer}"
         elif int(answer_type) in [x for x in range(10)]:
             return f"Answer to question number {answer_type} is {answer}"

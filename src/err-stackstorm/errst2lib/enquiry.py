@@ -3,6 +3,7 @@ import logging
 import time
 
 from jsonschema import Draft3Validator  # As of May 2022, st2 enquiry uses Draft3
+
 from errbot import BotFlow, BotPlugin, Command, FlowRoot, botcmd, botflow, re_botcmd
 
 log = logging.getLogger(__name__)
@@ -53,7 +54,7 @@ class EnquiryManager:
         """
         if not chat_user or not enquiry_id:
             return None
-        
+
         user_id = chat_user.aclattr
         current = self.enquiries.get(user_id)
         if current:
@@ -134,7 +135,6 @@ class Enquiry:
         """
         next() returns the next question to be answered in an enquiry object.
         """
-        
         for k in self.enquiry_data["schema"]["properties"]:
             if k not in self.answers:
                 return self.enquiry_data["schema"]["properties"][k].get("description")
