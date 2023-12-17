@@ -168,9 +168,53 @@ class St2(BotPlugin):
         # delete user session
         return "Not implemented yet."
 
+    def enquiry_send(self, msg, args):
+        """
+        enquiry send [id] - submits the currently selected enquiry to stackstorm.
+        """
+        # check enquiry_id exists
+        # check enquiry is complete
+        # submit enquiry answers to st2 api.
+        raise NotImplementedError
+
+    def enquiry_progress(self, msg, args):
+        """
+        enquiry progress - display the questions and answers for the currently selected enquiry.
+        """
+        # This functionality might present a privacy/security risk.
+        raise NotImplementedError
+
+    def enquiry_answer(self, msg, args):
+        """
+        enquiry answer next <value> - apply the value to the next unanswered question in the currently selected enquiry
+        enquiry answer [1-9] <value> - apply the value to the specific question.
+        enquiry answer raw <object> - apply json object to the currently selected enquiry.
+        """
+        args_list = shlex.split(args)
+        answer_type = args_list.pop(0)
+        answer = args_list.pop(0)
+        if answer_type == "next":
+            # get current enquiry context.
+            enquiry_id = self.response.get_current_enquiry(msg.frm)
+            if not enquiry_id:
+                return "No active enquiry has been set"
+            enquiry = self.response.get(msg.frm, enquiry_id)
+            return f"Next answer will be given {answer} for {enquiry}"
+        elif answer_type == "raw":
+            # Create new method to handle this use case. i.e: .set_raw() 
+            return f"Raw response object will be {answer}"
+        elif int(answer_type) in [x for x in range(10)]:
+            return f"Answer to question number {answer_type} is {answer}"
+
+        return "Unsupport answer format {args}"
+
     def enquiry_list(self, msg, args):
         """
-        Usage: st2 <enquiry|inquiry> list
+        Usage: enquiry list
+
+        enquiry list - list available enquiries
+        enquiry list questions [id] - no id: list the questions for the currently selected enquiry.
+                                    - id: list the questions for the enquiry id.
         """
         chat_user = msg.frm
         st2token, err_msg = self.get_token(chat_user)
@@ -183,21 +227,51 @@ class St2(BotPlugin):
             LOG.warning(rejection)
             return rejection
 
-        res = self.st2api.enquiry_list(st2token).json()
-        yield f"Enquries awaiting response: {len(res)}"
-        for enquiry in res:
-            yield enquiry["id"]
+        args = shlex.split(args)
+        list_type = args.pop(0) if args else "enquiry"
+        enquiry_id = args.pop(0) if args else self.responses.get_current_enquiry(chat_user)
+
+        if list_type == "enquiry":
+            res = self.st2api.enquiry_list(st2token).json()
+            yield f"Enquries awaiting response: {len(res)}"
+            for enquiry in res:
+                yield enquiry["id"]
+        elif list_type == "questions":
+            yield f"List variables are {list_type} {enquiry_id} {chat_user} {str(chat_user)}"
+            if enquiry_id:
+                equiry = self.responses.get(chat_user, enquiry_id)
+                if enquiry:
+                    return enquiry
+                else:
+                    return f"Failed to find an enquiry for id {enquiry_id}."
+            else:
+                yield "No enquiry matched the supplied id or no enquiry id has been set to be responded to."
+        else:
+            yield "Invalid input, try again."
 
     def enquiry_set(self, msg, args):
         """
-        Usage: st2 <enquiry|inquiry> set <enquiry_id>
+        Usage: enquiry set <enquiry_id>
+        Calling enquiry set without an enquiry id with return the current enquiry id.
         """
-        self.responses.set(msg.frm.userid, args)
-        return f"setting current enquiry to {args}"
+        if args:
+            enquiry_id = args[0]
+            if self.responses.set(msg.frm, enquiry_id):
+                return f"setting current enquiry to {enquiry_id}"
+            else:
+                return f"Error setting {enquiry_id} for user {msg.frm.aclattr}"
+        else:
+            # command called without enquiry id.
+            current_id = self.responses.get_current_enquiry(msg.frm)
+            if current_id:
+                return current_id
+            else:
+                return "No enquiry currently set"
 
     def enquiry_get(self, msg, args):
         """
-        Usage: st2 <enquiry|inquiry> get <enquiry_id>
+        Usage: st2 enquiry get <enquiry_id>
+        Displays information and questions associated with the enquiry_id.
         """
         chat_user = msg.frm
         st2token, err_msg = self.get_token(chat_user)
@@ -210,59 +284,35 @@ class St2(BotPlugin):
             LOG.warning(rejection)
             return rejection
 
-        res = self.st2api.enquiry_get(args, st2token)
-        if res:
-            p = res["schema"]["properties"]
-            return "Enquiry ID: {} (★ indicates required responses)\n{}".format(
-                res["id"],
-                "\n".join(
-                    [
-                        "Q{question}. {desc}{req} [{resp_type}]".format(
-                            question=q[0] + 1,
-                            desc=p[q[1]]["description"],
-                            req="★" if p[q[1]]["required"] else "",
-                            resp_type=p[q[1]]["type"],
-                        )
-                        for q in enumerate(p)
-                    ]
-                ),
+        enquiry_execution = self.st2api.execution_get(args, st2token)
+        if enquiry_execution:
+            enquiry_execution = enquiry_execution.json()
+            parent_execution = self.st2api.execution_get(enquiry_execution["parent"], st2token)
+            parent_execution = parent_execution.json()
+            p = enquiry_execution["parameters"]["schema"]["properties"]
+            return (
+                """Enquiry for **{}** _{}_ by {} @ {} """
+                """ID: `{}` (★ indicates required responses)\n{}""".format(
+                    parent_execution["action"]["ref"],
+                    parent_execution["action"]["description"],
+                    enquiry_execution["context"]["user"],
+                    enquiry_execution["start_timestamp"],
+                    enquiry_execution["id"],
+                    "\n".join(
+                        [
+                            "Q{question}. {desc}{req} [{resp_type}]".format(
+                                question=q[0] + 1,
+                                desc=p[q[1]]["description"],
+                                req="★" if p[q[1]]["required"] else "",
+                                resp_type=p[q[1]]["type"],
+                            )
+                            for q in enumerate(p)
+                        ]
+                    ),
+                )
             )
         else:
-            return f"Error getting enquiry. {res}"
-
-    def enquiry_reply(self, msg, args_str):
-        """
-        Usage: st2 <enquiry|inquiry> respond <enquiry_id> <question_idx> <answer>
-        st2enquiry reply
-        st2enquiry full reply '<json>'
-        st2enquiry q1 reply <value>
-        """
-        args = shlex.split(args_str)
-
-        user_id = msg.frm.userid
-        enquiry_id = self.responses.get_current_enquiry(user_id)
-
-        if len(args) == 0:
-            yield "Respond to what?"
-            return
-        # TODO : Implement logic to use enquiry context to select next question.
-
-        # ~ chat_user = msg.frm
-        # ~ st2token, err_msg = self.get_token(chat_user)
-        # ~ if st2token is False:
-        # ~ rejection = (
-        # ~ "Error: '{}'.  Responding to enquiries is not allowed for chat user '{}'."
-        # ~ "  Please authenticate using {}session_start or see your StackStorm"
-        # ~ " administrator to grant access.".format(err_msg, chat_user, self.cfg.plugin_prefix)
-        # ~ )
-        # ~ LOG.warning(rejection)
-        # ~ yield rejection
-
-        # ~ res = self.st2api.enquiry_get(args, st2token)
-        # ~ self.responses.
-        # ~ enquiry = Enquiry(res)
-
-        # ~ yield f"{enquiry.response(1, 'a string')}"
+            return f"Error getting enquiry. {enquiry_execution}"
 
     def session_authenticate(self, msg, args):
         """
@@ -400,24 +450,24 @@ class St2(BotPlugin):
         else:
             return self.chatbackend.format_help(help_result)
 
-    @webhook("/chatops/message")
-    def chatops_message(self, request):
-        """
-        Webhook entry point for stackstorm to post messages into
-        errbot which will relay them into the chat backend.
-        """
-        # WARNING: Sensitive security information will be logged, uncomment only when necessary.
-        # LOG.debug("Webhook request: {}".format(request))
+    # ~ @webhook("/chatops/message")
+    # ~ def chatops_message(self, request):
+    # ~ """
+    # ~ Webhook entry point for stackstorm to post messages into
+    # ~ errbot which will relay them into the chat backend.
+    # ~ """
+    # ~ # WARNING: Sensitive security information will be logged, uncomment only when necessary.
+    # ~ # LOG.debug("Webhook request: {}".format(request))
 
-        channel = request.get("channel")
-        message = request.get("message")
+    # ~ channel = request.get("channel")
+    # ~ message = request.get("message")
 
-        user = request.get("user")
-        whisper = request.get("whisper")
-        extra = request.get("extra", {})
+    # ~ user = request.get("user")
+    # ~ whisper = request.get("whisper")
+    # ~ extra = request.get("extra", {})
 
-        self.chatbackend.post_message(whisper, message, user, channel, extra)
-        return "Delivered to chat backend."
+    # ~ self.chatbackend.post_message(whisper, message, user, channel, extra)
+    # ~ return "Delivered to chat backend."
 
     @webhook("/login/authenticate/<uuid>")
     def login_auth(self, request, uuid):
@@ -515,7 +565,7 @@ class St2(BotPlugin):
 
         def enquiry_reply(plugin, msg, args):
             """
-            Wrapped plugin method to be able process generators.
+            Wrapped plugin method to be able to process generators.
             """
             for r in self.enquiry_reply(msg, args):
                 yield r
@@ -587,30 +637,36 @@ class St2(BotPlugin):
                     cmd_type=botcmd,
                     cmd_kwargs={"admin_only": False},
                     doc=f"Usage: {self.cfg.plugin_prefix}enquiry_list\n"
-                    "List enquiries awaiting respond.",
+                    "List enquiries awaiting respond.\n When an enquiry id is supplied, the list of questions will be displayed.",
                 ),
-                # TODO: Add the enquiry code when it's completed.
-                # ~ Command(
-                # ~ lambda plugin, msg, args: self.enquiry_get(msg, args),
-                # ~ name=f"{self.cfg.plugin_prefix}enquiry_get",
-                # ~ cmd_type=botcmd,
-                # ~ cmd_kwargs={"admin_only": False},
-                # ~ doc=f"Usage: {self.cfg.plugin_prefix}enquiry_get\n" "View an enquiry.",
-                # ~ ),
-                # ~ Command(
-                # ~ lambda plugin, msg, args: self.enquiry_set(msg, args),
-                # ~ name=f"{self.cfg.plugin_prefix}enquiry_set",
-                # ~ cmd_type=botcmd,
-                # ~ cmd_kwargs={"admin_only": False},
-                # ~ doc=f"Usage: {self.cfg.plugin_prefix}enquiry_set\n" "Set an active enquiry.",
-                # ~ ),
-                # ~ Command(
-                # ~ enquiry_reply,
-                # ~ name=f"{self.cfg.plugin_prefix}enquiry_reply",
-                # ~ cmd_type=botcmd,
-                # ~ cmd_kwargs={"admin_only": False},
-                # ~ doc=f"Usage: {self.cfg.plugin_prefix}enquiry_reply\n" "Respond to an enquiry.",
-                # ~ ),
+                Command(
+                    lambda plugin, msg, args: self.enquiry_get(msg, args),
+                    name=f"{self.cfg.plugin_prefix}enquiry_get",
+                    cmd_type=botcmd,
+                    cmd_kwargs={"admin_only": False},
+                    doc=f"Usage: {self.cfg.plugin_prefix}enquiry_get\n View an enquiry.",
+                ),
+                Command(
+                    lambda plugin, msg, args: self.enquiry_set(msg, args),
+                    name=f"{self.cfg.plugin_prefix}enquiry_set",
+                    cmd_type=botcmd,
+                    cmd_kwargs={"admin_only": False, "split_args_with": None},
+                    doc=f"Usage: {self.cfg.plugin_prefix}enquiry_set\n Set an active enquiry.",
+                ),
+                Command(
+                    lambda plugin, msg, args: self.enquiry_send(msg, args),
+                    name=f"{self.cfg.plugin_prefix}enquiry_send",
+                    cmd_type=botcmd,
+                    cmd_kwargs={"admin_only": False},
+                    doc=f"Usage: {self.cfg.plugin_prefix}enquiry_send\n Send answers to stackstorm.",
+                ),
+                Command(
+                    lambda plugin, msg, args: self.enquiry_answer(msg, args),
+                    name=f"{self.cfg.plugin_prefix}enquiry_answer",
+                    cmd_type=botcmd,
+                    cmd_kwargs={"admin_only": False},
+                    doc=f"Usage: {self.cfg.plugin_prefix}enquiry_answer\n Answer a question from the enquiry.",
+                ),
                 Help_Command,
             ),
         )

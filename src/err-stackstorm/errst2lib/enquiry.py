@@ -30,28 +30,65 @@ class EnquiryManager:
             user:
                 current: enquiry_id
                 responses:
-                    id: enquiry_obj
+                    enquiry_id: enquiry_obj
         """
         self.enquiries = {}
 
-    def get_current_enquiry(self, user_id):
+    def get_current_enquiry(self, chat_user):
         """
         Get the current enquiry id for responses or None if not set.
+        :chat_user: errbot identifier - the user identification.
         """
-        return self.enquiries.get(user_id, {}).get("current")
+        user_id = chat_user.aclattr
+        if user_id:
+            # errbot objects can't be hashed so use ACL to uniquely identify the chat user.
+            return self.enquiries.get(user_id, {}).get("current")
 
-    def get(self, user_id, enquiry_id):
-        self.enquiries.get(user_id)["responses"].get(enquiry_id).next()
+    def get(self, chat_user, enquiry_id):
+        """
+        :chat_user: Errbot Person object.
+        :enquiry_id:
+        Get the enquiry object for the user_id enquiry_id pair.
+        Returns None if the user_id/enquiry_id are not found.
+        """
+        if not chat_user or not enquiry_id:
+            return None
+        
+        user_id = chat_user.aclattr
+        current = self.enquiries.get(user_id)
+        if current:
+            enquiry = current["responses"].get(enquiry_id)
+            if enquiry:
+                return enquiry.next()
 
-    def next(self, user_id):
+    def next(self, chat_user):
+        """
+        :user_id: Errbot Person object.
+        """
+        if not char_user:
+            return None
+
+        user_id = chat_user.aclattr
+
         current = self.enquiries.get(user_id, {}).get("current")
         if current:
             return self.get(user_id, current)
 
-    def set(self, user_id, enquiry):
+    def set(self, chat_user, enquiry_id):
+        """
+        :user_id: Errbot Person object.
+        :enquiry_id: The enquiry id that will be set as active for answers and response submission.
+        """
+        if not chat_user:
+            return False
+
+        # Use unique identification aclattr because Errbot Person object is not hashable.
+        user_id = chat_user.aclattr
+
         if user_id not in self.enquiries:
             self.enquiries[user_id] = {"current": None, "responses": {}}
-        self.enquiries[user_id]["current"] = enquiry
+        self.enquiries[user_id]["current"] = enquiry_id
+        return True
 
     def purge_expired(self):
         purge_list = []
@@ -70,9 +107,9 @@ class Enquiry:
         The Enquiry class wraps the St2 API response in a Python Object.   The Python object
         tracks the answers provided for the specific enquiry and maintains a time to live for
         answers to be considered abandonned.
-        
-        enquiry: the stackstorm enquiry API response object in JSON form.
-        ttl: seconds to consider the enquiry should remain.
+
+        :enquiry: the stackstorm enquiry API response object in JSON form.
+        :ttl: time to live before an enquiry expires.
         """
         self.validator = None
 
@@ -81,25 +118,28 @@ class Enquiry:
         self.expiration = time.time() + ttl
 
     @classmethod
-    def get_associated_data(cls)
-    """
-    The enquiry data is insufficent to identify it's association with a specific workflow.
-    The get_associated_data queries the associated execution_id and then the associated workflow.
-    to collect descriptions
-    """
-    raise NotImplementedError
-    
-    
+    def get_associated_data(cls):
+        """
+        The enquiry data is insufficent to identify its association with a specific workflow.
+        The get_associated_data function queries the associated execution_id and then the
+        associated workflow to collect descriptions.
+        """
+        raise NotImplementedError
+
     @property
     def id(self):
         return self.enquiry_data["id"]
 
     def next(self):
+        """
+        next() returns the next question to be answered in an enquiry object.
+        """
+        
         for k in self.enquiry_data["schema"]["properties"]:
             if k not in self.answers:
                 return self.enquiry_data["schema"]["properties"][k].get("description")
         else:
-            return "All questions have been answered, use enquiry submit."
+            return "All questions have been answered."
 
     @property
     def has_expired(self):
@@ -108,8 +148,8 @@ class Enquiry:
     def response(self, num, answer):
         """
         response: Answer a specific question in the enquiry.
-        num: int: the question to be answered (order in the query)
-        answer: any: the answer that conforms with the enquiry schema
+        :num: int the question to be answered (order in the query)
+        :answer: any the answer that conforms with the enquiry schema
         """
         if self.answers:
             return "finished"

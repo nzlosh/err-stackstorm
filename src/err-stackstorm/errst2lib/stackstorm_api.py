@@ -27,8 +27,8 @@ class Result(object):
 
 
 class StackStormAPI(object):
-    stream_backoff = 10
-    authenticate_backoff = 10
+    retry_delay = 10
+    last_error = 0
 
     def __init__(self, cfg, accessctl):
         self.cfg = cfg
@@ -42,12 +42,22 @@ class StackStormAPI(object):
         session_id = self.accessctl.get_session(self.accessctl.bot.internal_identity)
         self.accessctl.bot.reauthenticate_bot_credentials(session_id)
 
-    def action_get(self, action_id):
-        raise NotImplementedError
-    
-    def workflow_get(self, action_id):
-        raise NotImplementedError
+    def action_get(self, action_id, st2_creds=None):
+        url = f"{self.cfg.api_url}/actions/{action_id}"
+        params = {}
+        headers = st2_creds.requests()
+        return requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
 
+    def execution_get(self, action_id, st2_creds=None):
+        """
+        the Inquiry ID is the same as the action execution ID that raised it
+        """
+        url = f"{self.cfg.api_url}/executions/{action_id}"
+        params = {}
+        headers = st2_creds.requests()
+        return requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
+        # Returned data includes _workflow_execution_ that will be resolved to report on the
+        # context in which the core.ask was run.
 
     def enquiry_list(self, st2_creds=None):
         """
@@ -81,21 +91,6 @@ class StackStormAPI(object):
                 }
             }
         }
-        curl -X GET -H 'User-Agent: python-requests/2.25.1'
-        -H 'Accept-Encoding: gzip, deflate'
-        -H 'Accept: */*'
-        -H 'Connection: keep-alive'
-        -H 'X-Auth-Token: b678fac0557f4fc7893e82d31a615942'
-        http://127.0.0.1:9101/v1/inquiries/60a81cee6d573fae8028be84
-
-         {
-            "id": "60a81cee6d573fae8028be84",
-             "route": "slack_query",
-             "ttl": 1440,
-             "users": [],
-                 }
-             }
-         }
         """
 
         url = f"{self.cfg.api_url}/inquiries/{enquiry_id}"
@@ -120,7 +115,7 @@ class StackStormAPI(object):
         # -H 'Content-Type: application/json'
         # -XGET localhost:9101/v1/actionalias/help -d '{}'
 
-        url = "/".join([self.cfg.api_url, "actionalias/help"])
+        url = f"{self.cfg.api_url}/actionalias/help"
 
         params = {}
         if pack is not None:
@@ -143,7 +138,7 @@ class StackStormAPI(object):
 
     def match(self, text, st2token):
         headers = st2token.requests()
-        url = "/".join([self.cfg.api_url, "actionalias/match"])
+        url = f"{self.cfg.api_url}/actionalias/match"
 
         payload = json.dumps({"command": text})
         headers["Content-Type"] = "application/json"
@@ -175,14 +170,14 @@ class StackStormAPI(object):
 
     def execute_actionalias(self, msg, chat_user, st2token):
         """
-        @msg: errbot message.
-        @chat_user: the chat provider user/channel to pass to StackStorm for the execution
+        :msg: errbot message.
+        :chat_user: the chat provider user/channel to pass to StackStorm for the execution
                     result response.
-        @st2token: The st2 api token/key to be used when submitting the action-alias execution.
+        :st2token: The st2 api token/key to be used when submitting the action-alias execution.
         """
         headers = st2token.requests()
 
-        url = "/".join([self.cfg.api_url, "aliasexecution/match_and_execute"])
+        url = f"{self.cfg.api_url}/aliasexecution/match_and_execute"
 
         payload = {"command": msg.body, "user": chat_user, "notification_route": self.cfg.route_key}
 
@@ -214,7 +209,6 @@ class StackStormAPI(object):
         LOG.info("*** Start stream listener ***")
 
         def listener(callback=None, bot_identity=None):
-
             token = self.accessctl.get_token_by_userid(bot_identity)
             if not token:
                 self.refresh_bot_credentials()
@@ -228,11 +222,11 @@ class StackStormAPI(object):
 
             stream_kwargs = {"headers": token.requests(), "verify": self.cfg.verify_cert}
 
-            stream_url = "".join([self.cfg.stream_url, "/stream"])
+            stream_url = f"{self.cfg.stream_url}/stream"
 
             stream = sseclient.SSEClient(stream_url, **stream_kwargs)
             for event in stream:
-                if event.event == "st2.announcement__{}".format(self.cfg.route_key):
+                if event.event == f"st2.announcement__{self.cfg.route_key}":
                     LOG.debug(
                         "*** Errbot announcement event detected! ***\n{}\n{}\n".format(
                             event.dump(), stream
@@ -240,7 +234,7 @@ class StackStormAPI(object):
                     )
                     data = json.loads(event.data)
                     if data.get("context") is not None:
-                        LOG.info("Inquiry payload detected, looking up inquery data.")
+                        LOG.info("Enquiry payload detected, looking up enquiry data.")
                     else:
                         p = data["payload"]
                         callback(
@@ -254,16 +248,40 @@ class StackStormAPI(object):
                 if self.accessctl.bot.run_listener is False:
                     break
 
-        StackStormAPI.stream_backoff = 10
+        def reconnect_delay(self, ttl: int = 600, interval: int = 5, delay: int = 60) -> int:
+            """
+            Performs a delay that will grow over repeated calls until
+            the maximum backoff delay is reached.
+
+            ttl - The duration an error period is active before resetting the retry delay.
+            interval - The interval of time to increment the backoff delay.
+            delay - The maximum backoff delay to prevent excessively long recoveries.
+            """
+            instability_ttl = ttl
+            delay_interval = interval
+            maximum_delay = delay
+
+            error_ts = int(time.time())
+            if error_ts - StackStormAPI.last_error > instability_ttl:
+                StackStormAPI.retry_delay = delay_interval
+            else:
+                if StackStormAPI.retry_delay < maximum_delay:
+                    StackStormAPI.retry_delay += delay_interval
+            LOG.info("Reconnection attempt delay for %d seconds.", StackStormAPI.retry_delay)
+            time.sleep(StackStormAPI.retry_delay)
+
         while self.accessctl.bot.run_listener:
             try:
                 self.refresh_bot_credentials()
                 listener(callback, bot_identity)
             except Exception as err:
                 LOG.critical(
-                    "St2 stream listener - An error occurred: {} {}.  "
-                    "Backing off {} seconds.".format(type(err), err, StackStormAPI.stream_backoff)
+                    "St2 stream listener - An error occurred: %s %s.  " "Backing off %s seconds.",
+                    type(err),
+                    err,
+                    StackStormAPI.stream_backoff,
                 )
                 traceback.print_exc()
-                time.sleep(StackStormAPI.stream_backoff)
+                reconnect_delay()
+
         LOG.info("*** Exit stream listener ***")
