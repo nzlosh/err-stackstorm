@@ -26,81 +26,87 @@ ERR_STACKSTORM_VERSION=2.2.0
 #
 # https://gist.github.com/fernandoaleman/1377211/d78d13bd8f134e7d9b9bc3da5895c859d7cbf294
 # https://gist.githubusercontent.com/fernandoaleman/1377169/raw/3e841ca1a887dd21f3fcb35a3e74b0cc2fc4977b/create-repo-metadata.sh
-
-function centos_8_install
+function title
+{
+    echo -e "\033[38;5;206;48;5;57m${1}\033[0m"
+}
+function rocky8_install
 {
     dnf install -y ${PKGS[@]}
 }
-function rocky_9.0_install
+function rocky9_install
 {
     dnf install -y ${PKGS[@]}
 }
-function ubuntu_18.04_install
+function ubuntu18_install
 {
     apt install ${PKGS[@]}
 }
-function ubuntu_20.04_install
+function ubuntu20_install
 {
     apt install ${PKGS[@]}
 }
-function ubuntu_22.04_install
+function ubuntu22_install
 {
     apt install ${PKGS[@]}
 }
-function debian_10_install
+function debian10_install
 {
     apt install ${PKGS[@]}
 }
-function debian_11_install
+function debian11_install
 {
     apt install ${PKGS[@]}
 }
 
 function install_system_requirements
 {
-    echo INSTALL SYSTEM REQUIREMENTS
+    title "INSTALL SYSTEM REQUIREMENTS"
     ${DISTRO_COMBO}_install
 }
 
 function create_virtual_environment
 {
-    echo CREATE VIRTUAL ENVIRONMENT
-    $PYBIN -m venv $ROOT
-    cd $ROOT
-    mkdir $ROOT/{plugins,backends,data}
+    title "CREATE VIRTUAL ENVIRONMENT"
+    $PYBIN -m venv "$ROOT/venv"
+    cd "$ROOT"
+    mkdir "$ROOT"/{plugins,backends,data}
 }
 
 function fetch_archives
 {
-    echo DOWNLOAD ARCHIVES
+    title "DOWNLOAD ARCHIVES"
     export BACKENDS=("err-backend-discord" "err-backend-slackv3" "err-backend-gitter" "err-backend-mattermost" "err-backend-botframework")
-    cd $ROOT/backends
-    wget https://github.com/errbotio/err-backend-discord/archive/refs/tags/v2.1.0.tar.gz -O err-backend-discord-v2.1.0.tar.gz
-    wget https://github.com/errbotio/err-backend-slackv3/archive/refs/tags/v0.2.0.tar.gz -O err-backend-slackv3-v0.2.0.tar.gz
-    wget https://github.com/errbotio/err-backend-mattermost/archive/refs/tags/2.1.0.tar.gz -O err-backend-mattermost-v2.1.0.tar.gz
-    wget https://github.com/nzlosh/err-backend-gitter/archive/refs/tags/v0.1.0.tar.gz -O err-backend-gitter-v0.1.0.tar.gz
-    wget https://github.com/nzlosh/err-backend-botframework/archive/refs/tags/v0.1.0.tar.gz -O err-backend-botframework-v0.1.0.tar.gz
+    mkdir "${BUILD_DIR}/backends"
+    cd "${BUILD_DIR}"
+    wget "https://github.com/errbotio/err-backend-discord/archive/refs/tags/v4.0.0.tar.gz" -O "backends/err-backend-discord-v4.0.0.tar.gz"
+    wget "https://github.com/errbotio/err-backend-slackv3/archive/refs/tags/v0.2.1.tar.gz" -O "backends/err-backend-slackv3-v0.2.1.tar.gz"
+    wget "https://github.com/errbotio/err-backend-mattermost/archive/refs/tags/3.0.0.tar.gz" -O "backends/err-backend-mattermost-v3.0.0.tar.gz"
+    wget "https://github.com/nzlosh/err-backend-gitter/archive/refs/tags/v0.1.0.tar.gz" -O "backends/err-backend-gitter-v0.1.0.tar.gz"
+    wget "https://github.com/nzlosh/err-backend-botframework/archive/refs/tags/v0.1.0.tar.gz" -O "backends/err-backend-botframework-v0.1.0.tar.gz"
 
-    cd $ROOT/plugins
+    mkdir "${BUILD_DIR}/plugins"
     export PLUGINS=("err-stackstorm")
-    wget https://github.com/nzlosh/err-stackstorm/archive/refs/tags/v${ERR_STACKSTORM_VERSION}.tar.gz -O err-stackstorm-v${ERR_STACKSTORM_VERSION}.tar.gz
+    wget "https://github.com/nzlosh/err-stackstorm/archive/refs/tags/v${ERR_STACKSTORM_VERSION}.tar.gz" -O "plugins/err-stackstorm-v${ERR_STACKSTORM_VERSION}.tar.gz"
 }
 
 function install_extensions
 {
-    echo INSTALL ERRBOT EXTENSIONS
-    for location in $ROOT/backends $ROOT/plugins
+    title "INSTALL ERRBOT EXTENSIONS"
+    for location in backends plugins
     do
         # extract
-        for targz in ${location}/*.tar.gz
+        for targz in "${BUILD_DIR}/${location}"/*.tar.gz
         do
-            cd "$location"
-            tar xvf "$targz" && rm "$targz"
+            tar xf "$targz" -C "${ROOT}/${location}"
         done
         # install dependencies
-        for proj in ${location}/*
+        for proj in "${ROOT}/${location}"/*
         do
-            pip install -r "${proj}/requirements.txt"
+            # Install from pyproject
+            test -f "${proj}/pyproject.toml" && pip install -e "${proj}"
+            # Install from requirements
+            test -f "${proj}/requirements.txt" && pip install -r "${proj}/requirements.txt"
         done
     done
 
@@ -109,42 +115,60 @@ function install_extensions
         cd $location
         for backend in ${BACKENDS[@]}
         do
-            mv -f *${backend}* "$backend"
+            # Move archive directory names to correct errbot names.
+            mv -f *"${backend}"* "$backend"
         done
     done
 
-    for location in $ROOT/plugins
+    for location in "$ROOT/plugins"
     do
-        cd $location
+        cd "$location"
         for plugin in ${PLUGINS[@]}
         do
-            mv -f *${plugin}* "$plugin"
+            mv -f *"${plugin}"* "$plugin"
         done
     done
 }
 
 function prune_installation
 {
-    echo PRUNE INSTALLATION
-    find $ROOT -iname '*.pyc' -delete
-    for pycache in $(find $ROOT -iname '__pycache__' -type d)
+    title "PRUNE INSTALLATION"
+    # Remove python cache files and hidden files.
+    find "$ROOT/venv" -iname '*.pyc' -delete
+    # Remove unrequired directories
+    for dir in '__pycache__' ".github" "docs" "tests"
     do
-        test -d "${pycache}" && rm -rf "${pycache}"
+        find "${ROOT}/venv" -iname "$dir" -type d -exec rm -rf "{}" \;
     done
+    for f in '.*' 'manifest.in'
+    do
+        # Remove hidden project files
+        find "${ROOT}/venv" -iname '.*' -delete
+    done
+    # Remove non-core code from err-stackstorm
     for excess in contrib docs tests
     do
-      rm -rf "$ROOT/plugins/err-stackstorm/${excess}"
+        rm -rf "$ROOT/plugins/err-stackstorm/${excess}"
     done
+    # Remove temp build dir
+    rm -rf "$BUILD_DIR"
 }
 
 
 
 function install_errbot
 {
-    echo "INSTALL ERRBOT ($($ROOT/bin/pip --version))"
-    source $ROOT/bin/activate
+    title "INSTALL ERRBOT ($($ROOT/venv/bin/pip --version))"
+    source "${ROOT}/venv/bin/activate"
     pip install --upgrade pip
-    pip install errbot
+    # Use tmp dir to download and build errbot/plugins.
+    export BUILD_DIR=$(mktemp -d "$ROOT"/build.XXXXXX)
+    cd "$BUILD_DIR"
+    ERRBOT_VERSION="6.2.0"
+    wget "https://github.com/errbotio/errbot/archive/refs/tags/${ERRBOT_VERSION}.tar.gz" -O errbot-v${ERRBOT_VERSION}.tar.gz
+    tar xf errbot-v${ERRBOT_VERSION}.tar.gz
+    cd errbot-${ERRBOT_VERSION}
+    pip install -e .[IRC,XMPP,telegram]
     fetch_archives
     install_extensions
     prune_installation
@@ -156,40 +180,33 @@ function build_archive
     install_system_requirements
     create_virtual_environment
     install_errbot
-    tar czvf /opt/err-stackstorm_${ERR_STACKSTORM_VERSION}_${DISTRO_COMBO}_x86_64.tar.gz $ROOT
+    tar czf "/opt/err-stackstorm_${ERR_STACKSTORM_VERSION}_${DISTRO_COMBO}_x86_64.tar.gz" "$ROOT"
 }
 
 export DISTRO=$(source /etc/os-release; echo $ID)
 export DISTRO_VERSION=$(source /etc/os-release; echo $VERSION_ID)
-export DISTRO_COMBO="${DISTRO}_${DISTRO_VERSION}"
-export ROOT=/opt/errbot
+# Strip the minor version since the script is designed to work on major versions.
+export DISTRO_COMBO="${DISTRO}${DISTRO_VERSION%.*}"
+export ROOT="/opt/errbot"
 
-case "${DISTRO}_${DISTRO_VERSION}" in
-    centos_8)
+case "${DISTRO_COMBO}" in
+    rocky8)
         export PKGS=(python38 virtualenv python38-devel git wget)
         export PYBIN=/usr/bin/python3.8
         ;;
-    rocky_9.0)
+    rocky9)
         export PKGS=(python39 python3-devel tar gcc git wget)
         export PYBIN=/usr/bin/python3.9
         ;;
-    ubuntu_18.04)
-        export PKGS=(python3.7-minimal git)
-        export PYBIN=/usr/bin/python3.7
-        ;;
-    ubuntu_20.04)
+    ubuntu20)
         export PKGS=(python3.8-minimal git)
         export PYBIN=/usr/bin/python3.8
         ;;
-    ubuntu_22.04)
+    ubuntu22)
         export PKGS=(python3.10-minimal git)
         export PYBIN=/usr/bin/python3.10
         ;;
-    debian_10)
-        export PKGS=(python3.7-minimal git wget)
-        export PYBIN=/usr/bin/python3.7
-        ;;
-    debian_11)
+    debian11)
         export PKGS=(python3.9-minimal git wget)
         export PYBIN=/usr/bin/python3.9
         ;;
