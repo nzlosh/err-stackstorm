@@ -81,7 +81,7 @@ class Enquiry:
         self.expiration = time.time() + ttl
 
     @classmethod
-    def get_associated_data(cls)
+    def get_associated_data(cls):
     """
     The enquiry data is insufficent to identify it's association with a specific workflow.
     The get_associated_data queries the associated execution_id and then the associated workflow.
