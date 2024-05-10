@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Restructured source layout for pypi packaging.
   - Restructured and updated documentation.
   - Switched from setup.py to pyproject.toml
+  - Updated package build process to support Rocky linux and base on major version of OS.
 
 ### Removed
   - Removed `check_latest_version` function.
