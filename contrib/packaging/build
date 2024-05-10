@@ -101,7 +101,7 @@ class BuildTarget:
         self.retrieve_assets()
         self.teardown_environment()
 
-class CentOS8(BuildTarget):
+class Rocky8(BuildTarget):
     def setup_environment(self):
         super().setup_environment()
         # rpmdev-setuptree creates the RPM build directory in the home env directory, so a symlink
@@ -124,7 +124,7 @@ class CentOS8(BuildTarget):
         run(["rpmdev-setuptree"], cwd=self.tmp_build_dir, check=True)
 
     def copy_archives(self):
-        # CentOS needs the archive in a different location for Ubuntu and Debian so it's overridden here.
+        # Rocky needs the archive in a different location compared to Ubuntu and Debian so it's overridden here.
         src = os.path.join(self.build_cfg["_common"]["archive"]["path"], self.build_cfg["_common"]["archive"]["filename"])
         dst = os.path.join(self.tmp_build_dir, "rpmbuild", "SOURCES", os.path.basename(src))
         print(f"Copy archive file {src} {dst}")
@@ -140,9 +140,9 @@ class CentOS8(BuildTarget):
         home_rpm_path.unlink()
 
 
-class Rocky9(CentOS8):
+class Rocky9(Rocky8):
     """
-    Rocky 9.0 steps _might_ be the same as CentOS8.
+    Rocky 9.0 steps _might_ be the same as Rocky8.
     """
     pass
 
@@ -253,17 +253,18 @@ def release_info(release_files):
     return rel_to_dict(rel)
 
 rel = release_info(release_files)
-distro = "{}_{}".format(rel["id"], rel["version_id"])
+# Strip the minor version since the script is designed to work on major versions.
+distro = "{}{}".format(rel["id"], rel["version_id"].split(".", 1)[0])
 build_cfg = load_config()
 
 targets = {
-    "ubuntu_18.04": Ubuntu1804,
-    "ubuntu_20.04": Ubuntu2004,
-    "ubuntu_22.04": Ubuntu2204,
-    "debian_10": Debian10,
-    "debian_11": Debian11,
-    "centos_8": CentOS8,
-    "rocky_9.0": Rocky9,
+    "ubuntu18": Ubuntu1804,
+    "ubuntu20": Ubuntu2004,
+    "ubuntu22": Ubuntu2204,
+    "debian10": Debian10,
+    "debian11": Debian11,
+    "rocky8": Rocky8,
+    "rocky9": Rocky9,
 }
 
 if distro not in build_cfg:
