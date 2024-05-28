@@ -322,7 +322,7 @@ class St2(BotPlugin):
             """
             Drop plugin prefix and any trailing white space from user supplied st2 command.
             """
-            return msg.replace(self.cfg.plugin_prefix, "", 1).strip()
+            return msg.removeprefix(self.cfg.plugin_prefix).strip()
 
         chat_user = msg.frm
         st2token, err_msg = self.get_token(chat_user)
