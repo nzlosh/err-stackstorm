@@ -44,10 +44,9 @@ class StackStormAPI(object):
 
     def action_get(self, action_id):
         raise NotImplementedError
-    
+
     def workflow_get(self, action_id):
         raise NotImplementedError
-
 
     def enquiry_list(self, st2_creds=None):
         """

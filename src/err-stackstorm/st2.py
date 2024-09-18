@@ -351,7 +351,7 @@ class St2(BotPlugin):
         action_alias = matched_result.message["actionalias"]
         del matched_result
 
-        if action_alias.get("enabled", True) == False:
+        if action_alias.get("enabled", True) is False:
             return "The command '{}' is disabled.".format(msg.body)
 
         actionalias_exec_result = self.st2api.execute_actionalias(
@@ -359,7 +359,8 @@ class St2(BotPlugin):
         )
 
         LOG.debug(
-            f"action alias execution result: type={type(actionalias_exec_result)} {actionalias_exec_result}"
+            f"action alias execution result: "
+            "type={type(actionalias_exec_result)} {actionalias_exec_result}"
         )
 
         if not isinstance(actionalias_exec_result, dict):
