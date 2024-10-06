@@ -83,8 +83,7 @@ function install_errbot
 {
     echo -e "\e[93mErrbot plugins installation\e[0m"
     pip3 install --upgrade pip setuptools
-    # Use slackclient 1.3.1 until support for slack 2.0 has been added to slack backend.
-    pip3 install errbot slackclient==1.3.1 sleekxmpp IRC
+    pip3 install errbot==6.2.0 slixmpp IRC errbot-backend-slackv3 err-backend-mattermost err-backend-discord
     initialise_errbot
     for dirname in plugins backends log
     do
@@ -96,10 +95,7 @@ function install_errbot
     done
 
     for backend in  'https://github.com/nzlosh/err-backend-rocketchat.git@maint_nzlosh' \
-                    'https://github.com/nzlosh/err-backend-gitter.git@maint_nzlosh' \
-                    'https://github.com/errbotio/err-backend-discord' \
-                    'https://github.com/errbotio/err-backend-mattermost' \
-                    'https://github.com/errbotio/err-backend-slackv3'
+                    'https://github.com/nzlosh/err-backend-gitter.git@maint_nzlosh'
     do
         install_backend $backend
     done

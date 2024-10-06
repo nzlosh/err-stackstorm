@@ -32,51 +32,52 @@ function title
 }
 function rocky8_install
 {
-    dnf install -y ${PKGS[@]}
+    dnf install -y "${PKGS[@]}"
 }
 function rocky9_install
 {
-    dnf install -y ${PKGS[@]}
+    dnf install -y "${PKGS[@]}"
 }
 function ubuntu18_install
 {
-    apt install ${PKGS[@]}
+    apt install "${PKGS[@]}"
 }
 function ubuntu20_install
 {
-    apt install ${PKGS[@]}
+    apt install "${PKGS[@]}"
 }
 function ubuntu22_install
 {
-    apt install ${PKGS[@]}
+    apt install "${PKGS[@]}"
 }
 function debian10_install
 {
-    apt install ${PKGS[@]}
+    apt install "${PKGS[@]}"
 }
 function debian11_install
 {
-    apt install ${PKGS[@]}
+    apt install "${PKGS[@]}"
 }
 
 function install_system_requirements
 {
     title "INSTALL SYSTEM REQUIREMENTS"
-    ${DISTRO_COMBO}_install
+    "${DISTRO_COMBO}_install"
 }
 
 function create_virtual_environment
 {
     title "CREATE VIRTUAL ENVIRONMENT"
-    $PYBIN -m venv "$ROOT/venv"
-    cd "$ROOT"
-    mkdir "$ROOT"/{plugins,backends,data}
+    "${PYBIN}" -m venv "${ROOT}"
+    cd "${ROOT}"
+    mkdir ./{plugins,backends,data}
 }
 
 function fetch_archives
 {
     title "DOWNLOAD ARCHIVES"
     export BACKENDS=("err-backend-discord" "err-backend-slackv3" "err-backend-gitter" "err-backend-mattermost" "err-backend-botframework")
+
     mkdir "${BUILD_DIR}/backends"
     cd "${BUILD_DIR}"
     wget "https://github.com/errbotio/err-backend-discord/archive/refs/tags/v4.0.0.tar.gz" -O "backends/err-backend-discord-v4.0.0.tar.gz"
@@ -110,22 +111,22 @@ function install_extensions
         done
     done
 
-    for location in $ROOT/backends
+    for location in "${ROOT}/backends"
     do
-        cd $location
-        for backend in ${BACKENDS[@]}
+        cd "${location}"
+        for backend in "${BACKENDS[@]}"
         do
             # Move archive directory names to correct errbot names.
-            mv -f *"${backend}"* "$backend"
+            mv -f ./*"${backend}"* "$backend"
         done
     done
 
     for location in "$ROOT/plugins"
     do
         cd "$location"
-        for plugin in ${PLUGINS[@]}
+        for plugin in "${PLUGINS[@]}"
         do
-            mv -f *"${plugin}"* "$plugin"
+            mv -f ./*"${plugin}"* "$plugin"
         done
     done
 }
@@ -160,6 +161,7 @@ function install_errbot
 {
     title "INSTALL ERRBOT ($($ROOT/venv/bin/pip --version))"
     source "${ROOT}/venv/bin/activate"
+
     pip install --upgrade pip
     # Use tmp dir to download and build errbot/plugins.
     export BUILD_DIR=$(mktemp -d "$ROOT"/build.XXXXXX)
