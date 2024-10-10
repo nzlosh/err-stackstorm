@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ##  [2.3.0] Unreleased
 ### Added
   - Proof of concept for enquiry support.
+  - Add Python 3.12 to test matrix.
 
 ### Changed
   - Restructured source layout for pypi packaging.
@@ -17,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Removed
   - Removed `check_latest_version` function.
   - Removed CircleCI from project in favour of using Github Actions.
+  - Remove Python 3.7 & 3.8 from test matrix.
 
 ##  [2.2.0] 2021-11-27
 ### Added

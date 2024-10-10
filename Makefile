@@ -21,8 +21,8 @@ setup:
 	pip install -r requirements-test.txt
 	pip install -r requirements-build.txt
 
-.PHONY: python_package
-python_package:
+.PHONY: build_python_package
+build_python_package:
 	echo "Build python package"
 	python -m build
 
@@ -68,6 +68,6 @@ help:
 	echo "format_test: Run black formatting check over source files."
 	echo "auto_format: Apply black formatting over source files."
 	echo "setup: Install errbot and dependencies into virtual environment."
-	echo "python_package: Build a python package of err-stackstorm."
+	echo "build_python_package: Build a python package of err-stackstorm."
 	echo "publish_pypi: Upload python package in dist/ to pypi."
 	echo "documentation: Trigger build on the readthedocs site."
