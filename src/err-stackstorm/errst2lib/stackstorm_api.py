@@ -29,6 +29,7 @@ class Result(object):
 class StackStormAPI(object):
     stream_backoff = 10
     authenticate_backoff = 10
+    http_timeout = 10
 
     def __init__(self, cfg, accessctl):
         self.cfg = cfg
@@ -55,7 +56,13 @@ class StackStormAPI(object):
         url = f"{self.cfg.api_url}/inquiries/"
         params = {}
         headers = st2_creds.requests()
-        return requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
+        return requests.get(
+            url,
+            headers=headers,
+            params=params,
+            timeout=StackStormAPI.http_timeout,
+            verify=self.cfg.verify_cert,
+        )
 
     def enquiry_get(self, enquiry_id, st2_creds=None):
         """
@@ -100,7 +107,13 @@ class StackStormAPI(object):
         url = f"{self.cfg.api_url}/inquiries/{enquiry_id}"
         params = {}
         headers = st2_creds.requests()
-        response = requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
+        response = requests.get(
+            url,
+            headers=headers,
+            params=params,
+            timeout=StackStormAPI.http_timeout,
+            verify=self.cfg.verify_cert,
+        )
 
         if response.status_code == requests.codes.ok:
             return response.json()
@@ -132,7 +145,13 @@ class StackStormAPI(object):
             params["offset"] = offset
 
         headers = st2_creds.requests()
-        response = requests.get(url, headers=headers, params=params, verify=self.cfg.verify_cert)
+        response = requests.get(
+            url,
+            headers=headers,
+            params=params,
+            timeout=StackStormAPI.http_timeout,
+            verify=self.cfg.verify_cert,
+        )
         if response.status_code == requests.codes.ok:
             return response.json().get("helpstrings", [])
         elif response.status_code == 401:
@@ -150,7 +169,11 @@ class StackStormAPI(object):
         result = Result()
         try:
             response = requests.post(
-                url, headers=headers, data=payload, verify=self.cfg.verify_cert
+                url,
+                headers=headers,
+                data=payload,
+                timeout=StackStormAPI.http_timeout,
+                verify=self.cfg.verify_cert,
             )
             if response.status_code == 200:
                 result.OK(response.json())
@@ -195,7 +218,11 @@ class StackStormAPI(object):
         msg = ""
         try:
             response = requests.post(
-                url, headers=headers, json=payload, verify=self.cfg.verify_cert
+                url,
+                headers=headers,
+                json=payload,
+                timeout=StackStormAPI.http_timeout,
+                verify=self.cfg.verify_cert,
             )
 
             if response.status_code in [201, 400]:
