@@ -1,8 +1,22 @@
 #!/bin/bash
 
-set -eou pipefail +x
+set -eou pipefail -x
 
-ERR_STACKSTORM_VERSION=2.2.0
+# jq is required to read data file.
+test -x $(command -v jq)
+
+export CFGFILE="build.cfg"
+export DISTRO=$(source /etc/os-release; echo $ID)
+export DISTRO_VERSION=$(source /etc/os-release; echo $VERSION_ID)
+# Strip the minor version since the script is designed to work on major versions.
+export DISTRO_COMBO="${DISTRO}${DISTRO_VERSION%.*}"
+export ROOT="/opt/errbot"
+export VENVDIR="${ROOT}/venv"
+export BUILD_ROOT=$(pwd)/$(jq -r '._common.build_dir' "${CFGFILE}")
+export PKGS=( $(jq -r ".${DISTRO_COMBO}.archive_deps[]" "${CFGFILE}") )
+export PYBIN="/usr/bin/$(jq -r ".${DISTRO_COMBO}.pybin" "${CFGFILE}")"
+export ERR_STACKSTORM_VERSION=$(jq -r '._common.version' "${CFGFILE}")
+export ERRBOT_VERSION=$(jq -r '._common.errbot.version' "${CFGFILE}")
 
 # Package contains the following software projects and their respective licence.
 #
@@ -28,7 +42,7 @@ ERR_STACKSTORM_VERSION=2.2.0
 # https://gist.githubusercontent.com/fernandoaleman/1377169/raw/3e841ca1a887dd21f3fcb35a3e74b0cc2fc4977b/create-repo-metadata.sh
 function title
 {
-    echo -e "\033[38;5;206;48;5;57m${1}\033[0m"
+    echo -e "\033[37;1;206;44;1;57m${1}\033[0m"
 }
 function rocky8_install
 {
@@ -38,10 +52,6 @@ function rocky9_install
 {
     dnf install -y "${PKGS[@]}"
 }
-function ubuntu18_install
-{
-    apt install "${PKGS[@]}"
-}
 function ubuntu20_install
 {
     apt install "${PKGS[@]}"
@@ -50,11 +60,15 @@ function ubuntu22_install
 {
     apt install "${PKGS[@]}"
 }
-function debian10_install
+function ubuntu24_install
 {
     apt install "${PKGS[@]}"
 }
 function debian11_install
+{
+    apt install "${PKGS[@]}"
+}
+function debian12_install
 {
     apt install "${PKGS[@]}"
 }
@@ -67,15 +81,15 @@ function install_system_requirements
 
 function create_virtual_environment
 {
-    title "CREATE VIRTUAL ENVIRONMENT"
-    "${PYBIN}" -m venv "${ROOT}"
+    title "CREATE VIRTUAL ENVIRONMENT ${VENVDIR}"
+    "${PYBIN}" -m venv "${VENVDIR}"
     cd "${ROOT}"
-    mkdir ./{plugins,backends,data}
+    mkdir -p ./{plugins,backends,data}
 }
 
 function fetch_archives
 {
-    title "DOWNLOAD ARCHIVES"
+    title "DOWNLOAD ARCHIVES to ${BUILD_DIR}"
     export BACKENDS=("err-backend-discord" "err-backend-slackv3" "err-backend-gitter" "err-backend-mattermost" "err-backend-botframework")
 
     mkdir "${BUILD_DIR}/backends"
@@ -93,7 +107,7 @@ function fetch_archives
 
 function install_extensions
 {
-    title "INSTALL ERRBOT EXTENSIONS"
+    title "INSTALL ERRBOT EXTENSIONS to ${BUILD_DIR}"
     for location in backends plugins
     do
         # extract
@@ -105,9 +119,12 @@ function install_extensions
         for proj in "${ROOT}/${location}"/*
         do
             # Install from pyproject
-            test -f "${proj}/pyproject.toml" && pip install -e "${proj}"
-            # Install from requirements
-            test -f "${proj}/requirements.txt" && pip install -r "${proj}/requirements.txt"
+            if [[ -f "${proj}/pyproject.toml" ]]; then
+                pip install "${proj}"
+            elif [[ -f "${proj}/requirements.txt" ]]; then
+                # Install from requirements
+                pip install -r "${proj}/requirements.txt"
+            fi
         done
     done
 
@@ -135,42 +152,39 @@ function prune_installation
 {
     title "PRUNE INSTALLATION"
     # Remove python cache files and hidden files.
-    find "$ROOT/venv" -iname '*.pyc' -delete
+    find "${VENVDIR}" -iname '*.pyc' -delete
     # Remove unrequired directories
     for dir in '__pycache__' ".github" "docs" "tests"
     do
-        find "${ROOT}/venv" -iname "$dir" -type d -exec rm -rf "{}" \;
-    done
-    for f in '.*' 'manifest.in'
-    do
-        # Remove hidden project files
-        find "${ROOT}/venv" -iname '.*' -delete
+        for x in $(find "${VENVDIR}" -iname "$dir" -type d)
+        do
+            rm -rf "${x}"
+        done
     done
     # Remove non-core code from err-stackstorm
     for excess in contrib docs tests
     do
         rm -rf "$ROOT/plugins/err-stackstorm/${excess}"
     done
-    # Remove temp build dir
-    rm -rf "$BUILD_DIR"
+
 }
 
 
 
 function install_errbot
 {
-    title "INSTALL ERRBOT ($($ROOT/venv/bin/pip --version))"
-    source "${ROOT}/venv/bin/activate"
-
-    pip install --upgrade pip
+    title "INSTALL ERRBOT ($(${VENVDIR}/bin/pip --version))"
+    source "${VENVDIR}/bin/activate"
+    pip install --upgrade pip setuptools
     # Use tmp dir to download and build errbot/plugins.
-    export BUILD_DIR=$(mktemp -d "$ROOT"/build.XXXXXX)
+    TMP_DIR="${BUILD_ROOT}"
+    mkdir -p "${TMP_DIR}"
+    export BUILD_DIR=$(mktemp -d "${TMP_DIR}"/build.XXXXXX)
     cd "$BUILD_DIR"
-    ERRBOT_VERSION="6.2.0"
     wget "https://github.com/errbotio/errbot/archive/refs/tags/${ERRBOT_VERSION}.tar.gz" -O errbot-v${ERRBOT_VERSION}.tar.gz
     tar xf errbot-v${ERRBOT_VERSION}.tar.gz
     cd errbot-${ERRBOT_VERSION}
-    pip install -e .[IRC,XMPP,telegram]
+    pip install .[IRC,XMPP,telegram]
     fetch_archives
     install_extensions
     prune_installation
@@ -182,40 +196,23 @@ function build_archive
     install_system_requirements
     create_virtual_environment
     install_errbot
-    tar czf "/opt/err-stackstorm_${ERR_STACKSTORM_VERSION}_${DISTRO_COMBO}_x86_64.tar.gz" "$ROOT"
+    tar czf "/opt/err-stackstorm_${ERR_STACKSTORM_VERSION}_${DISTRO_COMBO}_x86_64.tar.gz" "${ROOT}"
 }
 
-export DISTRO=$(source /etc/os-release; echo $ID)
-export DISTRO_VERSION=$(source /etc/os-release; echo $VERSION_ID)
-# Strip the minor version since the script is designed to work on major versions.
-export DISTRO_COMBO="${DISTRO}${DISTRO_VERSION%.*}"
-export ROOT="/opt/errbot"
+function build_system_package
+{
+    title "BUILD SYSTEM PACKAGE FROM ARCHIVE in ${BUILD_DIR}"
+    WORKDIR=$(dirname ${BUILD_ROOT})
+    cd "${WORKDIR}"
+    ${PYBIN} -m venv "${BUILD_DIR}/venv"
+    source "${BUILD_DIR}/venv/bin/activate"
+    pip install -r "${WORKDIR}/requirements.txt"
+    $(basename ${PYBIN}) ./build
+    # Remove temp build dir
+    rm -rf "${BUILD_DIR}"
+}
 
-case "${DISTRO_COMBO}" in
-    rocky8)
-        export PKGS=(python38 virtualenv python38-devel git wget)
-        export PYBIN=/usr/bin/python3.8
-        ;;
-    rocky9)
-        export PKGS=(python39 python3-devel tar gcc git wget)
-        export PYBIN=/usr/bin/python3.9
-        ;;
-    ubuntu20)
-        export PKGS=(python3.8-minimal git)
-        export PYBIN=/usr/bin/python3.8
-        ;;
-    ubuntu22)
-        export PKGS=(python3.10-minimal git)
-        export PYBIN=/usr/bin/python3.10
-        ;;
-    debian11)
-        export PKGS=(python3.9-minimal git wget)
-        export PYBIN=/usr/bin/python3.9
-        ;;
-    *)
-        echo "Distribution ${DISTRO} version ${DISTRO_VERSION} isn't supported."
-        exit 1
-        ;;
-esac
+test -x $PYBIN
 
 build_archive
+build_system_package
