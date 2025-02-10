@@ -103,9 +103,9 @@ class GenericChatAdapter(AbstractChatAdapter):
             if pack != help_obj["pack"]:
                 help_text += "[{}]\n".format(help_obj["pack"])
                 pack = help_obj["pack"]
-            help_text += "\t{}{} {} - {}\n".format(
+            help_text += "\t{}{}{} - {}\n".format(
                 self.bot_plugin.cfg.bot_prefix,
-                self.bot_plugin.cfg.plugin_prefix,
+                self.bot_plugin.cfg.command_prefix,
                 help_obj["display"],
                 help_obj["description"],
             )
@@ -414,9 +414,9 @@ class SlackChatAdapter(GenericChatAdapter):
             if pack != help_obj["pack"]:
                 help_text += "\n**{}**\n".format(help_obj["pack"])
                 pack = help_obj["pack"]
-            help_text += "\t{}{} {} - _{}_\n".format(
+            help_text += "\t{}{}{} - _{}_\n".format(
                 self.bot_plugin.cfg.bot_prefix,
-                self.bot_plugin.cfg.plugin_prefix,
+                self.bot_plugin.cfg.command_prefix,
                 help_obj["display"],
                 help_obj["description"],
             )

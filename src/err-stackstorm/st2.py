@@ -576,7 +576,7 @@ class St2(BotPlugin):
                     lambda plugin, msg, args: self.execute_actionalias(msg, args),
                     name="{}".format(self.cfg.plugin_prefix),
                     cmd_type=re_botcmd,
-                    cmd_kwargs={"pattern": "^{} .*".format(self.cfg.plugin_prefix)},
+                    cmd_kwargs={"pattern": "^{}.*".format(self.cfg.command_prefix)},
                     doc="Run an arbitrary StackStorm command (action-alias).\n"
                     "Available commands can be listed using {}{}help".format(
                         self.cfg.bot_prefix, self.cfg.plugin_prefix
