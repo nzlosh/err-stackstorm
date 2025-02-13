@@ -180,8 +180,8 @@ class StackStormAPI(object):
             elif response.status_code == 400:
                 result.error(
                     1,
-                    "st2 command '{}' not found.  View available commands with {}st2help.".format(
-                        text, self.cfg.bot_prefix
+                    "st2 command '{}' not found.  View available commands with {}{}help.".format(
+                        text, self.cfg.bot_prefix, self.cfg.plugin_prefix
                     ),
                 )
                 LOG.error(result.message)
