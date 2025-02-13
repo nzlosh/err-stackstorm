@@ -66,6 +66,11 @@ class PluginConfiguration(BorgSingleton):
     def _configure_prefixes(self, bot_conf):
         self.bot_prefix = bot_conf.BOT_PREFIX
         self.plugin_prefix = bot_conf.STACKSTORM.get("plugin_prefix", "st2")
+        # If there is a plugin prefix set we want a space between it and the command, otherwise not
+        if bot_conf.STACKSTORM.get("plugin_prefix", True):
+            self.command_prefix = "{} ".format(self.plugin_prefix)
+        else:
+            self.command_prefix = "{}".format(self.plugin_prefix)
         self.full_prefix = "{}{} ".format(bot_conf.BOT_PREFIX, self.plugin_prefix)
 
     def _configure_stackstorm(self, bot_conf):
