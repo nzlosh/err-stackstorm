@@ -63,6 +63,9 @@ class PluginConfiguration(BorgSingleton):
             )
         return True
 
+    def _configure_acls(self, bot_conf):
+        self.acls = bot_conf.STACKSTORM.get("acls", {"defaults":{}, "rules"=[]})
+
     def _configure_prefixes(self, bot_conf):
         self.bot_prefix = bot_conf.BOT_PREFIX
         self.plugin_prefix = bot_conf.STACKSTORM.get("plugin_prefix", "st2")

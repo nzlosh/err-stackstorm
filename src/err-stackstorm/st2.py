@@ -64,6 +64,106 @@ class St2(BotPlugin):
         self.run_listener = True
         self.st2events_listener = None
 
+    @cmdfilter
+    def acls_filter(self, msg, cmd, args, dry_run):
+        """
+        Filter commands, stop on first match.  ACL rule order matters.
+        :param msg: The original chat message.
+        :param cmd: The command name itself.
+        :param args: Arguments passed to the command.
+        :param dry_run: True when this is a dry-run.
+
+
+        # match command against st2 api.
+        curl -sv -X POST -H 'Accept: */*' -H 'X-Auth-Token: XXXXXXXX' -H 'Content-Type: application/json' 'http://127.0.0.1:9101/v1/actionalias/match' -d '{"command": "chatops command here"}'
+
+        ACL = {
+            "defaults": [
+                {
+                    policy: "<allow/deny>:<public/private/any>",
+                    users: ["*"],
+                    groups: ["*"]
+                }
+            ],
+            "rules": {
+            "st2b_storage": [
+                {
+                    "cmd_pattern": "",
+                    "policy": "<allow/deny>:<public/private/any>",
+                    "users": [],
+                    "groups": [],
+                },
+                {
+                    "cmd_pattern": "*",
+                    "policy": "deny:any",
+                }
+            ],
+            "*": [
+                {
+                    "cmd_pattern": "*",
+
+                }
+            ]
+        }
+        """
+        def allow(msg, cmd, args):
+            return msg, cmd, args
+        def deny(msg, reason, dry_run):
+            if not dry_run:
+                self._bot.send_simple_reply(msg, reason)
+            return None, None, None
+
+        def get_acl_usr(msg):
+            """Return the ACL attribute of the sender of the given message"""
+            if hasattr(
+                msg.frm, "aclattr"
+            ):  # if the identity requires a special field to be used for acl
+                return msg.frm.aclattr
+            return msg.frm.person  # default
+
+
+        def get_acl_room(room):
+            """Return the ACL attribute of the room used for a given message"""
+            if hasattr(room, "aclattr"):
+                return room.aclattr
+            return str(room)  # old behaviour
+
+
+        def glob(text, patterns):
+            """
+            Match text against the list of patterns according to unix glob rules.
+            Return True if a match is found, False otherwise.
+            """
+            if isinstance(patterns, str):
+                patterns = (patterns,)
+            if not isinstance(text, str):
+                text = str(text)
+            return any(fnmatch.fnmatchcase(text, str(pattern)) for pattern in patterns)
+
+
+        def ciglob(text, patterns):
+            """
+            Case-insensitive version of glob.
+
+            Match text against the list of patterns according to unix glob rules.
+            Return True if a match is found, False otherwise.
+            """
+            if isinstance(patterns, str):
+                patterns = (patterns,)
+            return glob(text.lower(), [p.lower() for p in patterns])
+
+
+        f = self._bot.all_commands[cmd]
+        cmd_str = f"{f.__self__.name}:{cmd}"
+        self.log.debug("ACL check for '%s'.", cmd_str)
+
+        usr = get_acl_usr(msg)
+
+        for pattern, acls in self.acl_rules.items():
+            raise NotImplementedError
+
+        raise NotImplementedError
+
     def authenticate_bot_credentials(self):
         """
         Create a session and associate valid StackStorm credentials with it for the bot to use.
