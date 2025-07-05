@@ -20,7 +20,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Removed
   - Removed `check_latest_version` function.
   - Removed CircleCI from project in favour of using Github Actions.
-  - Remove Python 3.7 & 3.8 from test matrix.
+  - Removed Python 3.7 & 3.8 from test matrix.
+  - Removed detection of 'block' key from _post_block_message() which was causing messages to be silently ignored.
 
 ##  [2.2.0] 2021-11-27
 ### Added

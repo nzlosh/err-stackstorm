@@ -399,13 +399,11 @@ class SlackChatAdapter(GenericChatAdapter):
         """
         Reference: https://api.slack.com/methods/chat.postMessage
         """
-        if "blocks" in extra["slack"]:
-            extra["slack"]["text"] = message
-            extra["slack"]["channel"] = target_id
+        extra["slack"]["text"] = message
+        extra["slack"]["channel"] = target_id
 
-            LOG.debug(f"Sending Slack Block {extra['slack']}")
-
-            self.bot_plugin._bot.slack_web.api_call("chat.postMessage", data=extra["slack"])
+        LOG.debug(f"Sending Slack Block {extra['slack']}")
+        self.bot_plugin._bot.slack_web.api_call("chat.postMessage", data=extra["slack"])
 
     def format_help(self, help_strings):
         help_text = ""
