@@ -2,7 +2,7 @@
 
 set -eou pipefail +x
 
-ERR_STACKSTORM_VERSION=2.2.0
+ERR_STACKSTORM_VERSION=2.3.0
 
 # Package contains the following software projects and their respective licence.
 #
