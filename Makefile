@@ -1,4 +1,4 @@
-SHELL=/bin/sh
+SHELL=/bin/bash
 MAX_LINE_LEN=100
 SOURCE_PATH=src/err-stackstorm
 LIB_PATH=${SOURCE_PATH}/errst2lib
@@ -68,14 +68,14 @@ lint_test:
 
 .PHONY: help
 help:
-	echo "${FMT_TITLE}TARGET${FMT_NONE}                  ${FMT_TITLE}DESCRIPTION${FMT_NONE}"
-	echo "${FMT_TARGET}clean${FMT_NONE}                   Remove tmp files and previous build artifacst. (Not Implemented)"
-	echo "${FMT_TARGET}setup${FMT_NONE}                   Install errbot and dependencies into virtual environment."
-	echo "${FMT_TARGET}build_python_package${FMT_NONE}    Build python deployment packages."
-	echo "${FMT_TARGET}publish_pypi${FMT_NONE}            Push python deployment packages to pypi. (Not Implemented)"
-	echo "${FMT_TARGET}build_documentation${FMT_NONE}     Generate readthedocs documentation. (Not Implemented)"
-	echo "${FMT_TARGET}format_test${FMT_NONE}             Run black formatting check over source files."
-	echo "${FMT_TARGET}auto_format${FMT_NONE}             Apply black format against python source files."
-	echo "${FMT_TARGET}security_scan${FMT_NONE}           Check python source code for security issues."
-	echo "${FMT_TARGET}unit_test${FMT_NONE}               Run Unit tests using pytest."
-	echo "${FMT_TARGET}lint_test${FMT_NONE}               Run flake and pycodestyle tests on source files."
+	echo -e "${FMT_TITLE}TARGET${FMT_NONE}                  ${FMT_TITLE}DESCRIPTION${FMT_NONE}"
+	echo -e "${FMT_TARGET}clean${FMT_NONE}                   Remove tmp files and previous build artifacst. (Not Implemented)"
+	echo -e "${FMT_TARGET}setup${FMT_NONE}                   Install errbot and dependencies into virtual environment."
+	echo -e "${FMT_TARGET}build_python_package${FMT_NONE}    Build python deployment packages."
+	echo -e "${FMT_TARGET}publish_pypi${FMT_NONE}            Push python deployment packages to pypi. (Not Implemented)"
+	echo -e "${FMT_TARGET}build_documentation${FMT_NONE}     Generate readthedocs documentation. (Not Implemented)"
+	echo -e "${FMT_TARGET}format_test${FMT_NONE}             Run black formatting check over source files."
+	echo -e "${FMT_TARGET}auto_format${FMT_NONE}             Apply black format against python source files."
+	echo -e "${FMT_TARGET}security_scan${FMT_NONE}           Check python source code for security issues."
+	echo -e "${FMT_TARGET}unit_test${FMT_NONE}               Run Unit tests using pytest."
+	echo -e "${FMT_TARGET}lint_test${FMT_NONE}               Run flake and pycodestyle tests on source files."
