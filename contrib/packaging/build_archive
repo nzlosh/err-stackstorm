@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eou pipefail +x
+set -eou pipefail -x
 
 ERR_STACKSTORM_VERSION=2.3.0
 
@@ -38,10 +38,6 @@ function rocky9_install
 {
     dnf install -y "${PKGS[@]}"
 }
-function ubuntu18_install
-{
-    apt install "${PKGS[@]}"
-}
 function ubuntu20_install
 {
     apt install "${PKGS[@]}"
@@ -50,11 +46,15 @@ function ubuntu22_install
 {
     apt install "${PKGS[@]}"
 }
-function debian10_install
+function ubuntu24_install
 {
     apt install "${PKGS[@]}"
 }
 function debian11_install
+{
+    apt install "${PKGS[@]}"
+}
+function debian12_install
 {
     apt install "${PKGS[@]}"
 }
@@ -68,9 +68,12 @@ function install_system_requirements
 function create_virtual_environment
 {
     title "CREATE VIRTUAL ENVIRONMENT"
-    "${PYBIN}" -m venv "${ROOT}"
+    "${PYBIN}" -m venv "${ROOT}/venv"
     cd "${ROOT}"
-    mkdir ./{plugins,backends,data}
+    for d in ./{plugins,backends,data}
+    do
+        test -d "$d" || mkdir "$d"
+    done
 }
 
 function fetch_archives
@@ -78,10 +81,10 @@ function fetch_archives
     title "DOWNLOAD ARCHIVES"
     export BACKENDS=("err-backend-discord" "err-backend-slackv3" "err-backend-gitter" "err-backend-mattermost" "err-backend-botframework")
 
-    mkdir "${BUILD_DIR}/backends"
+    test -d "${BUILD_DIR}/backends" || mkdir "${BUILD_DIR}/backends"
     cd "${BUILD_DIR}"
     wget "https://github.com/errbotio/err-backend-discord/archive/refs/tags/v4.0.0.tar.gz" -O "backends/err-backend-discord-v4.0.0.tar.gz"
-    wget "https://github.com/errbotio/err-backend-slackv3/archive/refs/tags/v0.2.1.tar.gz" -O "backends/err-backend-slackv3-v0.2.1.tar.gz"
+    wget "https://github.com/errbotio/err-backend-slackv3/archive/refs/tags/v0.3.1.tar.gz" -O "backends/err-backend-slackv3-v0.3.1.tar.gz"
     wget "https://github.com/errbotio/err-backend-mattermost/archive/refs/tags/3.0.0.tar.gz" -O "backends/err-backend-mattermost-v3.0.0.tar.gz"
     wget "https://github.com/nzlosh/err-backend-gitter/archive/refs/tags/v0.1.0.tar.gz" -O "backends/err-backend-gitter-v0.1.0.tar.gz"
     wget "https://github.com/nzlosh/err-backend-botframework/archive/refs/tags/v0.1.0.tar.gz" -O "backends/err-backend-botframework-v0.1.0.tar.gz"
@@ -137,14 +140,19 @@ function prune_installation
     # Remove python cache files and hidden files.
     find "$ROOT/venv" -iname '*.pyc' -delete
     # Remove unrequired directories
-    for dir in '__pycache__' ".github" "docs" "tests"
+    for dir in '__pycache__' ".github" "docs" "tests" ".*"
     do
-        find "${ROOT}/venv" -iname "$dir" -type d -exec rm -rf "{}" \;
+        for tgt in $(find "${ROOT}/venv" -iname "$dir" -type d)
+        do
+            if [[ -d "$tgt" ]]; then
+                rm -rf "$tgt"
+            fi
+        done
     done
     for f in '.*' 'manifest.in'
     do
         # Remove hidden project files
-        find "${ROOT}/venv" -iname '.*' -delete
+        find "${ROOT}/venv" -type f -iname '.*' -delete
     done
     # Remove non-core code from err-stackstorm
     for excess in contrib docs tests
@@ -208,9 +216,17 @@ case "${DISTRO_COMBO}" in
         export PKGS=(python3.10-minimal git)
         export PYBIN=/usr/bin/python3.10
         ;;
+    ubuntu24)
+        export PKGS=(python3.12-minimal git)
+        export PYBIN=/usr/bin/python3.12
+        ;;
     debian11)
         export PKGS=(python3.9-minimal git wget)
         export PYBIN=/usr/bin/python3.9
+        ;;
+    debian12)
+        export PKGS=(python3.11-minimal git wget)
+        export PYBIN=/usr/bin/python3.11
         ;;
     *)
         echo "Distribution ${DISTRO} version ${DISTRO_VERSION} isn't supported."
@@ -219,3 +235,4 @@ case "${DISTRO_COMBO}" in
 esac
 
 build_archive
+title "COMPLETED"

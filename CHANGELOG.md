@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ##  [2.4.0] Unreleased
 
 ### Added
+  - Added Ubuntu 24 and Debian 12 to package build.
+
 ### Changed
+  - Display ANSI colour correctly in makefile.
+
 ### Removed
+  - Removed Ubuntu 18 and Debian 10 from package build.
 
 ##  [2.3.0] 2025-07-05
 ### Added

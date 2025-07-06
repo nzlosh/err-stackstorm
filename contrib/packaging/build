@@ -146,7 +146,7 @@ class Rocky9(Rocky8):
     """
     pass
 
-class Ubuntu1804(BuildTarget):
+class Ubuntu2004(BuildTarget):
     def __init__(self, build_cfg, distro):
         super().__init__(build_cfg, distro)
 
@@ -170,19 +170,19 @@ class Ubuntu1804(BuildTarget):
     def teardown_environment(self):
         super().teardown_environment()
 
-class Ubuntu2004(Ubuntu1804):
+class Ubuntu2204(Ubuntu2004):
     """
-    Ubuntu 18.04 steps are sufficient to build for 20.04
-    """
-    pass
-
-class Ubuntu2204(Ubuntu1804):
-    """
-    Ubuntu 18.04 steps are sufficient to build for 22.04
+    Ubuntu 20.04 steps are sufficient to build for 22.04
     """
     pass
 
-class Debian10(BuildTarget):
+class Ubuntu2404(Ubuntu2004):
+    """
+    Ubuntu 20.04 steps are sufficient to build for 24.04
+    """
+    pass
+
+class Debian11(BuildTarget):
     def __init__(self, build_cfg, distro):
         super().__init__(build_cfg, distro)
 
@@ -210,9 +210,9 @@ class Debian10(BuildTarget):
     def teardown_environment(self):
         super().teardown_environment()
 
-class Debian11(Debian10):
+class Debian12(Debian11):
     """
-    Build for Debian 11
+    Build for Debian 12
     """
     pass
 
@@ -258,11 +258,11 @@ distro = "{}{}".format(rel["id"], rel["version_id"].split(".", 1)[0])
 build_cfg = load_config()
 
 targets = {
-    "ubuntu18": Ubuntu1804,
     "ubuntu20": Ubuntu2004,
     "ubuntu22": Ubuntu2204,
-    "debian10": Debian10,
+    "ubuntu24": Ubuntu2404,
     "debian11": Debian11,
+    "debian12": Debian12,
     "rocky8": Rocky8,
     "rocky9": Rocky9,
 }

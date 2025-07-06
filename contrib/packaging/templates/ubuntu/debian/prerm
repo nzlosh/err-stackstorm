@@ -12,8 +12,8 @@ function check_version
 {
     VERSION="$1"
     if [[ -z "$VERSION" ]]; then
-        echo "Aborting! $0 $VERB called without providing a package version."
-        exit $E_BAD_VERSION
+        echo "Warning! $0 $VERB called without providing a package version."
+        #exit $E_BAD_VERSION
     fi
 }
 
