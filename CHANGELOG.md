@@ -7,10 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ##  [2.4.0] Unreleased
 
 ### Added
+### Changed
+### Removed
+
+##  [2.3.1] Unreleased
+
+### Added
   - Added Ubuntu 24 and Debian 12 to package build.
 
 ### Changed
   - Display ANSI colour correctly in makefile.
+  - Removed redundant testing of the extra.slack key.
 
 ### Removed
   - Removed Ubuntu 18 and Debian 10 from package build.
