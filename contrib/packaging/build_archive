@@ -2,7 +2,9 @@
 
 set -eou pipefail -x
 
-ERR_STACKSTORM_VERSION=2.3.0
+REL_PATH=$(pwd $(dirname $0))
+VER_PATH="${REL_PATH}/../../src/err-stackstorm/errst2lib/version.py"
+ERR_STACKSTORM_VERSION=$(source <(grep ERR_STACKSTORM_VERSION "$VER_PATH"); echo $ERR_STACKSTORM_VERSION)
 
 # Package contains the following software projects and their respective licence.
 #

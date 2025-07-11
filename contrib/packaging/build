@@ -10,9 +10,18 @@ import pathlib
 import string
 import sys
 from subprocess import run
-
 from jinja2 import FileSystemLoader
 from jinja2.sandbox import SandboxedEnvironment as Environment
+
+# Include err-stackstorm python module path to import current version.
+sys.path.append(
+    os.path.abspath(
+        os.path.join(
+            os.path.dirname(os.path.abspath(sys.argv[0])), "../../src/err-stackstorm/errst2lib"
+        )
+    )
+)
+from version import ERR_STACKSTORM_VERSION
 
 # Run after the err-stackstorm virtualenv archive has been created.
 # 1. install build dependencies.
@@ -38,13 +47,17 @@ class BuildTarget:
             "_runtime": {
                 "rfc2822_datetime": email.utils.formatdate(),
                 "distro": distro,
-                "dyslexic_datetime": datetime.datetime.now().strftime("%a %h %d %Y")
+                "dyslexic_datetime": datetime.datetime.now().strftime("%a %h %d %Y"),
             },
-            "_common": build_cfg["_common"]
+            "_common": build_cfg["_common"],
         }
         self.build_cfg.update(build_cfg[distro])
-        self.build_cfg["_common"]["archive"]["filename"] = build_cfg["_common"]["archive"]["filename"].format(
-            version=self.build_cfg["_common"]["version"], distro=distro
+        # Update tokens from configuration file with runtime data for use in build process.
+        self.build_cfg["_common"]["archive"]["filename"] = build_cfg["_common"]["archive"][
+            "filename"
+        ].format(version=ERR_STACKSTORM_VERSION, distro=distro)
+        self.build_cfg["_common"]["version"] = self.build_cfg["_common"]["version"].format(
+            version=ERR_STACKSTORM_VERSION
         )
 
     def setup_environment(self):
@@ -62,7 +75,10 @@ class BuildTarget:
         run([build_cfg[distro]["pkg_bin"], "-y", "install"] + build_cfg[distro]["build_deps"])
 
     def copy_archives(self):
-        src = os.path.join(self.build_cfg["_common"]["archive"]["path"], self.build_cfg["_common"]["archive"]["filename"])
+        src = os.path.join(
+            self.build_cfg["_common"]["archive"]["path"],
+            self.build_cfg["_common"]["archive"]["filename"],
+        )
         dst = os.path.join(self.tmp_build_dir, os.path.basename(src))
         print(f"Copy archive file {src} {dst}")
         shutil.copyfile(src, dst)
@@ -101,6 +117,7 @@ class BuildTarget:
         self.retrieve_assets()
         self.teardown_environment()
 
+
 class Rocky8(BuildTarget):
     def setup_environment(self):
         super().setup_environment()
@@ -116,7 +133,9 @@ class Rocky8(BuildTarget):
             home_rpm_path.unlink()
         else:
             if home_rpm_path.exists():
-                raise EnvironmentError(f"{home_rpm_path} exists and is not a symlink.  Refusing to alter filesystem state that wasn't created by the build script.")
+                raise EnvironmentError(
+                    f"{home_rpm_path} exists and is not a symlink.  Refusing to alter filesystem state that wasn't created by the build script."
+                )
         print(f"Creating symlink from {home_rpm_path} to {build_rpm_path.resolve()}")
         home_rpm_path.symlink_to(build_rpm_path.resolve())
 
@@ -125,7 +144,10 @@ class Rocky8(BuildTarget):
 
     def copy_archives(self):
         # Rocky needs the archive in a different location compared to Ubuntu and Debian so it's overridden here.
-        src = os.path.join(self.build_cfg["_common"]["archive"]["path"], self.build_cfg["_common"]["archive"]["filename"])
+        src = os.path.join(
+            self.build_cfg["_common"]["archive"]["path"],
+            self.build_cfg["_common"]["archive"]["filename"],
+        )
         dst = os.path.join(self.tmp_build_dir, "rpmbuild", "SOURCES", os.path.basename(src))
         print(f"Copy archive file {src} {dst}")
         shutil.copyfile(src, dst)
@@ -144,7 +166,9 @@ class Rocky9(Rocky8):
     """
     Rocky 9.0 steps _might_ be the same as Rocky8.
     """
+
     pass
+
 
 class Ubuntu2004(BuildTarget):
     def __init__(self, build_cfg, distro):
@@ -170,17 +194,22 @@ class Ubuntu2004(BuildTarget):
     def teardown_environment(self):
         super().teardown_environment()
 
+
 class Ubuntu2204(Ubuntu2004):
     """
     Ubuntu 20.04 steps are sufficient to build for 22.04
     """
+
     pass
+
 
 class Ubuntu2404(Ubuntu2004):
     """
     Ubuntu 20.04 steps are sufficient to build for 24.04
     """
+
     pass
+
 
 class Debian11(BuildTarget):
     def __init__(self, build_cfg, distro):
@@ -210,11 +239,14 @@ class Debian11(BuildTarget):
     def teardown_environment(self):
         super().teardown_environment()
 
+
 class Debian12(Debian11):
     """
     Build for Debian 12
     """
+
     pass
+
 
 def load_config(cfg_file="build.cfg"):
     with open(cfg_file, "r") as f:
@@ -251,6 +283,7 @@ def release_info(release_files):
         raise "Failed to find rel release information."
 
     return rel_to_dict(rel)
+
 
 rel = release_info(release_files)
 # Strip the minor version since the script is designed to work on major versions.
