@@ -110,7 +110,7 @@ function install_extensions
         for proj in "${ROOT}/${location}"/*
         do
             # Install from pyproject
-            test -f "${proj}/pyproject.toml" && pip install -e "${proj}"
+            test -f "${proj}/pyproject.toml" && pip install "${proj}"
             # Install from requirements
             test -f "${proj}/requirements.txt" && pip install -r "${proj}/requirements.txt"
         done
@@ -180,7 +180,7 @@ function install_errbot
     wget "https://github.com/errbotio/errbot/archive/refs/tags/${ERRBOT_VERSION}.tar.gz" -O errbot-v${ERRBOT_VERSION}.tar.gz
     tar xf errbot-v${ERRBOT_VERSION}.tar.gz
     cd errbot-${ERRBOT_VERSION}
-    pip install -e .[IRC,XMPP,telegram]
+    pip install .[IRC,XMPP,telegram]
     fetch_archives
     install_extensions
     prune_installation

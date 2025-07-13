@@ -5,7 +5,7 @@ After=network.target
 [Service]
 User=errbot
 Environment="CONFIGFILE=/opt/errbot/config.py"
-ExecStart=/opt/errbot/bin/python /opt/errbot/bin/errbot --config $CONFIGFILE
+ExecStart=/opt/errbot/venv/bin/python /opt/errbot/venv/bin/errbot --config $CONFIGFILE
 ExecStop=/bin/kill -SIGINT $MAINPID
 Restart=on-failure
 

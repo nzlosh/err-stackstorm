@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 ### Changed
+  - Fixed python path in systemd unit file.
+
 ### Removed
 
 ##  [2.3.1] 2025-07-11
