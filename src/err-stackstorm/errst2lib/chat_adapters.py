@@ -2,6 +2,11 @@
 import abc
 import logging
 
+from errbot.backends.base import (
+    Person,
+    Room,
+)
+
 LOG = logging.getLogger("errbot.plugin.st2.chat_adapters")
 
 
@@ -393,7 +398,12 @@ class SlackChatAdapter(GenericChatAdapter):
         Reference: https://api.slack.com/methods/chat.postMessage
         """
         extra["text"] = message
-        extra["channel"] = target_id
+        if isinstance(target_id, Person):
+            extra["user"] = target_id.userid
+        elif isinstance(target_id, Room):
+            extra["channel"] = target_id.id
+        else:
+            LOG.warning("target_id is type %s that isn't a Person or Room!", type(target_id))
 
         LOG.debug(f"Sending Slack Block {extra}")
         self.bot_plugin._bot.slack_web.api_call("chat.postMessage", data=extra)

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 ### Changed
   - Fixed python path in systemd unit file.
+  - Used correct user id/channel id with postMessage when using blocks in Slack chat adapter.
 
 ### Removed
 
