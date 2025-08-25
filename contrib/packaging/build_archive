@@ -203,16 +203,16 @@ export ROOT="/opt/errbot"
 
 case "${DISTRO_COMBO}" in
     rocky8)
-        export PKGS=(python38 virtualenv python38-devel git wget)
-        export PYBIN=/usr/bin/python3.8
+        export PKGS=(python39 virtualenv python39-devel git wget)
+        export PYBIN=/usr/bin/python3.9
         ;;
     rocky9)
         export PKGS=(python39 python3-devel tar gcc git wget)
         export PYBIN=/usr/bin/python3.9
         ;;
     ubuntu20)
-        export PKGS=(python3.8-minimal git)
-        export PYBIN=/usr/bin/python3.8
+        export PKGS=(python3.9-minimal git)
+        export PYBIN=/usr/bin/python3.9
         ;;
     ubuntu22)
         export PKGS=(python3.10-minimal git)
