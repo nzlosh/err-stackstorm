@@ -161,6 +161,8 @@ function prune_installation
     do
         rm -rf "$ROOT/plugins/err-stackstorm/${excess}"
     done
+    # remove python build backend directory
+    rm -rf "$ROOT"/{plugins,backends}/*/build
     # Remove temp build dir
     rm -rf "$BUILD_DIR"
 }
