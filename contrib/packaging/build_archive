@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eou pipefail -x
+set -eou pipefail +x
 
 REL_PATH=$(pwd $(dirname $0))
 VER_PATH="${REL_PATH}/../../src/err-stackstorm/errst2lib/version.py"
@@ -28,6 +28,8 @@ ERR_STACKSTORM_VERSION=$(source <(grep ERR_STACKSTORM_VERSION "$VER_PATH"); echo
 #
 # https://gist.github.com/fernandoaleman/1377211/d78d13bd8f134e7d9b9bc3da5895c859d7cbf294
 # https://gist.githubusercontent.com/fernandoaleman/1377169/raw/3e841ca1a887dd21f3fcb35a3e74b0cc2fc4977b/create-repo-metadata.sh
+# https://stackoverflow.com/questions/122327/how-do-i-find-the-location-of-my-python-site-packages-directory
+#
 function title
 {
     echo -e "\033[38;5;206;48;5;57m${1}\033[0m"
@@ -86,7 +88,7 @@ function fetch_archives
     test -d "${BUILD_DIR}/backends" || mkdir "${BUILD_DIR}/backends"
     cd "${BUILD_DIR}"
     wget "https://github.com/errbotio/err-backend-discord/archive/refs/tags/v4.0.0.tar.gz" -O "backends/err-backend-discord-v4.0.0.tar.gz"
-    wget "https://github.com/errbotio/err-backend-slackv3/archive/refs/tags/v0.3.1.tar.gz" -O "backends/err-backend-slackv3-v0.3.1.tar.gz"
+    wget "https://github.com/errbotio/err-backend-slackv3/archive/refs/tags/v0.3.2.tar.gz" -O "backends/err-backend-slackv3-v0.3.1.tar.gz"
     wget "https://github.com/errbotio/err-backend-mattermost/archive/refs/tags/3.0.0.tar.gz" -O "backends/err-backend-mattermost-v3.0.0.tar.gz"
     wget "https://github.com/nzlosh/err-backend-gitter/archive/refs/tags/v0.1.0.tar.gz" -O "backends/err-backend-gitter-v0.1.0.tar.gz"
     wget "https://github.com/nzlosh/err-backend-botframework/archive/refs/tags/v0.1.0.tar.gz" -O "backends/err-backend-botframework-v0.1.0.tar.gz"
@@ -101,39 +103,42 @@ function install_extensions
     title "INSTALL ERRBOT EXTENSIONS"
     for location in backends plugins
     do
-        # extract
+        # extract archive and install contents into a specific
+        # directory inside the python virtualenv
         for targz in "${BUILD_DIR}/${location}"/*.tar.gz
         do
-            tar xf "$targz" -C "${ROOT}/${location}"
+            tar xf "$targz" -C "${BUILD_DIR}/${location}"
         done
         # install dependencies
-        for proj in "${ROOT}/${location}"/*
+        for proj in "${BUILD_DIR}/${location}"/*
         do
-            # Install from pyproject
+            # Install from pyproject.  Target errbot-backend directory inside virtualenv
+            # so they are found by errbot's dection
             test -f "${proj}/pyproject.toml" && pip install "${proj}"
             # Install from requirements
             test -f "${proj}/requirements.txt" && pip install -r "${proj}/requirements.txt"
         done
     done
 
-    for location in "${ROOT}/backends"
-    do
-        cd "${location}"
-        for backend in "${BACKENDS[@]}"
-        do
-            # Move archive directory names to correct errbot names.
-            mv -f ./*"${backend}"* "$backend"
-        done
-    done
+	# not needed with installation directly into site-packages.
+    #~ for location in "${ROOT}/backends"
+    #~ do
+        #~ cd "${location}"
+        #~ for backend in "${BACKENDS[@]}"
+        #~ do
+            #~ # Move archive directory names to correct errbot names.
+            #~ mv -f ./*"${backend}"* "$backend"
+        #~ done
+    #~ done
 
-    for location in "$ROOT/plugins"
-    do
-        cd "$location"
-        for plugin in "${PLUGINS[@]}"
-        do
-            mv -f ./*"${plugin}"* "$plugin"
-        done
-    done
+    #~ for location in "$ROOT/plugins"
+    #~ do
+        #~ cd "$location"
+        #~ for plugin in "${PLUGINS[@]}"
+        #~ do
+            #~ mv -f ./*"${plugin}"* "$plugin"
+        #~ done
+    #~ done
 }
 
 function prune_installation
@@ -171,14 +176,16 @@ function prune_installation
 
 function install_errbot
 {
-    title "INSTALL ERRBOT ($($ROOT/venv/bin/pip --version))"
+    title "INSTALL ERRBOT ${ERRBOT_VERSION} $($ROOT/venv/bin/pip --version)"
     source "${ROOT}/venv/bin/activate"
+    
+    # source from stack overflow article (virtualenv site directory).
+    export VENV_SITE_DIR=$(python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
 
     pip install --upgrade pip
     # Use tmp dir to download and build errbot/plugins.
     export BUILD_DIR=$(mktemp -d "$ROOT"/build.XXXXXX)
     cd "$BUILD_DIR"
-    ERRBOT_VERSION="6.2.0"
     wget "https://github.com/errbotio/errbot/archive/refs/tags/${ERRBOT_VERSION}.tar.gz" -O errbot-v${ERRBOT_VERSION}.tar.gz
     tar xf errbot-v${ERRBOT_VERSION}.tar.gz
     cd errbot-${ERRBOT_VERSION}
@@ -202,6 +209,7 @@ export DISTRO_VERSION=$(source /etc/os-release; echo $VERSION_ID)
 # Strip the minor version since the script is designed to work on major versions.
 export DISTRO_COMBO="${DISTRO}${DISTRO_VERSION%.*}"
 export ROOT="/opt/errbot"
+export ERRBOT_VERSION="6.2.0"
 
 case "${DISTRO_COMBO}" in
     rocky8)
