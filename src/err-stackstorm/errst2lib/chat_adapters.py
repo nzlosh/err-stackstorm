@@ -397,6 +397,7 @@ class SlackChatAdapter(GenericChatAdapter):
         """
         Reference: https://api.slack.com/methods/chat.postMessage
         """
+        LOG.debug("Post Block Message called.")
         extra["text"] = message
         if isinstance(target_id, Person):
             extra["user"] = target_id.userid
@@ -405,7 +406,7 @@ class SlackChatAdapter(GenericChatAdapter):
         else:
             LOG.warning("target_id is type %s that isn't a Person or Room!", type(target_id))
 
-        LOG.debug(f"Sending Slack Block {extra}")
+        LOG.debug("Sending Slack Block %s", extra)
         self.bot_plugin._bot.slack_web.api_call("chat.postMessage", data=extra)
 
     def format_help(self, help_strings):
