@@ -2,13 +2,15 @@
 export ERRBOT_ROOT=/opt/errbot
 export ERRBOT_USER=errbot
 
+set -euo pipefail
+set -x
+
 function setup_account
 {
     echo -e "\e[93mUser/Group\e[0m"
-    mkdir -p ${ERRBOT_ROOT}
     addgroup ${ERRBOT_USER}
+    adduser --ingroup ${ERRBOT_USER} --home "${ERRBOT_ROOT}" --shell "/bin/false" "${ERRBOT_USER}"
     addgroup ${ERRBOT_USER} ${ERRBOT_USER}
-    adduser -S -g ${ERRBOT_USER} -h ${ERRBOT_ROOT} -s /bin/false ${ERRBOT_USER}
     chown -R ${ERRBOT_USER}:${ERRBOT_USER} ${ERRBOT_ROOT}
     id ${ERRBOT_USER}
     ls -ld ${ERRBOT_ROOT}
@@ -16,34 +18,35 @@ function setup_account
 
 function install_prod_packages
 {
-    echo -e "\e[93mPackage\e[0m"
-    apk add --no-cache py3-virtualenv python3 git openssl rsync
+    echo -e "\e[93mProduction Packages\e[0m"
+    apt update
+    apt install -y python3.10 python3.10-venv git openssl rsync
 }
 
 function install_build_packages
 {
+    echo -e "\e[93mBuild Packages\e[0m"
     install_prod_packages
-    apk add --no-cache gcc python3-dev openssl-dev libffi-dev musl-dev
-    python3 -m ensurepip
-    rm -r /usr/lib/python*/ensurepip
-    test ! -e /usr/bin/pip && ln -s pip3 /usr/bin/pip
-    test ! -e /usr/bin/python && ln -sf /usr/bin/python3 /usr/bin/python
-    test -d /root/.cache && rm -r /root/.cache
+    apt install -y gcc python3-dev libssl-dev libffi-dev python3.10-venv
+   #python3 -m ensurepip # disabled on ubuntu/debian systems
+    #~ rm -r /usr/lib/python*/ensurepip
+    #~ test ! -e /usr/bin/pip && ln -s pip3 /usr/bin/pip
+    #~ test ! -e /usr/bin/python && ln -sf /usr/bin/python3 /usr/bin/python
+    #~ test -d /root/.cache && rm -r /root/.cache || true
 }
 
 function install_openssh
 {
-    echo -e "\e[93mCopy virtualenv to final image\e[0m"
-    apk add openssh
+    echo -e "\e[93mInstall OpenSSH server\e[0m"
+    apt install -y openssh-server
     ssh-keygen -b 4096 -t ed25519 -f /etc/ssh/ssh_host_ed25519_key
     echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config
-
 }
 
 function setup_virtual_env
 {
     echo -e "\e[93mVirtual Environment\e[0m"
-    virtualenv -p python3 ${ERRBOT_ROOT}
+    python3.10 -m venv ${ERRBOT_ROOT}
     source ${ERRBOT_ROOT}/bin/activate
 }
 
@@ -82,22 +85,28 @@ function initialise_errbot
 function install_errbot
 {
     echo -e "\e[93mErrbot plugins installation\e[0m"
+    source ${ERRBOT_ROOT}/bin/activate
+    apt install -y python3.10-venv
     pip3 install --upgrade pip setuptools
-    pip3 install errbot==6.2.0 slixmpp IRC errbot-backend-slackv3 err-backend-mattermost err-backend-discord
+    INSTALL_LIST=(
+        errbot==6.2.0
+        slixmpp
+        IRC
+        errbot-backend-slackv3
+        err-backend-mattermost
+        err-backend-discord
+        'git+https://github.com/nzlosh/err-stackstorm.git'
+        'git+https://github.com/nzlosh/err-backend-rocketchat.git@maint_nzlosh'
+        'git+https://github.com/nzlosh/err-backend-gitter.git@maint_nzlosh'
+    )
+    for pip_tgt in ${INSTALL_LIST[@]}
+    do
+        pip install --upgrade "$pip_tgt"
+    done
     initialise_errbot
     for dirname in plugins backends log
     do
         mkdir -p ${ERRBOT_ROOT}/${dirname}
-    done
-    for plugin in 'https://github.com/nzlosh/err-stackstorm.git'
-    do
-        install_plugin $plugin
-    done
-
-    for backend in  'https://github.com/nzlosh/err-backend-rocketchat.git@maint_nzlosh' \
-                    'https://github.com/nzlosh/err-backend-gitter.git@maint_nzlosh'
-    do
-        install_backend $backend
     done
 }
 
@@ -118,7 +127,7 @@ function stage2_build
 {
     setup_account
     install_prod_packages
-    install_openssh
+    #install_openssh
 }
 
 if [ "$1" == "stage1" ]
