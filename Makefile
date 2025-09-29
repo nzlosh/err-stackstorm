@@ -29,7 +29,7 @@ setup:
 .PHONY: build_python_package # Build python deployment packages.
 build_python_package:
 	echo "Build python package"
-	python -m build
+	python3 -m build
 
 .PHONY: publish_pypi # Push python deployment packages to pypi. (Not Implemented)
 publish_pypi:
@@ -59,7 +59,7 @@ security_scan:
 .PHONY: unit_test # Run Unit tests using pytest.
 unit_test:
 	echo "Running Python unit tests\n"
-	python -m pytest
+	python3 -m pytest
 
 .PHONY: lint_test # Run flake and pycodestyle tests on source files.
 lint_test:

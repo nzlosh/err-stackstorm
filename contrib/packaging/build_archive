@@ -3,9 +3,13 @@
 set -eou pipefail -x
 
 REL_PATH=$(pwd $(dirname $0))
-VER_PATH="${REL_PATH}/../../src/err-stackstorm/errst2lib/version.py"
-ERR_STACKSTORM_VERSION=$(source <(grep ERR_STACKSTORM_VERSION "$VER_PATH"); echo $ERR_STACKSTORM_VERSION)
-
+ERR_STACKSTORM_VERSION=$(python <<EOF
+import os,sys
+sys.path.insert(0, os.path.abspath("${REL_PATH}/../../src/err-stackstorm"))
+from errst2lib.version import ERR_STACKSTORM_VERSION
+print(ERR_STACKSTORM_VERSION)
+EOF
+)
 # Package contains the following software projects and their respective licence.
 #
 # errbot                      GPL3
