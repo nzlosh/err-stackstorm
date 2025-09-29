@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "err-stackstorm"
-version = "2.3.1"
+version = "2.3.2"
 authors = [{ name="Err-stackstorm maintainers", email="nzlosh@yahoo.com" }]
 keywords = [
     "errbot",
