@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ##  [2.4.0] Unreleased
 
 ### Added
+
+### Changed
+
+### Removed
+
+##  [2.3.2] 2025-09-28
+
+### Added
+
 ### Changed
   - Fixed python path in systemd unit file.
   - Used correct user id/channel id with postMessage when using blocks in Slack chat adapter.
+  - Updated dockerfile to use ubuntu22.04 and python3.10
+  - Fixed version number in documentation.
 
 ### Removed
 

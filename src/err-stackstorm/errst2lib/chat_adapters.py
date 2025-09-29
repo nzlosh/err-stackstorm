@@ -397,8 +397,6 @@ class SlackChatAdapter(GenericChatAdapter):
         """
         Reference: https://api.slack.com/methods/chat.postMessage
         """
-        LOG.debug("Post Block Message called.")
-
         extra["text"] = message
         if isinstance(target_id, Person):
             extra["user"] = target_id.userid
