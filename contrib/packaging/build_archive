@@ -3,7 +3,7 @@
 set -eou pipefail +x
 
 REL_PATH=$(pwd $(dirname $0))
-ERR_STACKSTORM_VERSION=$(python <<EOF
+ERR_STACKSTORM_VERSION=$(python3 <<EOF
 import os,sys
 sys.path.insert(0, os.path.abspath("${REL_PATH}/../../src/err-stackstorm"))
 from errst2lib.version import ERR_STACKSTORM_VERSION
@@ -38,17 +38,13 @@ function title
 {
     echo -e "\033[38;5;206;48;5;57m${1}\033[0m"
 }
-function rocky8_install
+function rocky10_install
 {
     dnf install -y "${PKGS[@]}"
 }
 function rocky9_install
 {
     dnf install -y "${PKGS[@]}"
-}
-function ubuntu20_install
-{
-    apt install "${PKGS[@]}"
 }
 function ubuntu22_install
 {
@@ -58,7 +54,7 @@ function ubuntu24_install
 {
     apt install "${PKGS[@]}"
 }
-function debian11_install
+function debian13_install
 {
     apt install "${PKGS[@]}"
 }
@@ -161,38 +157,17 @@ function build_archive
 export DISTRO=$(source /etc/os-release; echo $ID)
 export DISTRO_VERSION=$(source /etc/os-release; echo $VERSION_ID)
 # Strip the minor version since the script is designed to work on major versions.
+# NOTE: Only Ubuntu LTS (xx.04) major versions are supported.
 export DISTRO_COMBO="${DISTRO}${DISTRO_VERSION%.*}"
 export ROOT="/opt/errbot"
-export ERRBOT_VERSION="6.2.0"
 
 case "${DISTRO_COMBO}" in
-    rocky8)
-        export PKGS=(python39 virtualenv python39-devel git wget)
-        export PYBIN=/usr/bin/python3.9
-        ;;
-    rocky9)
-        export PKGS=(python39 python3-devel tar gcc git wget)
-        export PYBIN=/usr/bin/python3.9
-        ;;
-    ubuntu20)
-        export PKGS=(python3.9-minimal git)
-        export PYBIN=/usr/bin/python3.9
-        ;;
-    ubuntu22)
-        export PKGS=(python3.10-minimal git)
-        export PYBIN=/usr/bin/python3.10
-        ;;
-    ubuntu24)
-        export PKGS=(python3.12-minimal git)
-        export PYBIN=/usr/bin/python3.12
-        ;;
-    debian11)
-        export PKGS=(python3.9-minimal git wget)
-        export PYBIN=/usr/bin/python3.9
-        ;;
-    debian12)
-        export PKGS=(python3.11-minimal git wget)
-        export PYBIN=/usr/bin/python3.11
+    rocky9|rocky10|ubuntu22|ubuntu24|debian12|debian13)
+        export ERRBOT_VERSION=$(jq  -r "._common.errbot_version" build.cfg)
+        export PKGS=(
+            $(jq -r ".${DISTRO_COMBO}.pkg_build.deps[]" build.cfg)
+        )
+        export PYBIN=/usr/bin/$(jq -r ".${DISTRO_COMBO}.pybin" build.cfg)
         ;;
     *)
         echo "Distribution ${DISTRO} version ${DISTRO_VERSION} isn't supported."

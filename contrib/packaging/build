@@ -118,7 +118,7 @@ class BuildTarget:
         self.teardown_environment()
 
 
-class Rocky8(BuildTarget):
+class Rocky9(BuildTarget):
     def setup_environment(self):
         super().setup_environment()
         # rpmdev-setuptree creates the RPM build directory in the home env directory, so a symlink
@@ -162,15 +162,15 @@ class Rocky8(BuildTarget):
         home_rpm_path.unlink()
 
 
-class Rocky9(Rocky8):
+class Rocky10(Rocky9):
     """
-    Rocky 9.0 steps _might_ be the same as Rocky8.
+    Rocky 10.0 steps _might_ be the same as Rocky8.
     """
 
     pass
 
 
-class Ubuntu2004(BuildTarget):
+class Ubuntu2204(BuildTarget):
     def __init__(self, build_cfg, distro):
         super().__init__(build_cfg, distro)
 
@@ -195,23 +195,15 @@ class Ubuntu2004(BuildTarget):
         super().teardown_environment()
 
 
-class Ubuntu2204(Ubuntu2004):
+class Ubuntu2404(Ubuntu2204):
     """
-    Ubuntu 20.04 steps are sufficient to build for 22.04
-    """
-
-    pass
-
-
-class Ubuntu2404(Ubuntu2004):
-    """
-    Ubuntu 20.04 steps are sufficient to build for 24.04
+    Ubuntu 22.04 steps are sufficient to build for 24.04
     """
 
     pass
 
 
-class Debian11(BuildTarget):
+class Debian12(BuildTarget):
     def __init__(self, build_cfg, distro):
         super().__init__(build_cfg, distro)
 
@@ -240,9 +232,9 @@ class Debian11(BuildTarget):
         super().teardown_environment()
 
 
-class Debian12(Debian11):
+class Debian13(Debian12):
     """
-    Build for Debian 12
+    Build for Debian 13
     """
 
     pass
@@ -291,13 +283,12 @@ distro = "{}{}".format(rel["id"], rel["version_id"].split(".", 1)[0])
 build_cfg = load_config()
 
 targets = {
-    "ubuntu20": Ubuntu2004,
     "ubuntu22": Ubuntu2204,
     "ubuntu24": Ubuntu2404,
-    "debian11": Debian11,
     "debian12": Debian12,
-    "rocky8": Rocky8,
+    "debian13": Debian13,
     "rocky9": Rocky9,
+    "rocky10": Rocky10,
 }
 
 if distro not in build_cfg:
