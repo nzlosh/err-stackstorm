@@ -455,14 +455,12 @@ class SlackChatV3Adapter(SlackChatAdapter):
             channel_name,
             channel_id,
         ) = self.bot_plugin._bot.extract_identifiers_from_string(str(msg.frm))
-        LOG.warning(
-            f"""
+        LOG.warning(f"""
             username = {username}
             user_id = {user_id}
             channel_name = {channel_name}
             channel_id = {channel_id}
-        """
-        )
+        """)
         if channel_id:
             name = f"#{channel_id}"
         elif channel_name:
@@ -472,3 +470,16 @@ class SlackChatV3Adapter(SlackChatAdapter):
         else:
             name = f"@{username}"
         return name
+
+    def present_sessions(self, sessions):
+        res = "**Sessions**:\n"
+        for session in sessions:
+            userid = session.attributes()["UserID"]
+            if session.attributes().get("UserID") == "errbot%service":
+                res += "- {}\n".format(str(session))
+            else:
+                user = self.bot_plugin.build_identifier(
+                    "<@{}>".format(session.attributes().get("UserID"))
+                )
+                res += "- `{}` `{}`\n".format(user.person, str(session))
+        return res

@@ -2,6 +2,13 @@
 import abc
 import logging
 
+try:
+    import hvac
+
+    HAVE_HVAC = True
+except ModuleNotFoundError:
+    HAVE_HVAC = False
+
 LOG = logging.getLogger(__name__)
 
 
@@ -15,24 +22,32 @@ class SecretsAdapterFactory(AbstractSecretsAdapterFactory):
     @staticmethod
     def instantiate(store_type):
         LOG.debug("Establish connection with secret store service. '{}'".format(store_type))
-        return {"vault": VaultSecretsAdapter}.get(store_type, ClearTextSecretsAdapter)
+        return {"vault": VaultSecretsAdapter}[store_type]
 
 
 class AbstractSecretsAdapter(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def setup(self, *args, **kwargs):
+    def setup(self, cfg):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def set(self, name, secret, namespace):
+    def wrap_secret(self, secret, ttl):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get(self, name, namespace):
+    def unwrap(self, token):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def teardown(self, user):
+    def read_kv(self, path, mount_point):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def write_kv(self, k, v, mount_point):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def teardown(self):
         raise NotImplementedError
 
 
@@ -42,29 +57,66 @@ class VaultSecretsAdapter(AbstractSecretsAdapter):
     """
 
     def __init__(self):
-        import hvac
-        self.client = hvac.Client()
+        self.client = None
+        self.unwrap_path = None
 
-    def __str__(self):
-        return str(self.associations)
+    def setup(self, cfg):
+        if not HAVE_HVAC:
+            LOG.warning(
+                "hvac module could not be found.  The Vault Secrets adapter can't function without it."
+            )
+            return
 
-    def setup(self):
+        self.client = hvac.Client(url=cfg["url"])
+        self.unwrap_path = cfg["unwrap_path"]
+
         # supported credentials are token or approle.
-        backend = cfg.get("secrets", {}).get("backend")
-        if backend:
-            raise NotImplementedError
+        token = cfg.get("auth", {}).get("token")
+        if "token" in cfg["auth"]:
+            LOG.debug("Vault authentication using Token")
+            self.client.token = cfg["auth"]["token"]
+        elif "approle" in cfg["auth"]:
+            LOG.debug("Vault authentication using AppRole")
+            self.client.auth.approle.login(
+                role_id=cfg["auth"]["approle"].get("role_id"),
+                secret_id=cfg["auth"]["approle"].get("secret_id"),
+            )
+        else:
+            raise RuntimeError(
+                "Vault Secret backend only supports token or approle authentication."
+            )
+        LOG.info("Vault token is authenticated = %s", self.client.is_authenticated())
 
-    def set(self, name, secret, namespace=""):
-        self.associations[name] = secret
-        return True
+    def get_wrap_path(self):
+        return self.unwrap_path
 
-    def get(self, name, namespace=""):
-        return self.associations.get(name)
+    def wrap_secret(self, secret, ttl=30):
+        """
+        Given a secret and the path
+        """
+        return self.client.sys.wrap(payload=secret, ttl=ttl)
 
-    def delete(self, name, namespace=""):
-        if name in self.associations:
-            del self.associations[name]
+    def unwrap(self, token):
+        """
+        Given a chat userid, fetch an unwrap token from unwrap_path and perform the unwrap procedure
+        to return the secret contents.
+        """
+        return self.client.sys.unwrap(token)
+
+    def read_kv(self, path, mount_point="kv"):
+        """
+        Read a vault secret from kv path.
+        """
+        return self.client.secrets.kv.v1.read_secret(
+            path=path,
+            mount_point=mount_point,
+        )["data"]
+
+    def write_kv(self, k, v, mount_point="kv"):
+        """
+        Write a vault secret to the kv path.
+        """
+        self.client.secrets.kv.v1.create_or_update_secret(k, secret=v, mount_point="kv")
 
     def teardown(self):
         pass
-

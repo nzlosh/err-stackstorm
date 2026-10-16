@@ -133,6 +133,7 @@ class AuthenticationController(object):
         Handle an initial request to establish a session.  If a session already exists, return it.
         """
         user_id = self.to_userid(user)
+        LOG.info("Create session for userid %s", user_id)
         return self.sessions.create(user_id, user_secret, self.bot.cfg.session_ttl)
 
     def get_session(self, user):

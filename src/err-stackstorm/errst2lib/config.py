@@ -3,6 +3,7 @@ import logging
 
 from errst2lib.authentication_handler import AuthHandlerFactory
 from errst2lib.credentials_adapters import CredentialsFactory
+from errst2lib.secrets_adapters import SecretsAdapterFactory
 
 LOG = logging.getLogger(__name__)
 
@@ -38,6 +39,9 @@ class PluginConfiguration(BorgSingleton):
         self._configure_credentials(bot_conf)
         self._configure_rbac_auth(bot_conf)
         self._configure_stackstorm(bot_conf)
+        self._configure_secret_backend(bot_conf.STACKSTORM.get("secrets_backend", {}))
+        self._configure_federated_authentication(bot_conf.STACKSTORM.get("federation", {}))
+
         self.oob_auth_url = bot_conf.STACKSTORM.get("oob_auth_url", "https://localhost:8888/")
         self.timer_update = bot_conf.STACKSTORM.get("timer_update", 60)
         self.verify_cert = bot_conf.STACKSTORM.get("verify_cert", True)
@@ -96,3 +100,20 @@ class PluginConfiguration(BorgSingleton):
             LOG.warning(
                 "Failed to find any valid st2 credentials for the bot,  check configuration file."
             )
+
+    def _configure_secret_backend(self, bot_conf):
+        """
+        Instantiate a secret backend client for use in federated authentication.
+        """
+        secret_backend_cfg = bot_conf.get("vault")
+        if secret_backend_cfg:
+            self.secrets = SecretsAdapterFactory.instantiate("vault")()
+            self.secrets.setup(secret_backend_cfg)
+        else:
+            self.secrets = None
+
+    def _configure_federated_authentication(self, bot_conf):
+        """
+        Configuration for Federated authentication.
+        """
+        self.federation = bot_conf
