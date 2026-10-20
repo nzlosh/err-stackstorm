@@ -3,6 +3,7 @@ import logging
 
 from errst2lib.authentication_handler import AuthHandlerFactory
 from errst2lib.credentials_adapters import CredentialsFactory
+from errst2lib.secrets_adapters import SecretsAdapterFactory
 
 LOG = logging.getLogger(__name__)
 
@@ -38,6 +39,9 @@ class PluginConfiguration(BorgSingleton):
         self._configure_credentials(bot_conf)
         self._configure_rbac_auth(bot_conf)
         self._configure_stackstorm(bot_conf)
+        self._configure_secret_backend(bot_conf.STACKSTORM.get("secrets_backend", {}))
+        self._configure_federated_authentication(bot_conf.STACKSTORM.get("federation", {}))
+
         self.oob_auth_url = bot_conf.STACKSTORM.get("oob_auth_url", "https://localhost:8888/")
         self.timer_update = bot_conf.STACKSTORM.get("timer_update", 60)
         self.verify_cert = bot_conf.STACKSTORM.get("verify_cert", True)
@@ -96,3 +100,29 @@ class PluginConfiguration(BorgSingleton):
             LOG.warning(
                 "Failed to find any valid st2 credentials for the bot,  check configuration file."
             )
+
+    def _configure_secret_backend(self, bot_conf):
+        """
+        Get the secret definition.
+        """
+        secret_backend = list(bot_conf.keys())
+        LOG.debug("Secrets backend %s", secret_backend)
+        if len(secret_backend) == 0:
+            LOG.warning(
+                "Unable to configure secrets backend.  'secrets_backend' "
+                "not found in config or no backend defined."
+            )
+        elif len(secret_backend) > 1:
+            LOG.warning(
+                "Only one secret backend definition is supported, "
+                "multiple secret backends have been detected."
+            )
+        else:
+            self.secret_backend = secret_backend[0]
+            self.secret_backend_cfg = bot_conf[self.secret_backend]
+
+    def _configure_federated_authentication(self, bot_conf):
+        """
+        Configuration for Federated authentication.
+        """
+        self.federation = bot_conf

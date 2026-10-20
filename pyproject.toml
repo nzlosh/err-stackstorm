@@ -28,6 +28,7 @@ dependencies = [
     "requests>=2.20.0",
     "sseclient",
     "jsonschema",
+    "hvac",
 ]
 
 [project.urls]

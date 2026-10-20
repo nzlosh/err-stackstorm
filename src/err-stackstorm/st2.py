@@ -1,17 +1,19 @@
 # coding:utf-8
 import json
 import logging
+import requests
 import shlex
 import threading
 import traceback
+import uuid
 from types import SimpleNamespace
 
-import requests
 from errbot import BotPlugin, Command, arg_botcmd, botcmd, re_botcmd, webhook
 
 from errst2lib.authentication_controller import AuthenticationController, BotPluginIdentity
 from errst2lib.authentication_handler import AuthHandlerFactory, ClientSideAuthHandler
 from errst2lib.chat_adapters import ChatAdapterFactory
+from errst2lib.secrets_adapters import SecretsAdapterFactory
 from errst2lib.config import PluginConfiguration
 from errst2lib.credentials_adapters import St2ApiKey, St2UserCredentials, St2UserToken
 from errst2lib.enquiry import Enquiry, EnquiryManager
@@ -43,9 +45,15 @@ class St2(BotPlugin):
         except Exception as err:
             LOG.critical(
                 "Errors were encountered processing the STACKSTORM configuration."
-                "Please correct the errors and restart the bot."
-                "{}".format(err)
+                "  Please correct the errors and restart the bot.  %s",
+                err,
             )
+            return
+
+        self.secrets = SecretsAdapterFactory.instantiate(self.cfg.secret_backend)(
+            self.cfg.secret_backend_cfg
+        )
+        self.secrets.setup()
 
         # The chat backend adapter mediates data format and api calls between
         # stackstorm, errbot and the chat backend.
@@ -68,7 +76,6 @@ class St2(BotPlugin):
         """
         Create a session and associate valid StackStorm credentials with it for the bot to use.
         """
-
         # Create a session for internal use by err-stackstorm
         try:
             bot_session = self.accessctl.create_session(
@@ -152,21 +159,40 @@ class St2(BotPlugin):
         """
         return self.chatbackend.present_sessions(self.accessctl.list_sessions())
 
-    def session_delete(self, msg, args):
+    def session_end(self, msg, args):
         """
-        Delete an established session.
+        User triggered end of an established session. (for users to end their session)
         """
-        if len(args) > 0:
-            self.accessctl.delete_session(args)
+        userid = msg.frm
+        LOG.debug("End session for '%s'", userid)
+        session = self.accessctl.get_session(userid)
+        if session:
+            session_id = session.session_id
+        else:
+            session_id = session
+        # delete user session
+        self.accessctl.delete_session(session_id)
+        return f"Session ID {session_id} for {userid} has been removed."
 
-    def session_disconnect(self, msg, args):
+    def session_cancel(self, msg, args):
         """
-        Usage: session_disconnect
+        Usage: session_cancel <userid> (for admins to end user session)
         Closes the session.  StackStorm credentials are purged when the session is closed.
         """
-        # get user session
-        # delete user session
-        return "Not implemented yet."
+        if len(args) != 0:
+            userid = args
+            LOG.debug("Cancel session for '%s'", userid)
+            session = self.accessctl.get_session(userid)
+        else:
+            return "Chat user is required to cancel session."
+
+        if session:
+            session_id = session.session_id
+            # delete user session
+            self.accessctl.delete_session(session_id)
+            return f"Session ID {session_id} for {userid} has been removed."
+        else:
+            return f"Failed to find a session for {userid}"
 
     def enquiry_list(self, msg, args):
         """
@@ -420,10 +446,76 @@ class St2(BotPlugin):
         self.chatbackend.post_message(whisper, message, user, channel, extra)
         return "Delivered to chat backend."
 
+    @webhook("/login/remote-authenticate/<userid>")
+    def remote_login_auth(self, request, userid):
+        """
+        Remote Login Authentication is a end point used to receive login events from federated
+        err-stackstorm instances.  No sensitive data is received by the end point, however a
+        secret store (Vault) is used to share the credentials between instances.
+        """
+        LOG.info("Remote Login Authentication called for %s", userid)
+
+        if not self.cfg.federation:
+            LOG.warning(
+                "Received a remote login request for a non-federated err-stackstorm instance."
+            )
+            return
+
+        if not self.secrets:
+            LOG.warning(
+                "Received a remote login request for a federated"
+                "err-stackstorm instance without a secret backend."
+            )
+            return
+        self.secrets.renew_token()
+
+        unwrap_path = self.secrets.get_wrap_path().format(federation_id=self.cfg.federation["id"])
+        unwrap_path = f"{unwrap_path}/{userid}"
+        LOG.debug("Unwrap path %s", unwrap_path)
+
+        token = self.secrets.read_kv(unwrap_path)["token"]
+        credentials = self.secrets.unwrap(token)["data"]
+
+        try:
+            session = self.accessctl.get_session(userid)
+            self.accessctl.delete_session(session.session_id)
+        except SessionInvalidError:
+            LOG.debug("No session exist, create a new one.")
+            pass
+
+        # Create or renew session for user.
+        shared_secret = str(uuid.uuid4())
+        session = self.accessctl.create_session(userid, shared_secret)
+        LOG.debug("Session %s created for %s", session.session_id, userid)
+        # Consume the session since it's a non-interactive, login.
+        self.accessctl.consume_session(session.session_id)
+
+        if self.accessctl.associate_credentials(
+            userid,
+            St2UserCredentials(credentials["username"], credentials["password"]),
+            self.cfg.bot_creds,
+        ):
+            LOG.info("StackStorm credentials association succeeded.")
+        else:
+            LOG.info("StackStorm credentials association failed.")
+
     @webhook("/login/authenticate/<uuid>")
     def login_auth(self, request, uuid):
-        # WARNING: Sensitive security information will be logged, uncomment only when necessary.
-        # LOG.debug("Request: {}".format(request))
+        """
+        Login route to authenticate StackStorm credentials.
+        The errbot Webserver plugin must be active and configured.  For example:
+        !plugin config Webserver {
+          "HOST": "0.0.0.0",
+          "PORT": 3141,
+          "SSL": {
+            "enabled": False,
+            "host": "0.0.0.0",
+            "port": 3142,
+            "certificate": "",
+            "key": ""
+          }
+        }
+        """
         r = SimpleNamespace(
             **{
                 "authenticated": False,
@@ -454,7 +546,7 @@ class St2(BotPlugin):
         if r.return_code == 0:
             # Get the user associated with the session id.
             user = self.accessctl.get_session_userid(uuid)
-            LOG.debug("Matched chat user {} for credential association".format(user))
+
             if "username" in request:
                 username = request.get("username", "")
                 password = request.get("password", "")
@@ -462,6 +554,43 @@ class St2(BotPlugin):
                     user, St2UserCredentials(username, password), self.cfg.bot_creds
                 ):
                     r.authenticated = True
+
+                    # Federated mode: notify peers to perform remote login.
+                    if self.secrets and self.cfg.federation:
+                        for peer_id, peer_data in self.cfg.federation["peers"].items():
+                            try:
+                                wrap_data = self.secrets.wrap_secret(
+                                    {"username": username, "password": password}
+                                )
+                                token = wrap_data.get("wrap_info", {}).get("token")
+                                # WARNING: uncomment the log below will leak sensitive info!
+                                # LOG.debug("unwrap token %s", token)
+                                secret_path = self.secrets.get_wrap_path().format(
+                                    federation_id=peer_id
+                                )
+                                secret_path = f"{secret_path}/{user}"
+                                self.secrets.write_kv(secret_path, {"token": token})
+                                notify_url = "{}/login/remote-authenticate/{}".format(
+                                    peer_data["api"]["url"], user
+                                )
+                                LOG.debug(
+                                    "Sending remote login notification for %s for %s at %s",
+                                    user,
+                                    peer_id,
+                                    notify_url,
+                                )
+                                headers = {"X-ErrStackStorm-Token": peer_data["api"]["token"]}
+                                notify_res = requests.get(notify_url, headers=headers, timeout=5)
+                                LOG.debug("HTTP notification returned %s", notify_res)
+                            except Exception as e:
+                                LOG.warning("Error notifying %s: %s", peer_id, str(e))
+                    else:
+                        LOG.debug(
+                            "Remote login unavailable.  secret cfg avilable: %s,"
+                            " federation cfg available: %s",
+                            bool(self.secrets),
+                            bool(self.cfg.federation),
+                        )
                 else:
                     r.message = "Invalid credentials"
                     r.return_code = 6
@@ -471,6 +600,9 @@ class St2(BotPlugin):
                     user, St2UserToken(user_token), self.cfg.bot_creds
                 ):
                     r.authenticated = True
+                    # Federated mode: notify peers to perform remote login.
+                    if self.secrets and self.federation:
+                        raise NotImplementedError
                 else:
                     r.message = "Invalid token"
                     r.return_code = 6
@@ -480,6 +612,9 @@ class St2(BotPlugin):
                     user, St2ApiKey(api_key), self.cfg.bot_creds
                 ):
                     r.authenticated = True
+                    # Federated mode: notify peers to perform remote login.
+                    if self.secrets and self.federation:
+                        raise NotImplementedError
                 else:
                     r.message = "Invalid api key"
                     r.return_code = 6
@@ -548,14 +683,14 @@ class St2(BotPlugin):
                     "chat service and StackStorm API.",
                 ),
                 Command(
-                    lambda plugin, msg, args: self.session_delete(msg, args),
+                    lambda plugin, msg, args: self.session_cancel(msg, args),
                     name=f"{self.cfg.plugin_prefix}session_cancel",
                     cmd_type=botcmd,
                     cmd_kwargs={"admin_only": True},
                     doc="Allow an administrator to cancel a users session.",
                 ),
                 Command(
-                    lambda plugin, msg, args: self.session_disconnect(msg, args),
+                    lambda plugin, msg, args: self.session_end(msg, args),
                     name="{}session_end".format(self.cfg.plugin_prefix),
                     cmd_type=botcmd,
                     cmd_kwargs={"admin_only": False},

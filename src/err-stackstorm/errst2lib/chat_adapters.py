@@ -472,3 +472,19 @@ class SlackChatV3Adapter(SlackChatAdapter):
         else:
             name = f"@{username}"
         return name
+
+    def normalise_user_id(self, user):
+        return str(user.aclattr)
+
+    def present_sessions(self, sessions):
+        res = "**Sessions**:\n"
+        for session in sessions:
+            userid = session.attributes()["UserID"]
+            if session.attributes().get("UserID") == "errbot%service":
+                res += "- {}\n".format(str(session))
+            else:
+                user = self.bot_plugin.build_identifier(
+                    "<@{}>".format(session.attributes().get("UserID"))
+                )
+                res += "- `{}` `{}`\n".format(user.person, str(session))
+        return res

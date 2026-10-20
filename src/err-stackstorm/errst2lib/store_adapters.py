@@ -1,5 +1,6 @@
 # coding:utf-8
 import abc
+import hashlib
 import logging
 
 LOG = logging.getLogger(__name__)
@@ -115,8 +116,16 @@ class SessionStore(object):
             self.id_to_user_map[session_id] = session.user_id
 
     def get_by_uuid(self, session_id):
+        """
+        Return a session given its UUID.
+        Return False if the session id is not found.
+        """
         user_id = self.id_to_user_map.get(session_id, False)
+        if user_id is False:
+            LOG.debug("Error: Session id '{}' doesn't exist in user mapping.".format(session_id))
+
         session = self.memory.get(user_id, False)
         if session is False:
-            LOG.debug("Error: Session id '{}' points to a missing session.".format(""))
+            LOG.debug("Error: User id '{}' doesn't exist.".format(user_id))
+
         return session
