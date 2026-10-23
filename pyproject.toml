@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "err-stackstorm"
-version = "2.3.2"
+version = "2.4.0"
 authors = [{ name="Err-stackstorm maintainers", email="nzlosh@yahoo.com" }]
 keywords = [
     "errbot",
@@ -28,6 +28,7 @@ dependencies = [
     "requests>=2.20.0",
     "sseclient",
     "jsonschema",
+    "hvac",
 ]
 
 [project.urls]
