@@ -3,7 +3,7 @@
 set -eou pipefail +x
 
 REL_PATH=$(pwd $(dirname $0))
-ERR_STACKSTORM_VERSION=$(python <<EOF
+ERR_STACKSTORM_VERSION=$(python3 <<EOF
 import os,sys
 sys.path.insert(0, os.path.abspath("${REL_PATH}/../../src/err-stackstorm"))
 from errst2lib.version import ERR_STACKSTORM_VERSION
@@ -163,16 +163,16 @@ export DISTRO_VERSION=$(source /etc/os-release; echo $VERSION_ID)
 # Strip the minor version since the script is designed to work on major versions.
 export DISTRO_COMBO="${DISTRO}${DISTRO_VERSION%.*}"
 export ROOT="/opt/errbot"
-export ERRBOT_VERSION="6.2.0"
+export ERRBOT_VERSION="6.2.1"
 
 case "${DISTRO_COMBO}" in
-    rocky8)
-        export PKGS=(python39 virtualenv python39-devel git wget)
-        export PYBIN=/usr/bin/python3.9
+    rocky10)
+        export PKGS=(python312 virtualenv python312-devel git wget)
+        export PYBIN=/usr/bin/python3.12
         ;;
     rocky9)
-        export PKGS=(python39 python3-devel tar gcc git wget)
-        export PYBIN=/usr/bin/python3.9
+        export PKGS=(python311 python3-devel tar gcc git wget)
+        export PYBIN=/usr/bin/python3.11
         ;;
     ubuntu20)
         export PKGS=(python3.9-minimal git)
