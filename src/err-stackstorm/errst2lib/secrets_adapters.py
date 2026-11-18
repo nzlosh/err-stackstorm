@@ -95,7 +95,8 @@ class VaultSecretsAdapter(AbstractSecretsAdapter):
     def setup(self):
         if not HAVE_HVAC:
             LOG.warning(
-                "hvac module could not be found.  The Vault Secrets adapter can't function without it."
+                "hvac module could not be found.  The Vault "
+                "Secrets adapter can't function without it."
             )
             return
         self.client = hvac.Client(url=self.cfg["url"])

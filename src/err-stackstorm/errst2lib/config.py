@@ -109,11 +109,13 @@ class PluginConfiguration(BorgSingleton):
         LOG.debug("Secrets backend %s", secret_backend)
         if len(secret_backend) == 0:
             LOG.warning(
-                "Unable to configure secrets backend.  'secrets_backend' no found in config or no backend defined."
+                "Unable to configure secrets backend.  'secrets_backend' no"
+                " found in config or no backend defined."
             )
         elif len(secret_backend) > 1:
             LOG.warning(
-                "Only one secret backend definition is supported, multiple secret backends have been detected."
+                "Only one secret backend definition is supported, "
+                "multiple secret backends have been detected."
             )
         else:
             self.secret_backend = secret_backend[0]

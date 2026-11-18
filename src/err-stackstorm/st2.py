@@ -464,7 +464,8 @@ class St2(BotPlugin):
 
         if not self.secrets:
             LOG.warning(
-                "Received a remote login request for a federated err-stackstorm instance without a secret backend."
+                "Received a remote login request for a federated err-stackstorm "
+                "instance without a secret backend."
             )
             return
         self.secrets.renew_token()
@@ -504,10 +505,12 @@ class St2(BotPlugin):
         """
         Login route to authenticate StackStorm credentials.
         The errbot Webserver plugin must be active and configured.  For example:
-        !plugin config Webserver {'HOST': '0.0.0.0', 'PORT': 3141, 'SSL': {'enabled': False, 'host': '0.0.0.0', 'port': 3142, 'certificate': '', 'key': ''}}
+        !plugin config Webserver {'HOST': '0.0.0.0', 'PORT': 3141, 'SSL':
+        {'enabled': False, 'host': '0.0.0.0', 'port': 3142, 'certificate': '', 'key': ''}}
         """
         # WARNING: Sensitive security information will be logged, uncomment only when necessary.
-        # LOG.debug("Request: {}\nEnvironment: {}".format(request, "\n".join([f"{k}={os.environ[k]}" for k in os.environ])))
+        # LOG.debug("Request: {}\nEnvironment: {}".format(request, "\n".join([f"{k}={os.environ[k]}"
+        # for k in os.environ])))
         LOG.debug("Authentication Controller: %s", hex(id(self.accessctl)))
         r = SimpleNamespace(
             **{
@@ -558,7 +561,8 @@ class St2(BotPlugin):
                                     {"username": username, "password": password}
                                 )
                                 token = wrap_data.get("wrap_info", {}).get("token")
-                                # Security warning: do not uncomment this line unless you know it is safe to do so.
+                                # Security warning: do not uncomment this line unless you know
+                                # it is safe to do so.
                                 # LOG.debug("unwrap token %s", token)
                                 secret_path = self.secrets.get_wrap_path().format(
                                     federation_id=peer_id
@@ -581,7 +585,8 @@ class St2(BotPlugin):
                                 LOG.warning("Error notifying %s: %s", peer_id, str(e))
                     else:
                         LOG.debug(
-                            "Remote login unavailable.  secret cfg avilable: %s, federation cfg available: %s",
+                            "Remote login unavailable.  secret cfg avilable:"
+                            " %s, federation cfg available: %s",
                             bool(self.secrets),
                             bool(self.cfg.federation),
                         )
