@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ##  [2.4.0] Unreleased
 
 ### Added
+  - Federated login for multiple instances.  Defaults to using Hashicorp Vault for secret management.
 
 ### Changed
 

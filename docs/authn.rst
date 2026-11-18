@@ -141,3 +141,41 @@ Authenticating
 Once the client side authentication is setup, you should be able to trigger the authentication process with ``!session_start my_secret_word`` which will return a url to complete the login processes. This is how the page looks like:
 
 .. image:: images/authentication_screen.jpg
+
+
+Federated authentication
+------------------------------------------------------------------------
+
+This feature is experimental and may not be suitable for all enviornments that would like to use such a feature.
+
+The federated authentication is intended for use when independent instances of StackStorm are run with an err-stackstorm instance attached to each one.
+
+This creates a problem when users must identify per st2 instance if they want to run an action-alias.  To enable scaling the login process, a remote authentication end point is added to err-stackstorm.  The endpoint recieves notifications when a chat user successfully authenticates.  The receiving err-stackstorm instance, will query a fixed path in the secret store to retreive a one time use token, that will give access to the credentials which will be used to authenticate against the local st2 api instance.
+
+`unwrap_path` string can have a token `{federation_id}` that will be resolved to the id defined in the list of federated peers.
+
+Currently, only vault is supported as a secret backend.
+
+```
+    "secrets_backend": {
+        "vault": {
+            "url": "https://vault.example.com",
+            "auth": {
+                "token": "a.bdcdeed",
+                "approle": {
+                    "role_id": "123456",
+                    "secret_id": "456789"
+                }
+            },
+            "unwrap_path": "/kv/{federation_id}/err-stackstorm/remote-auth"
+        }
+    },
+    "federation":{
+        "id": "dc2",
+        "peers": {
+            "dc1": {
+                "api": "https://st2.dc1.example.com/"
+            }
+        }
+    },
+```

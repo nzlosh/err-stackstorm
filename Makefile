@@ -3,6 +3,7 @@ MAX_LINE_LEN=100
 SOURCE_PATH=src/err-stackstorm
 LIB_PATH=${SOURCE_PATH}/errst2lib
 TESTS_PATH=tests
+VENV_PATH=venv
 
 # ANSI colour formats for help output.
 FMT_TITLE=\e[34;40;1m
@@ -16,19 +17,48 @@ all: auto_format format_test lint_test unit_test security_scan
 clean:
 	@echo Cleaning - N/A
 
+
+.PHONY: install_virtual_environment
+install_virtual_environment:
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		echo "Installing virtual environment"; \
+		python3 -m venv "${VENV_PATH}"; \
+	fi;
+
+.PHONY: install_requirements
+install_requirements: install_virtual_environment
+	echo "Installing Python requirements"
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		source "${VENV_PATH}/bin/activate"; \
+	fi; \
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		echo "Won't run outside CI/Virtualenv"; exit 1; \
+	fi; \
+	pip3 install -r requirements-test.txt -r requirements-build.txt
+
 .PHONY: setup # Install errbot and dependencies into virtual environment.
-setup:
-	test -n "${CI}" || ( test -n "${VIRTUAL_ENV}" || (echo "Not running in virtualenv/CI - abort setup"; exit 1 ) ) && echo "Running in virtual environment or CI pipeline"
-	pip install --upgrade pip
-	pip install errbot
-	errbot --init
+setup: install_requirements
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		source "${VENV_PATH}/bin/activate"; \
+	fi; \
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		echo "Won't run outside CI/Virtualenv"; exit 1; \
+	fi; \
+	echo "Uprgade pip and install errbot"; \
+	pip install --upgrade pip; \
+	pip install errbot; \
+	errbot --init; \
 	pip install .
-	pip install -r requirements-test.txt
-	pip install -r requirements-build.txt
 
 .PHONY: build_python_package # Build python deployment packages.
-build_python_package:
+build_python_package: install_requirements
 	echo "Build python package"
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		source "${VENV_PATH}/bin/activate"; \
+	fi; \
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		echo "Won't run outside CI/Virtualenv"; exit 1; \
+	fi; \
 	python3 -m build
 
 .PHONY: publish_pypi # Push python deployment packages to pypi. (Not Implemented)
@@ -43,28 +73,59 @@ documentation:
 
 .PHONY: format_test # Run black formatting check over source files.
 format_test:
-	echo "Formatting code\n"
+	echo "Run code format check"
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		source "${VENV_PATH}/bin/activate"; \
+	fi; \
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		echo "Won't run outside CI/Virtualenv"; exit 1; \
+	fi; \
 	black --check --line-length=${MAX_LINE_LEN} ${SOURCE_PATH}/st2.py ${LIB_PATH}/*.py ${TESTS_PATH}/*.py
 
 .PHONY: auto_format # Apply black format against python source files.
 auto_format:
 	echo "Formatting code\n"
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		source "${VENV_PATH}/bin/activate"; \
+	fi; \
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		echo "Won't run outside CI/Virtualenv"; exit 1; \
+	fi; \
 	black --line-length=${MAX_LINE_LEN} ${SOURCE_PATH}/st2.py ${LIB_PATH}/*.py ${TESTS_PATH}/*.py
 
 .PHONY: security_scan # Check python source code for security issues.
 security_scan:
-	echo "Scanning for potential security issues\n"
+	echo "Scanning for potential security issues"
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		source "${VENV_PATH}/bin/activate"; \
+	fi; \
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		echo "Won't run outside CI/Virtualenv"; exit 1; \
+	fi; \
 	bandit ${SOURCE_PATH}/*.py ${LIB_PATH}/*.py
 
 .PHONY: unit_test # Run Unit tests using pytest.
 unit_test:
-	echo "Running Python unit tests\n"
+	echo "Running Python unit tests"
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		source "${VENV_PATH}/bin/activate"; \
+	fi; \
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		echo "Won't run outside CI/Virtualenv"; exit 1; \
+	fi; \
 	python3 -m pytest
 
 .PHONY: lint_test # Run flake and pycodestyle tests on source files.
 lint_test:
-	echo -n "Running LINT tests\n"
+	echo "Running lint tests"
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		source "${VENV_PATH}/bin/activate"; \
+	fi; \
+	if [[ -z "$${CI}$${VIRTUAL_ENV}" ]]; then \
+		echo "Won't run outside CI/Virtualenv"; exit 1; \
+	fi; \
 	pycodestyle --max-line-length=${MAX_LINE_LEN} ${SOURCE_PATH}/st2.py ${LIB_PATH}/*.py
+
 
 .PHONY: help
 help:

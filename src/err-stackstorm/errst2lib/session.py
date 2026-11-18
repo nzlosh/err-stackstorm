@@ -23,7 +23,7 @@ class Session(object):
         self.bot_secret = None
         self.user_id = user_id
         self._is_sealed = True
-        self.session_id = uuid.uuid4()
+        self.session_id = str(uuid.uuid4())
         self.create_date = int(dt.now().timestamp())
         self.modified_date = self.create_date
         self.ttl_in_seconds = session_ttl
